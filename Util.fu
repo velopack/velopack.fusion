@@ -120,7 +120,15 @@ public static class Util
 #if CPP
         native { ret = util_current_os_name(); }
 #elif CS
-        native { ret = System.Runtime.InteropServices.RuntimeInformation.OSDescription; }
+        native { 
+            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) {
+                ret = "win32";
+            } else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(OSPlatform.Linux)) {
+                ret = "linux";
+            } else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) {
+                ret = "darwin";
+            }
+        }
 #elif JS
         native { ret = process.platform; } 
 #else

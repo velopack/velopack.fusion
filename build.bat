@@ -5,10 +5,10 @@ mkdir bin
 @REM fut -o bin\UpdateManager.cs -n Velopack -D CS Platform.fu UpdateManager.fu || exit /b
 
 
-fut -o bin\Velopack.cpp -n Velopack -D CPP Util.fu VelopackAsset.fu Platform.fu UpdateManager.fu || exit /b
-fut -o bin\Velopack.js -n Velopack -D JS Util.fu VelopackApp.fu VelopackAsset.fu Platform.fu UpdateManager.fu || exit /b
-fut -o bin\Velopack.ts -n Velopack -D JS Util.fu VelopackApp.fu VelopackAsset.fu Platform.fu UpdateManager.fu || exit /b
-fut -o bin\Velopack.cs -n Velopack -D CS Util.fu VelopackApp.fu VelopackAsset.fu Platform.fu UpdateManager.fu || exit /b
+fut -o bin\Velopack.cpp -n Velopack -D CPP Util.fu UpdateInfo.fu Platform.fu UpdateManager.fu || exit /b
+fut -o bin\Velopack.js -n Velopack -D JS Util.fu VelopackApp.fu UpdateInfo.fu Platform.fu UpdateManager.fu || exit /b
+fut -o bin\Velopack.ts -n Velopack -D JS Util.fu VelopackApp.fu UpdateInfo.fu Platform.fu UpdateManager.fu || exit /b
+@REM fut -o bin\Velopack.cs -n Velopack -D CS Util.fu VelopackApp.fu VelopackAsset.fu Platform.fu UpdateManager.fu || exit /b
 
 type include\json.hpp newline include\subprocess.h newline include\velopack.hpp newline bin\Velopack.hpp > bin\combined.hpp
 move /Y bin\combined.hpp bin\Velopack.hpp

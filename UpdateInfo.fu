@@ -165,6 +165,71 @@ public class UpdateInfo
     }
 }
 
+public class ProgressEvent
+{
+    internal string() File = "";
+    internal bool Complete = false;
+    internal int Progress = 0;
+    internal string() Error = "";
+
+    public static ProgressEvent#? FromJson(string json)
+    {
+        string() file = "";
+        bool complete = false;
+        int progress = 0;
+        string() error = "";
+
+#if CPP
+        native {
+            auto obj = nlohmann::json::parse(json);
+            // Helper lambda to perform case-insensitive comparison
+            auto ci_equal = [](const std::string& a, const std::string& b) {
+                return std::equal(a.begin(), a.end(), b.begin(), b.end(),
+                    [](char a, char b) {
+                        return tolower(a) == tolower(b);
+                    });
+            };
+            for (auto& el : obj.items()) {
+                std::string key = el.key();
+                if (ci_equal(key, "file")) {
+                    file = el.value();
+                } else if (ci_equal(key, "complete")) {
+                    complete = el.value().get<bool>();
+                } else if (ci_equal(key, "progress")) {
+                    progress = el.value().get<int>();
+                } else if (ci_equal(key, "error")) {
+                    error = el.value();
+                }
+            }
+        }
+#elif JS
+        native {
+            const obj = JSON.parse(json);
+            Object.keys(obj).forEach(key => {
+                if (key.toLowerCase() === "file") {
+                    file = obj[key];
+                } else if (key.toLowerCase() === "complete") {
+                    complete = obj[key];
+                } else if (key.toLowerCase() === "progress") {
+                    progress = obj[key];
+                } else if (key.toLowerCase() === "error") {
+                    error = obj[key];
+                }
+            });
+        }
+#else
+        throw Exception("Unsupported platform");
+#endif
+
+        ProgressEvent#? progressEvent = new ProgressEvent();
+        progressEvent.File = file;
+        progressEvent.Complete = complete;
+        progressEvent.Progress = progress;
+        progressEvent.Error = error;
+        return progressEvent;
+    }
+}
+
 // public class VelopackAssetFeed
 // {
 //     internal List<VelopackAsset()>! Assets;

@@ -1,17 +1,31 @@
 public abstract class ProgressHandler 
 {
     public abstract void OnProgress(int progress);
+    public abstract void OnComplete(string() assetPath);
+    public abstract void OnError(string() error);
+}
+
+public class UpdateOptions
+{
+    bool _allowDowngrade = false;
+    string() _explicitChannel = "";
+    string() _urlOrPath = "";
+    ProgressHandler? _progress;
+    public void SetUrlOrPath!(string() urlOrPath) { _urlOrPath = urlOrPath; }
+    public string() GetUrlOrPath() { return _urlOrPath; }
+    public void SetAllowDowngrade!(bool allowDowngrade) { _allowDowngrade = allowDowngrade; }
+    public bool GetAllowDowngrade() { return _allowDowngrade; }
+    public void SetExplicitChannel!(string() explicitChannel) { _explicitChannel = explicitChannel; }
+    public string() GetExplicitChannel() { return _explicitChannel; }
+    public void SetProgressHandler!(ProgressHandler? progress) { _progress = progress; }
+    public ProgressHandler? GetProgressHandler() { return _progress; }
 }
 
 public class UpdateManager : Platform
 {
-    ProgressHandler? _progress;
-
-    public void SetProgressHandler!(ProgressHandler? progress)
-    {
-        _progress = progress;
-    }
-
+    UpdateOptions? _options;
+    public void SetOptions!(UpdateOptions? options) { _options = options; }
+ 
     public string() GetCurrentVersion() throws Exception
     {
         List<string()>() command;
@@ -20,21 +34,28 @@ public class UpdateManager : Platform
         return StartProcessBlocking(command);
     }
 
-    public UpdateInfo#? CheckForUpdates(string() urlOrPath, bool allowDowngrade, string() explicitChannel) throws Exception
+    /// This function will check for updates, and return information about the latest available release.
+    public UpdateInfo#? CheckForUpdates() throws Exception
     {
+        if (_options == null)
+        {
+            throw Exception("Please call SetOptions before trying to check for updates.");
+        }
+
         List<string()>() command;
         command.Add(Util.GetUpdateExePath());
         command.Add("check");
         command.Add("--url");
-        command.Add(urlOrPath);
+        command.Add(_options.GetUrlOrPath());
         command.Add("--format");
         command.Add("json");
 
-        if (allowDowngrade)
+        if (_options.GetAllowDowngrade())
         {
             command.Add("--downgrade");
         }
 
+        string() explicitChannel = _options.GetExplicitChannel();
         if (explicitChannel.Length > 0)
         {
             command.Add("--channel");
@@ -51,11 +72,49 @@ public class UpdateManager : Platform
         return UpdateInfo.FromJson(output);
     }
 
+    /// This function will request the update download, and then return immediately.
+    /// To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
+    public void DownloadUpdateAsync!(UpdateInfo# updateInfo) throws Exception
+    {
+        if (_options == null)
+        {
+            throw Exception("Please call SetOptions before trying to download updates.");
+        }
+
+        List<string()>() command;
+        command.Add(Util.GetUpdateExePath());
+        command.Add("download");
+        command.Add("--url");
+        command.Add(_options.GetUrlOrPath());
+        command.Add("--clean");
+        command.Add("--format");
+        command.Add("json");
+        command.Add("--name");
+        command.Add(updateInfo.TargetFullRelease.FileName);
+
+        StartProcessAsync(command);
+    }
+
     protected override bool HandleProcessOutputLine!(string() line)
     {
-        if (_progress != null)
+        ProgressEvent#? ev = ProgressEvent.FromJson(line);
+        if (ev == null)
         {
-            _progress.OnProgress(50);
+            // error parsing?
+            return true;
+        }
+
+        if (_options.GetProgressHandler() != null)
+        {
+            if (ev.Complete) {
+                _options.GetProgressHandler().OnComplete(ev.File);
+                return true;
+            } else if (ev.Error.Length > 0) {
+                _options.GetProgressHandler().OnError(ev.Error);
+                return true;
+            } else {
+                _options.GetProgressHandler().OnProgress(ev.Progress);
+            }
         }
         return false;
     }
