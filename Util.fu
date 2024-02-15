@@ -1,0 +1,131 @@
+#if JS
+native {
+    const app = require("electron").remote.app;
+    const fs = require("fs");
+}
+#endif
+
+public static class Util
+{
+    /// Returns the path of the current process.
+    public static string() GetCurrentProcessPath() throws Exception
+    {
+        string() ret = "";
+#if CPP
+        native { ret = util_get_own_exe_path(); }
+#elif CS
+        native { ret = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName; }
+#elif JS
+        native { ret = app.getAppPath(); } 
+#else
+        throw Exception("Unsupported platform");
+#endif
+        return ret;
+    }
+
+    public static bool FileExists(string() path) throws Exception
+    {
+        bool ret = false;
+#if CPP
+        native { ret = util_does_file_exist(path); }
+#elif CS
+        native { ret = System.IO.File.Exists(path); }
+#elif JS
+        native { ret = fs.existsSync(path); } 
+#else
+        throw Exception("Unsupported platform");
+#endif
+        return ret;
+    }
+
+    public static string() GetUpdateExePath() throws Exception
+    {
+        string() exePath = GetCurrentProcessPath();
+        if (IsWindows()) {
+            exePath = PathJoin(PathParent(PathParent(exePath)), "Update.exe");
+        } else if (IsLinux()) {
+            exePath = PathJoin(PathParent(exePath), "UpdateNix");
+        } else if (IsOsx()) {
+            exePath = PathJoin(PathParent(exePath), "UpdateMac");
+        } else {
+            throw Exception("Unsupported platform");
+        }
+
+        if (!FileExists(exePath)) {
+            throw Exception("Update executable not found: " + exePath);
+        }
+        return exePath;
+    }
+
+    public static string() StrTrim(string() str)
+    {
+        Match() match;
+        if (match.Find(str, "(\\S.*\\S|\\S)")) {
+            return match.GetCapture(1);
+        }
+        return str;
+    }
+
+    public static string() StrToLower(string() str)
+    {
+        string() res = "";
+#if CPP
+        native { res = util_string_to_lower(str); }
+#elif CS
+        native { res = str.ToLower(); }
+#elif JS
+        native { res = str.toLowerCase(); }
+#else
+        throw Exception("Unsupported platform");
+#endif
+        return res;
+    }
+
+    public static string() PathParent(string() str)
+    {
+        int ix_win = str.LastIndexOf("\\");
+        int ix_nix = str.LastIndexOf("/");
+        int ix = Math.Max(ix_win, ix_nix);
+        return str.Substring(0, ix);
+    }
+
+    public static string() PathJoin(string() s1, string() s2)
+    {
+        while (s1.EndsWith("/") || s1.EndsWith("\\")) {
+            s1 = s1.Substring(0, s1.Length - 1);
+        }
+        while (s2.StartsWith("/") || s2.StartsWith("\\")) {
+            s2 = s2.Substring(1);
+        }
+        return s1 + PathSeparator() + s2;
+    }
+
+    public static string PathSeparator()
+    {
+        if (IsWindows()) {
+            return "\\";
+        } else {
+            return "/";
+        }
+    }
+
+    public static bool IsWindows() { return GetOsName() == "win32"; }
+    public static bool IsLinux() { return GetOsName() == "linux"; }
+    public static bool IsOsx() { return GetOsName() == "darwin"; }
+
+    /// Returns the name of the operating system.
+    public static string() GetOsName()
+    {
+        string() ret = "";
+#if CPP
+        native { ret = util_current_os_name(); }
+#elif CS
+        native { ret = System.Runtime.InteropServices.RuntimeInformation.OSDescription; }
+#elif JS
+        native { ret = process.platform; } 
+#else
+        throw Exception("Unsupported platform");
+#endif
+        return ret;
+    }
+}

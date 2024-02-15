@@ -1,0 +1,147 @@
+
+#if CPP
+native {
+    #include <functional>
+    #include <iostream>
+    #include <fstream>
+    #include <sstream>
+    #include <thread>
+}
+#endif
+
+#if JS
+native {
+    const { execSync, spawn } = require("child_process");
+    function emitLines (stream) {
+        var backlog = "";
+        stream.on("data", function (data) {
+            backlog += data
+            var n = backlog.indexOf('\n')
+            // got a \n? emit one or more 'line' events
+            while (~n) {
+                stream.emit("line", backlog.substring(0, n))
+                backlog = backlog.substring(n + 1)
+                n = backlog.indexOf('\n')
+            }
+        })
+        stream.on("end", function () {
+            if (backlog) {
+                stream.emit("line", backlog)
+            }
+        })
+    }
+}
+#endif
+
+public abstract class Platform
+{
+    /// Starts a new process and sychronously reads/returns its output.
+    protected string() StartProcessBlocking(List<string()>() command_line) 
+    {
+        string() ret = "";
+#if CPP
+        native { 
+            const char** command_line_array = new const char* [command_line.size() + 1];
+            for (size_t i = 0; i < command_line.size(); ++i) {
+                command_line_array[i] = command_line[i].c_str();
+            }
+            command_line_array[command_line.size()] = NULL; // last element must be NULL
+
+            struct subprocess_s subprocess;
+            int result = subprocess_create(command_line_array, subprocess_option_no_window, &subprocess);
+            delete[] command_line_array; // clean up the array
+
+            if (result != 0) {
+                throw std::runtime_error("Unable to start Update process.");
+            }
+
+            // read all stdout from the process
+            FILE* p_stdout = subprocess_stdout(&subprocess);
+            std::filebuf buf = std::basic_filebuf<char>(p_stdout);
+            std::istream is(&buf);
+            std::stringstream buffer;
+            buffer << is.rdbuf();
+            ret = buffer.str();
+         }
+#elif JS || TS
+        native { ret = execSync(command, { encoding: "utf8" }); } 
+#else
+        throw Exception("Unsupported platform");
+#endif
+
+        return Util.StrTrim(ret);
+    }
+
+    /// In the current process, starts a new process and asychronously reads its output line by line.
+    /// When a line is read, HandleProcessOutputLine is called with the line. 
+    /// If HandleProcessOutputLine returns true, the reading loop is terminated.
+    /// This method is non-blocking and returns immediately.
+    protected void StartProcessAsync!(List<string()>() command_line)
+    {
+#if CPP
+        native { 
+            const char** command_line_array = new const char* [command_line.size() + 1];
+            for (size_t i = 0; i < command_line.size(); ++i) {
+                command_line_array[i] = command_line[i].c_str();
+            }
+            command_line_array[command_line.size()] = NULL; // last element must be NULL
+
+            struct subprocess_s subprocess;
+            int result = subprocess_create(command_line_array, subprocess_option_no_window | subprocess_option_enable_async, &subprocess);
+            delete[] command_line_array; // clean up the array
+
+            if (result != 0) {
+                throw std::runtime_error("Unable to start Update process.");
+            }
+
+            std::thread outputThread([subprocess, this]() mutable {
+                const unsigned BUFFER_SIZE = 1024;
+                char readBuffer[BUFFER_SIZE];
+                std::string accumulatedData;
+
+                // read all stdout from the process one line at a time
+                while (true) {
+                    unsigned bytesRead = subprocess_read_stdout(&subprocess, readBuffer, BUFFER_SIZE - 1);
+
+                    if (bytesRead == 0) {
+                        // bytesRead is 0, indicating the process has completed
+                        // Process any remaining data in accumulatedData as the last line if needed
+                        if (!accumulatedData.empty()) {
+                            handleProcessOutputLine(accumulatedData);
+                        }
+                        return;
+                    }
+
+                    accumulatedData += std::string(readBuffer, bytesRead);
+
+                    // Process accumulated data for lines
+                    size_t pos;
+                    while ((pos = accumulatedData.find('\n')) != std::string::npos) {
+                        std::string line = accumulatedData.substr(0, pos);
+                        if (handleProcessOutputLine(line)) {
+                            return; // complete or err
+                        }
+                        accumulatedData.erase(0, pos + 1);
+                    }
+                }
+            });
+        }
+#elif JS || TS
+        native { 
+            const child = spawn(command, args);
+            emitLines(child.stdout);
+            child.stdout.resume()
+            child.stdout.setEncoding("utf8")
+            child.stdout.on("line", (data) => {
+                handleProcessOutputLine(data)
+            });
+        } 
+#else
+        throw Exception("Unsupported platform");
+#endif
+    }
+
+    /// Called when a line is read from the process started by StartProcessReadLineThread.
+    /// If this method returns true, the reading loop is terminated.
+    protected abstract bool HandleProcessOutputLine!(string() line);
+}

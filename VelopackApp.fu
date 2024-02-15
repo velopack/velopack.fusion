@@ -1,0 +1,46 @@
+
+public static class VelopackApp
+{
+    public static void Run()
+    {
+        List<string()>() args;
+#if JS
+        native { args = process.argv; }
+#elif CS
+        native { args = Environment.GetCommandLineArgs().ToList(); }
+#else
+        throw Exception("Unsupported platform");
+#endif
+        HandleArgs(args);
+    }
+
+    static void HandleArgs(List<string()> args)
+    {
+        for (int i = 0; i < args.Count; i++) {
+            string() val = Util.StrToLower(Util.StrTrim(args[i]));
+            if (val == "--veloapp-install") {
+                Exit(0);
+            }
+            if (val == "--veloapp-updated") {
+                Exit(0);
+            }
+            if (val == "--veloapp-obsolete") {
+                Exit(0);
+            }
+            if (val == "--veloapp-uninstall") {
+                Exit(0);
+            }
+        }
+    }
+
+    static void Exit(int code)
+    {
+#if JS
+        native { process.exit(code) }
+#elif CS
+        native { Environment.Exit(code); }
+#else
+        throw Exception("Unsupported platform");
+#endif
+    }
+}

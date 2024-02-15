@@ -1,0 +1,216 @@
+public enum VelopackAssetType
+{
+    Unknown,
+    Full,
+    Delta
+}
+
+public class VelopackAsset 
+{
+    /// The name or Id of the package containing this release.
+    internal string() PackageId = "";
+
+    /// The version of this release.
+    internal string() Version = "";
+
+    /// The type of asset (eg. full or delta).
+    internal VelopackAssetType Type = VelopackAssetType.Unknown;
+
+    /// The filename of the update package containing this release.
+    internal string() FileName = "";
+
+    /// The SHA1 checksum of the update package containing this release.
+    internal string() Sha1 = "";
+
+    /// The size in bytes of the update package containing this release.
+    internal long Size = 0;
+
+    /// The release notes in markdown format, as passed to Velopack when packaging the release.
+    internal string() NotesMarkdown = "";
+
+    /// The release notes in HTML format, transformed from Markdown when packaging the release.
+    internal string() NotesHTML = "";
+
+    public static VelopackAsset() FromJson(string json)
+    {
+        string() id = "";
+        string() version = "";
+        string() type = "";
+        string() filename = "";
+        string() sha1 = "";
+        string() size = "";
+        string() markdown = "";
+        string() html = "";
+
+#if CPP
+        native { 
+            auto obj = nlohmann::json::parse(json);
+            for (auto& el : obj.items()) {
+                std::string key = el.key();
+                if (ci_equal(key, "id")) id = el.value();
+                else if (ci_equal(key, "version")) version = el.value();
+                else if (ci_equal(key, "type")) type = el.value();
+                else if (ci_equal(key, "filename")) filename = el.value();
+                else if (ci_equal(key, "sha1")) sha1 = el.value();
+                else if (ci_equal(key, "size")) size = el.value();
+                else if (ci_equal(key, "markdown")) markdown = el.value();
+                else if (ci_equal(key, "html")) html = el.value();
+            }
+        }
+#elif JS
+        native {
+            const obj = JSON.parse(json);
+            Object.keys(obj).forEach(key => {
+                // Convert both key and field names to lowercase for case-insensitive comparison
+                switch (key.toLowerCase()) {
+                    case "id":
+                        id = obj[key];
+                        break;
+                    case "version":
+                        version = obj[key];
+                        break;
+                    case "type":
+                        type = obj[key];
+                        break;
+                    case "filename":
+                        filename = obj[key];
+                        break;
+                    case "sha1":
+                        sha1 = obj[key];
+                        break;
+                    case "size":
+                        size = obj[key];
+                        break;
+                    case "markdown":
+                        markdown = obj[key];
+                        break;
+                    case "html":
+                        html = obj[key];
+                        break;
+                    // Add more cases as needed
+                }
+            });
+        }
+#else
+        throw Exception("Unsupported platform");
+#endif
+
+        VelopackAsset() asset;
+        asset.PackageId = id;
+        asset.Version = version;
+        asset.FileName = filename;
+        asset.Sha1 = sha1;
+        asset.NotesMarkdown = markdown;
+        asset.NotesHTML = html;
+
+        int i;
+        if (i.TryParse(size)) {
+            asset.Size = i;
+        }
+
+        if (type == "full" || type == "Full") {
+            asset.Type = VelopackAssetType.Full;
+        } else if (type == "delta" || type == "Delta") {
+            asset.Type = VelopackAssetType.Delta;
+        }
+
+        return asset;
+    }
+}
+
+public class UpdateInfo 
+{
+    internal VelopackAsset() TargetFullRelease;
+    internal bool IsDowngrade = false;
+    public static UpdateInfo#? FromJson(string json)
+    {
+        string() assetJson = "";
+        bool isDowngrade = false;
+
+#if CPP
+        native {
+            auto obj = nlohmann::json::parse(json);
+            for (auto& el : obj.items()) {
+                std::string key = el.key();
+                if (ci_equal(key, "targetfullrelease")) {
+                    assetJson = el.value().dump();
+                } else if (ci_equal(key, "isdowngrade")) {
+                    isDowngrade = el.value().get<bool>();
+                }
+            }
+        }
+#elif JS
+        native {
+            const obj = JSON.parse(json);
+            Object.keys(obj).forEach(key => {
+                if (key.toLowerCase() === "targetfullrelease") {
+                    assetJson = JSON.stringify(obj[key]);
+                } else if (key.toLowerCase() === "isdowngrade") {
+                    isDowngrade = obj[key];
+                }
+            });
+        }
+#else
+        throw Exception("Unsupported platform");
+#endif
+
+        if (assetJson.Length == 0) {
+            return null;
+        }
+
+        UpdateInfo#? updateInfo = new UpdateInfo();
+        updateInfo.TargetFullRelease = VelopackAsset.FromJson(assetJson);
+        updateInfo.IsDowngrade = isDowngrade;
+        return updateInfo;
+    }
+}
+
+// public class VelopackAssetFeed
+// {
+//     internal List<VelopackAsset()>! Assets;
+
+//     public static VelopackAssetFeed() FromJson(string json)
+//     {
+//         VelopackAssetFeed() feed;
+
+// #if CPP
+//         native {
+//             auto obj = nlohmann::json::parse(json);
+//             for (auto& el : obj.items()) {
+//                 std::string key = el.key();
+//                 // Convert the key to lowercase for case-insensitive comparison
+//                 std::transform(key.begin(), key.end(), key.begin(), ::tolower);
+//                 if (key == "assets" && el.value().is_array()) {
+//                     for (auto& assetObj : el.value()) {
+//                         feed.add(assetObj.dump());
+//                     }
+//                 }
+//             }
+//         }
+// #elif JS || TS
+//         native {
+//             const obj = JSON.parse(json);
+//             const keys = Object.keys(obj);
+//             for (const key of keys) {
+//                 // Convert the key to lowercase for case-insensitive comparison
+//                 if (key.toLowerCase() === "assets" && Array.isArray(obj[key])) {
+//                     obj[key].forEach(assetObj => {
+//                         feed.add(JSON.stringify(assetObj));
+//                     });
+//                 }
+//             }
+//         }
+// #else
+//         throw Exception("Unsupported platform");
+// #endif
+
+//         return feed;
+//     }
+
+//     void Add!(string() asset)
+//     {
+//         VelopackAsset() obj = VelopackAsset.FromJson(asset);
+//         Assets.Insert(0);
+//         Assets[0] = obj;
+//     }
+// }

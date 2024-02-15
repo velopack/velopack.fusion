@@ -1,0 +1,69 @@
+public abstract class ProgressHandler 
+{
+    public abstract void OnProgress(int progress);
+}
+
+public class UpdateManager : Platform
+{
+    ProgressHandler? _progress;
+
+    public void SetProgressHandler!(ProgressHandler? progress)
+    {
+        _progress = progress;
+    }
+
+    public string() GetCurrentVersion() throws Exception
+    {
+        List<string()>() command;
+        command.Add(Util.GetUpdateExePath());
+        command.Add("get-version");
+        return StartProcessBlocking(command);
+    }
+
+    public UpdateInfo#? CheckForUpdates(string() urlOrPath, bool allowDowngrade, string() explicitChannel) throws Exception
+    {
+        List<string()>() command;
+        command.Add(Util.GetUpdateExePath());
+        command.Add("check");
+        command.Add("--url");
+        command.Add(urlOrPath);
+        command.Add("--format");
+        command.Add("json");
+
+        if (allowDowngrade)
+        {
+            command.Add("--downgrade");
+        }
+
+        if (explicitChannel.Length > 0)
+        {
+            command.Add("--channel");
+            command.Add(explicitChannel);
+        }
+    
+        string() output = StartProcessBlocking(command);
+
+        if (output.Length == 0 || output == "null")
+        {
+            return null;
+        }
+
+        return UpdateInfo.FromJson(output);
+    }
+
+    protected override bool HandleProcessOutputLine!(string() line)
+    {
+        if (_progress != null)
+        {
+            _progress.OnProgress(50);
+        }
+        return false;
+    }
+
+
+
+    // string() GetUpdateExePath()
+    // {
+    //     GetCurrentProcessPath
+    // }
+}
