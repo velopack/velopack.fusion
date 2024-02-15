@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <algorithm>
 #include <cctype>
+#include <stdexcept>
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
@@ -96,6 +97,25 @@ bool ci_equal(const std::string& a, const std::string& b) {
         [](char a, char b) {
             return tolower(a) == tolower(b);
         });
+}
+
+subprocess_s util_start_subprocess(const std::vector<std::string>* command_line, int options) {
+    auto size = command_line->size();
+	const char** command_line_array = new const char* [size + 1];
+	for (size_t i = 0; i < size; ++i) {
+		command_line_array[i] = command_line->at(i).c_str();
+	}
+	command_line_array[size] = NULL; // last element must be NULL
+
+	struct subprocess_s subprocess;
+	int result = subprocess_create(command_line_array, options, &subprocess);
+	delete[] command_line_array; // clean up the array
+
+	if (result != 0) {
+		throw std::runtime_error("Unable to start Update process.");
+	}
+
+	return subprocess;
 }
 
 }

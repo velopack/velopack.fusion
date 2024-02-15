@@ -36,24 +36,12 @@ native {
 public abstract class Platform
 {
     /// Starts a new process and sychronously reads/returns its output.
-    protected string() StartProcessBlocking(List<string()>() command_line) 
+    protected string() StartProcessBlocking(List<string()> command_line) 
     {
         string() ret = "";
 #if CPP
         native { 
-            const char** command_line_array = new const char* [command_line.size() + 1];
-            for (size_t i = 0; i < command_line.size(); ++i) {
-                command_line_array[i] = command_line[i].c_str();
-            }
-            command_line_array[command_line.size()] = NULL; // last element must be NULL
-
-            struct subprocess_s subprocess;
-            int result = subprocess_create(command_line_array, subprocess_option_no_window, &subprocess);
-            delete[] command_line_array; // clean up the array
-
-            if (result != 0) {
-                throw std::runtime_error("Unable to start Update process.");
-            }
+	        subprocess_s subprocess = util_start_subprocess(command_line, subprocess_option_no_window);
 
             // read all stdout from the process
             FILE* p_stdout = subprocess_stdout(&subprocess);
@@ -72,27 +60,27 @@ public abstract class Platform
         return Util.StrTrim(ret);
     }
 
+    /// Starts a new process and sychronously reads/returns its output.
+    protected void StartProcessFireAndForget(List<string()> command_line) 
+    {
+#if CPP
+        native { util_start_subprocess(command_line, subprocess_option_no_window); }
+#elif JS || TS
+        native { execSync(command, { encoding: "utf8" }); } 
+#else
+        throw Exception("Unsupported platform");
+#endif
+    }
+
     /// In the current process, starts a new process and asychronously reads its output line by line.
     /// When a line is read, HandleProcessOutputLine is called with the line. 
     /// If HandleProcessOutputLine returns true, the reading loop is terminated.
     /// This method is non-blocking and returns immediately.
-    protected void StartProcessAsync!(List<string()>() command_line)
+    protected void StartProcessAsyncReadLine!(List<string()> command_line)
     {
 #if CPP
         native { 
-            const char** command_line_array = new const char* [command_line.size() + 1];
-            for (size_t i = 0; i < command_line.size(); ++i) {
-                command_line_array[i] = command_line[i].c_str();
-            }
-            command_line_array[command_line.size()] = NULL; // last element must be NULL
-
-            struct subprocess_s subprocess;
-            int result = subprocess_create(command_line_array, subprocess_option_no_window | subprocess_option_enable_async, &subprocess);
-            delete[] command_line_array; // clean up the array
-
-            if (result != 0) {
-                throw std::runtime_error("Unable to start Update process.");
-            }
+	        subprocess_s subprocess = util_start_subprocess(command_line, subprocess_option_no_window | subprocess_option_enable_async);
 
             std::thread outputThread([subprocess, this]() mutable {
                 const unsigned BUFFER_SIZE = 1024;

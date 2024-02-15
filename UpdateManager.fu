@@ -26,6 +26,8 @@ public class UpdateManager : Platform
     UpdateOptions? _options;
     public void SetOptions!(UpdateOptions? options) { _options = options; }
  
+    /// This function will return the current installed version of the application
+    /// or throw, if the application is not installed.
     public string() GetCurrentVersion() throws Exception
     {
         List<string()>() command;
@@ -91,8 +93,47 @@ public class UpdateManager : Platform
         command.Add("json");
         command.Add("--name");
         command.Add(updateInfo.TargetFullRelease.FileName);
+        StartProcessAsyncReadLine(command);
+    }
 
-        StartProcessAsync(command);
+    public void ApplyUpdatesAndExit(string() assetPath) throws Exception 
+    {
+        List<string()>() args;
+        WaitExitThenApplyUpdates(assetPath, false, false, args);
+        Util.Exit(0);
+    }
+
+    public void ApplyUpdatesAndRestart(string() assetPath, List<string()> restartArgs) throws Exception 
+    {
+        WaitExitThenApplyUpdates(assetPath, false, true, restartArgs);
+        Util.Exit(0);
+    }
+
+    public void WaitExitThenApplyUpdates(string() assetPath, bool silent, bool restart, List<string()> restartArgs) throws Exception 
+    {
+        List<string()>() command;
+        command.Add(Util.GetUpdateExePath());
+        if (silent) {
+            command.Add("--silent");
+        }
+        command.Add("apply");
+        command.Add("--wait");
+
+        if (assetPath.Length > 0) {
+            command.Add("--package");
+            command.Add(assetPath);
+        }
+
+        if (restart) {
+            command.Add("--restart");
+        }
+
+        if (restart && restartArgs.Count > 0) {
+            command.Add("--");
+            command.AddRange(restartArgs);
+        }
+
+        StartProcessFireAndForget(command);
     }
 
     protected override bool HandleProcessOutputLine!(string() line)
@@ -104,25 +145,21 @@ public class UpdateManager : Platform
             return true;
         }
 
-        if (_options.GetProgressHandler() != null)
+        if (_options.GetProgressHandler() == null) 
         {
-            if (ev.Complete) {
-                _options.GetProgressHandler().OnComplete(ev.File);
-                return true;
-            } else if (ev.Error.Length > 0) {
-                _options.GetProgressHandler().OnError(ev.Error);
-                return true;
-            } else {
-                _options.GetProgressHandler().OnProgress(ev.Progress);
-            }
+            // can stop parsing output if no progress handler is set
+            return true;
         }
-        return false;
+
+        if (ev.Complete) {
+            _options.GetProgressHandler().OnComplete(ev.File);
+            return true;
+        } else if (ev.Error.Length > 0) {
+            _options.GetProgressHandler().OnError(ev.Error);
+            return true;
+        } else {
+            _options.GetProgressHandler().OnProgress(ev.Progress);
+            return false;
+        }
     }
-
-
-
-    // string() GetUpdateExePath()
-    // {
-    //     GetCurrentProcessPath
-    // }
 }
