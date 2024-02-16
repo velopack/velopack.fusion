@@ -11,7 +11,7 @@ public class VelopackApp
     {
         List<string()>() args;
 #if JS
-        native { args = process.argv; }
+        native { Array.prototype.push.apply(args, process.argv); }
 #elif CS
         native { args = Environment.GetCommandLineArgs().ToList(); }
 #else

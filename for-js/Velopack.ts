@@ -150,7 +150,7 @@ export class VelopackApp
 	public run(): void
 	{
 		const args: string[] = [];
-		 args = process.argv; this.#handleArgs(args);
+		 Array.prototype.push.apply(args, process.argv); this.#handleArgs(args);
 	}
 
 	#handleArgs(args: readonly string[]): void
@@ -373,7 +373,7 @@ export abstract class Platform
             child.stdout.resume()
             child.stdout.setEncoding("utf8")
             child.stdout.on("line", (data) => {
-                handleProcessOutputLine(data)
+                this.handleProcessOutputLine(data)
             });
         }
 

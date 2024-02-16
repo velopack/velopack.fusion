@@ -121,7 +121,7 @@ public abstract class Platform
             child.stdout.resume()
             child.stdout.setEncoding("utf8")
             child.stdout.on("line", (data) => {
-                handleProcessOutputLine(data)
+                this.handleProcessOutputLine(data)
             });
         } 
 #else

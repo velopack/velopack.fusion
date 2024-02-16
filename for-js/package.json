@@ -1,0 +1,37 @@
+{
+  "name": "velopack",
+  "version": "0.0.2",
+  "description": "Quick and easy installer and automatic updates for cross-platform applications",
+  "main": "Velopack.js",
+  "scripts": {
+    "build": "tsc Velopack.ts --module es2020 --target es2020 --declaration --skipLibCheck",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/velopack/velopack.fusion.git"
+  },
+  "keywords": [
+    "updater",
+    "autoupdate",
+    "installer",
+    "desktop",
+    "squirrel",
+    "velopack",
+    "macos",
+    "windows",
+    "linux",
+    "automatic-updates"
+  ],
+  "author": "Caelan Sayler",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/velopack/velopack.fusion/issues"
+  },
+  "homepage": "https://github.com/velopack/velopack.fusion#readme",
+  "devDependencies": {
+    "@types/node": "^20.11.19",
+    "typescript": "^5.3.3",
+    "undici-types": "^6.6.2"
+  }
+}
