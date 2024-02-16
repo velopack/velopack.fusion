@@ -3,6 +3,7 @@
   "version": "0.0.2",
   "description": "Quick and easy installer and automatic updates for cross-platform applications",
   "main": "Velopack.js",
+  "types": "Velopack.d.ts",
   "scripts": {
     "build": "tsc Velopack.ts --module es2020 --target es2020 --declaration --skipLibCheck",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -18,9 +19,11 @@
     "desktop",
     "squirrel",
     "velopack",
+    "electron",
     "macos",
     "windows",
     "linux",
+    "cross-platform",
     "automatic-updates"
   ],
   "author": "Caelan Sayler",
@@ -31,7 +34,6 @@
   "homepage": "https://github.com/velopack/velopack.fusion#readme",
   "devDependencies": {
     "@types/node": "^20.11.19",
-    "typescript": "^5.3.3",
-    "undici-types": "^6.6.2"
+    "typescript": "^5.3.3"
   }
 }

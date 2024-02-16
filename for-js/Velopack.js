@@ -13,7 +13,7 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
 var _VelopackApp_instances, _VelopackApp_handleArgs, _UpdateOptions__allowDowngrade, _UpdateOptions__explicitChannel, _UpdateOptions__urlOrPath, _UpdateOptions__progress, _UpdateManager__options;
 const app = require("electron").remote.app;
 const fs = require("fs");
-const { execSync, spawn } = require("child_process");
+const { spawn, spawnSync } = require("child_process");
 function emitLines(stream) {
     var backlog = "";
     stream.on("data", function (data) {
@@ -321,14 +321,14 @@ export class Platform {
      */
     startProcessBlocking(command_line) {
         let ret = "";
-        ret = execSync(command, { encoding: "utf8" });
+        ret = spawnSync(command_line[0], command_line.slice(1), { encoding: "utf8" }).stdout;
         return Util.strTrim(ret);
     }
     /**
      * Starts a new process and sychronously reads/returns its output.
      */
     startProcessFireAndForget(command_line) {
-        execSync(command, { encoding: "utf8" });
+        spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
     }
     /**
      * In the current process, starts a new process and asychronously reads its output line by line.
@@ -337,7 +337,7 @@ export class Platform {
      * This method is non-blocking and returns immediately.
      */
     startProcessAsyncReadLine(command_line) {
-        const child = spawn(command, args);
+        const child = spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
         emitLines(child.stdout);
         child.stdout.resume();
         child.stdout.setEncoding("utf8");

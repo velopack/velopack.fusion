@@ -3,7 +3,7 @@
     const app = require("electron").remote.app;
     const fs = require("fs");
 
-    const { execSync, spawn } = require("child_process");
+    const { spawn, spawnSync } = require("child_process");
     function emitLines (stream) {
         var backlog = "";
         stream.on("data", function (data) {
@@ -349,7 +349,7 @@ export abstract class Platform
 	protected startProcessBlocking(command_line: readonly string[]): string
 	{
 		let ret: string = "";
-		 ret = execSync(command, { encoding: "utf8" }); return Util.strTrim(ret);
+		 ret = spawnSync(command_line[0], command_line.slice(1), { encoding: "utf8" }).stdout; return Util.strTrim(ret);
 	}
 
 	/**
@@ -357,7 +357,7 @@ export abstract class Platform
 	 */
 	protected startProcessFireAndForget(command_line: readonly string[]): void
 	{
-		 execSync(command, { encoding: "utf8" }); }
+		 spawn(command_line[0], command_line.slice(1), { encoding: "utf8" }); }
 
 	/**
 	 * In the current process, starts a new process and asychronously reads its output line by line.
@@ -367,8 +367,8 @@ export abstract class Platform
 	 */
 	protected startProcessAsyncReadLine(command_line: readonly string[]): void
 	{
-		 
-            const child = spawn(command, args);
+		
+            const child = spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
             emitLines(child.stdout);
             child.stdout.resume()
             child.stdout.setEncoding("utf8")
