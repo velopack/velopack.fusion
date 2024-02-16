@@ -31,7 +31,7 @@ public class VelopackAsset
     /// The release notes in HTML format, transformed from Markdown when packaging the release.
     internal string() NotesHTML = "";
 
-    public static VelopackAsset() FromJson(string json)
+    public static VelopackAsset#? FromJson(string json)
     {
         string() id = "";
         string() version = "";
@@ -95,7 +95,7 @@ public class VelopackAsset
         throw Exception("Unsupported platform");
 #endif
 
-        VelopackAsset() asset;
+        VelopackAsset#? asset = new VelopackAsset();
         asset.PackageId = id;
         asset.Version = version;
         asset.FileName = filename;
@@ -120,7 +120,7 @@ public class VelopackAsset
 
 public class UpdateInfo 
 {
-    internal VelopackAsset() TargetFullRelease;
+    internal VelopackAsset#? TargetFullRelease;
     internal bool IsDowngrade = false;
     public static UpdateInfo#? FromJson(string json)
     {

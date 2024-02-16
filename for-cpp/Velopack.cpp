@@ -116,7 +116,7 @@ void Util::exit(int code)
 {
 	 exit(code); }
 
-VelopackAsset VelopackAsset::fromJson(std::string_view json)
+std::unique_ptr<VelopackAsset> VelopackAsset::fromJson(std::string_view json)
 {
 	std::string id{""};
 	std::string version{""};
@@ -139,22 +139,22 @@ VelopackAsset VelopackAsset::fromJson(std::string_view json)
                 else if (ci_equal(key, "markdown")) markdown = el.value();
                 else if (ci_equal(key, "html")) html = el.value();
             }
-        VelopackAsset asset;
-	asset.packageId = id;
-	asset.version = version;
-	asset.fileName = filename;
-	asset.sha1 = sha1;
-	asset.notesMarkdown = markdown;
-	asset.notesHTML = html;
+        std::unique_ptr<VelopackAsset> asset = std::make_unique<VelopackAsset>();
+	asset->packageId = id;
+	asset->version = version;
+	asset->fileName = filename;
+	asset->sha1 = sha1;
+	asset->notesMarkdown = markdown;
+	asset->notesHTML = html;
 	int i;
 	if ([&] { char *ciend; i = std::strtol(size.data(), &ciend, 10); return *ciend == '\0'; }()) {
-		asset.size = i;
+		asset->size = i;
 	}
 	if (type == "full" || type == "Full") {
-		asset.type = VelopackAssetType::full;
+		asset->type = VelopackAssetType::full;
 	}
 	else if (type == "delta" || type == "Delta") {
-		asset.type = VelopackAssetType::delta;
+		asset->type = VelopackAssetType::delta;
 	}
 	return asset;
 }
@@ -369,7 +369,7 @@ void UpdateManager::downloadUpdateAsync(std::unique_ptr<UpdateInfo> updateInfo)
 	command.push_back("--format");
 	command.push_back("json");
 	command.push_back("--name");
-	command.push_back(updateInfo->targetFullRelease.fileName);
+	command.push_back(updateInfo->targetFullRelease->fileName);
 	startProcessAsyncReadLine(&command);
 }
 

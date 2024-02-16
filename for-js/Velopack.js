@@ -235,7 +235,7 @@ export class VelopackAsset {
                 // Add more cases as needed
             }
         });
-        const asset = new VelopackAsset();
+        let asset = new VelopackAsset();
         asset.packageId = id;
         asset.version = version;
         asset.fileName = filename;
@@ -257,7 +257,6 @@ export class VelopackAsset {
 }
 export class UpdateInfo {
     constructor() {
-        this.targetFullRelease = new VelopackAsset();
         this.isDowngrade = false;
     }
     static fromJson(json) {

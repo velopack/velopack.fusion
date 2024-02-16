@@ -63,10 +63,10 @@ export declare class VelopackAsset {
      * The release notes in HTML format, transformed from Markdown when packaging the release.
      */
     notesHTML: string;
-    static fromJson(json: string): VelopackAsset;
+    static fromJson(json: string): VelopackAsset | null;
 }
 export declare class UpdateInfo {
-    readonly targetFullRelease: VelopackAsset;
+    targetFullRelease: VelopackAsset | null;
     isDowngrade: boolean;
     static fromJson(json: string): UpdateInfo | null;
 }

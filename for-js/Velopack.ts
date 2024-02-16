@@ -214,7 +214,7 @@ export class VelopackAsset
 	 */
 	notesHTML: string = "";
 
-	public static fromJson(json: string): VelopackAsset
+	public static fromJson(json: string): VelopackAsset | null
 	{
 		let id: string = "";
 		let version: string = "";
@@ -256,7 +256,7 @@ export class VelopackAsset
                     // Add more cases as needed
                 }
             });
-        const asset: VelopackAsset = new VelopackAsset();
+        let asset: VelopackAsset | null = new VelopackAsset();
 		asset.packageId = id;
 		asset.version = version;
 		asset.fileName = filename;
@@ -279,7 +279,7 @@ export class VelopackAsset
 
 export class UpdateInfo
 {
-	readonly targetFullRelease: VelopackAsset = new VelopackAsset();
+	targetFullRelease: VelopackAsset | null;
 	isDowngrade: boolean = false;
 
 	public static fromJson(json: string): UpdateInfo | null

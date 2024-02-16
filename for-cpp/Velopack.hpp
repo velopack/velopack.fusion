@@ -26042,7 +26042,7 @@ class VelopackAsset
 {
 public:
 	VelopackAsset() = default;
-	static VelopackAsset fromJson(std::string_view json);
+	static std::unique_ptr<VelopackAsset> fromJson(std::string_view json);
 public:
 	/**
 	 * The name or Id of the package containing this release.
@@ -26084,7 +26084,7 @@ public:
 	UpdateInfo() = default;
 	static std::unique_ptr<UpdateInfo> fromJson(std::string_view json);
 public:
-	VelopackAsset targetFullRelease;
+	std::unique_ptr<VelopackAsset> targetFullRelease;
 	bool isDowngrade = false;
 };
 
