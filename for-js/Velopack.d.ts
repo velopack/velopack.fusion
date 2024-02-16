@@ -7,7 +7,6 @@ export declare class Util {
     static fileExists(path: string): boolean;
     static getUpdateExePath(): string;
     static strTrim(str: string): string;
-    static strToLower(str: string): string;
     static pathParent(str: string): string;
     static pathJoin(s1: string, s2: string): string;
     static pathSeparator(): string;

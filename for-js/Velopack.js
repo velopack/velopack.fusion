@@ -74,11 +74,6 @@ export class Util {
         }
         return str;
     }
-    static strToLower(str) {
-        let res = "";
-        res = str.toLowerCase();
-        return res;
-    }
     static pathParent(str) {
         let ix_win = str.lastIndexOf("\\");
         let ix_nix = str.lastIndexOf("/");
@@ -139,7 +134,7 @@ export class VelopackApp {
 }
 _VelopackApp_instances = new WeakSet(), _VelopackApp_handleArgs = function _VelopackApp_handleArgs(args) {
     for (let i = 0; i < args.length; i++) {
-        let val = Util.strToLower(Util.strTrim(args[i]));
+        let val = Util.strTrim(args[i]).toLowerCase();
         if (val == "--veloapp-install") {
             Util.exit(0);
         }

@@ -49,17 +49,11 @@ std::string Util::getUpdateExePath()
 
 std::string Util::strTrim(std::string str)
 {
-	std::smatch match;
-	if (std::regex_search(str, match, std::regex("(\\S.*\\S|\\S)"))) {
+	std::cmatch match;
+	if (std::regex_search(str.c_str(), match, std::regex("(\\S.*\\S|\\S)"))) {
 		return match.str(1);
 	}
 	return str;
-}
-
-std::string Util::strToLower(std::string str)
-{
-	std::string res{""};
-	 res = util_string_to_lower(str); return res;
 }
 
 std::string Util::pathParent(std::string str)

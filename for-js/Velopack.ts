@@ -74,12 +74,6 @@ export class Util
 		return str;
 	}
 
-	public static strToLower(str: string): string
-	{
-		let res: string = "";
-		 res = str.toLowerCase(); return res;
-	}
-
 	public static pathParent(str: string): string
 	{
 		let ix_win: number = str.lastIndexOf("\\");
@@ -156,7 +150,7 @@ export class VelopackApp
 	#handleArgs(args: readonly string[]): void
 	{
 		for (let i: number = 0; i < args.length; i++) {
-			let val: string = Util.strToLower(Util.strTrim(args[i]));
+			let val: string = Util.strTrim(args[i]).toLowerCase();
 			if (val == "--veloapp-install") {
 				Util.exit(0);
 			}

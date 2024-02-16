@@ -23,7 +23,7 @@ public class VelopackApp
     void HandleArgs(List<string()> args)
     {
         for (int i = 0; i < args.Count; i++) {
-            string() val = Util.StrToLower(Util.StrTrim(args[i]));
+            string() val = Util.StrTrim(args[i]).ToLower();
             if (val == "--veloapp-install") {
                 Util.Exit(0);
             }

@@ -66,21 +66,6 @@ public static class Util
         return str;
     }
 
-    public static string() StrToLower(string() str)
-    {
-        string() res = "";
-#if CPP
-        native { res = util_string_to_lower(str); }
-#elif CS
-        native { res = str.ToLower(); }
-#elif JS
-        native { res = str.toLowerCase(); }
-#else
-        throw Exception("Unsupported platform");
-#endif
-        return res;
-    }
-
     public static string() PathParent(string() str)
     {
         int ix_win = str.LastIndexOf("\\");

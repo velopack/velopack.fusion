@@ -26022,7 +26022,6 @@ public:
 	static bool fileExists(std::string path);
 	static std::string getUpdateExePath();
 	static std::string strTrim(std::string str);
-	static std::string strToLower(std::string str);
 	static std::string pathParent(std::string str);
 	static std::string pathJoin(std::string s1, std::string s2);
 	static std::string_view pathSeparator();
