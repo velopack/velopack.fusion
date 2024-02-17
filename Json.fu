@@ -1,0 +1,280 @@
+// class State {
+//     internal String() propertyName;
+//     internal JsonNode# container;
+//     internal JsonNodeType Type;
+// }
+
+public enum JsonNodeType
+{
+    Null,
+    Bool,
+    Array,
+    Object,
+    Int,
+    Double,
+    String
+}
+
+// public class JsonNode
+// {
+//     /// Get the type of this node, such as string, object, array, etc.
+//     /// You should use this function and then call the corresponding
+//     /// AsObject, AsArray, AsString, etc. functions to get the actual
+//     /// parsed json information.
+//     // public JsonNodeType GetType();
+
+//     /// Reinterpret a JSON value as an object. Throws exception if the value type was not an object.
+//     // public Dictionary<string(), JsonNode#> AsObject();
+//     /// Reinterpret a JSON value as an array. Throws exception if the value type was not an array.
+//     // public List<JsonNode#> AsArray();
+//     /// Reinterpret a JSON value as an integer. Throws exception if the value type was not an integer.
+//     // public int AsInt();
+//     /// Reinterpret a JSON value as a double. Throws exception if the value type was not a double.
+//     // public double AsDouble();
+//     /// Reinterpret a JSON value as a boolean. Throws exception if the value type was not a boolean.
+//     // public bool AsBool();
+//     /// Reinterpret a JSON value as a string. Throws exception if the value type was not a string.
+//     // public string AsString();
+
+//     /// Try to parse a json string to a JsonNode object model. If the parsing fails,
+//     /// the JsonNode.Type will be null and this method will return false.
+//     // public bool TryParse(string jsonText);
+
+//     /// Parses the json text into a JsonNode object model, or throws an exception if the parsing fails.
+   
+// }
+
+// public class JsonParser
+// {
+    // public bool Parse(string jsonText)
+    // {
+
+    // }
+// }
+
+enum JsonToken { None, CurlyOpen, CurlyClose, SquareOpen, SquareClose, Colon, Comma, String, Number, Bool, Null }
+
+// https://github.com/gering/Tiny-JSON/blob/master/Tiny-JSON/Tiny-JSON/JsonParser.cs
+public class JsonParser
+{
+    string() text = "";
+    int position = 0;
+    StringWriter() builder;
+    TextWriter! writer;
+
+    public void Load!(string text)
+    {
+        this.text = text;
+        this.position = 0;
+        this.builder.Clear();
+        this.writer = builder;
+    }
+
+    public bool EndReached()
+    {
+        return position >= text.Length;
+    }
+
+    public int Read!()
+    {
+        if (position >= text.Length)
+        {
+            return -1;
+        }
+        int c = text[position];
+        position++;
+        return c;
+    }
+
+    public int Peek()
+    {
+        if (position >= text.Length)
+        {
+            return -1;
+        }
+        return text[position];
+    }
+
+    public bool PeekWhitespace()
+    {
+        int c = Peek();
+        return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+    }
+
+    public bool PeekWordbreak()
+    {
+        int c = Peek();
+        return c == ' ' || c == ',' || c == ':' || c == '\"' || c == '{' || c == '}' 
+            || c == '[' || c == ']' || c == '\t' || c == '\n' || c == '\r';
+    }
+
+    JsonToken PeekToken!() {
+        EatWhitespace();
+        if (EndReached()) return JsonToken.None;
+        switch (Peek()) {
+            case '{':
+                return JsonToken.CurlyOpen;
+            case '}':
+                return JsonToken.CurlyClose;
+            case '[':
+                return JsonToken.SquareOpen;
+            case ']':
+                return JsonToken.SquareClose;
+            case ',':
+                return JsonToken.Comma;
+            case '"':
+                return JsonToken.String;
+            case ':':
+                return JsonToken.Colon;
+            case '0':
+            case '1':
+            case '2':
+            case '3':
+            case '4':
+            case '5':
+            case '6':
+            case '7':
+            case '8':
+            case '9':
+            case '-':
+                return JsonToken.Number;
+            case 't':
+            case 'f':
+                return JsonToken.Bool;
+            case 'n':
+                return JsonToken.Null;
+            default:
+                return JsonToken.None;
+        }
+    }
+
+    public void EatWhitespace!()
+    {
+        while (!EndReached() && PeekWhitespace())
+        {
+            Read();
+        }
+    }
+
+    public string() ReadWord!()
+    {
+        builder.Clear();
+        while (!EndReached() && !PeekWordbreak())
+        {
+            writer.WriteChar(Read());
+        }
+        if (EndReached()) {
+            return "";
+        }
+        return builder.ToString();
+    }
+
+    public void ParseNull!() throws Exception 
+    {
+        if (PeekToken() != JsonToken.Null) {
+            throw Exception("Expected null");
+        }
+        ReadWord();
+    }
+
+    public double ParseNumber!() throws Exception 
+    {
+        if (PeekToken() != JsonToken.Number) {
+            throw Exception("Expected number");
+        }
+        double d;
+        if (d.TryParse(ReadWord())) {
+            return d;
+        }
+
+        throw Exception("Invalid number");
+    }
+
+    public string() ParseString!() throws Exception
+    {
+        if (PeekToken() != JsonToken.String) {
+            throw Exception("Expected string");
+        }
+        builder.Clear();
+        Read(); // ditch opening quote
+      
+        while (true) {
+            if (EndReached()) return "";
+            int c = Read();
+            switch (c) {
+                case '"':
+                    return builder.ToString();
+                case '\\':
+                    if (EndReached()) return "";
+                    
+                    c = Read();
+                    switch (c) {
+                        case '"':
+                        case '\\':
+                        case '/':
+                            writer.WriteChar(c);
+                            break;
+                        case 'b':
+                            writer.WriteChar(0x0008); // backspace
+                            break;
+                        case 'f':
+                            writer.WriteChar(0x000C); // form feed
+                            break;
+                        case 'n':
+                            writer.WriteChar('\n');
+                            break;
+                        case 'r':
+                            writer.WriteChar('\r');
+                            break;
+                        case 't':
+                            writer.WriteChar('\t');
+                            break;
+                        case 'u':
+                            string() hex = $"{Read()}{Read()}{Read()}{Read()}";
+                            int i;
+                            if (i.TryParse(hex, 16)) {
+                                writer.WriteChar(i);
+                            } else {
+                                throw Exception("Invalid unicode escape");
+                            }
+                            break;
+                    }
+                    break;
+                default:
+                    writer.WriteChar(c);
+                    break;
+            }
+        }
+    }
+}
+
+// public class StringBuilder
+// {
+//     List<string()>() parts;
+
+//     public void AppendChar!(int text)
+//     {
+//         parts.Add($"{text}");
+//     }
+
+//     public void Append!(string text)
+//     {
+//         parts.Add(text);
+//     }
+
+//     public void AppendLine!(string text)
+//     {
+//         parts.Add(text);
+//         parts.Add("\n");
+//     }
+
+//     public string() ToString()
+//     {
+//         string() result = "";
+//         foreach (string() part in parts)
+//         {
+//             result = result + part;
+//         }
+//         return result;
+//     }
+// }
