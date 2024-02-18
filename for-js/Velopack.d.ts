@@ -51,27 +51,6 @@ export declare class JsonNode {
     initNumber(value: number): void;
     initString(value: string): void;
 }
-export declare class Util {
-    private constructor();
-    /**
-     * Returns the path of the current process.
-     */
-    static getCurrentProcessPath(): string;
-    static fileExists(path: string): boolean;
-    static getUpdateExePath(): string;
-    static strTrim(str: string): string;
-    static pathParent(str: string): string;
-    static pathJoin(s1: string, s2: string): string;
-    static pathSeparator(): string;
-    static isWindows(): boolean;
-    static isLinux(): boolean;
-    static isOsx(): boolean;
-    /**
-     * Returns the name of the operating system.
-     */
-    static getOsName(): string;
-    static exit(code: number): void;
-}
 export declare class VelopackApp {
     #private;
     static build(): VelopackApp;
@@ -115,47 +94,33 @@ export declare class VelopackAsset {
      * The release notes in HTML format, transformed from Markdown when packaging the release.
      */
     notesHTML: string;
-    static fromJson(json: string): VelopackAsset | null;
-    static fromNode(node: JsonNode): VelopackAsset | null;
+    static fromJson(json: string): VelopackAsset;
+    static fromNode(node: JsonNode): VelopackAsset;
 }
 export declare class UpdateInfo {
-    targetFullRelease: VelopackAsset | null;
+    targetFullRelease: VelopackAsset;
     isDowngrade: boolean;
-    static fromJson(json: string): UpdateInfo | null;
+    static fromJson(json: string): UpdateInfo;
 }
 export declare class ProgressEvent {
     file: string;
     complete: boolean;
     progress: number;
     error: string;
-    static fromJson(json: string): ProgressEvent | null;
+    static fromJson(json: string): ProgressEvent;
 }
-export declare abstract class Platform {
+export declare abstract class ProcessReadLineHandler {
     /**
-     * Starts a new process and sychronously reads/returns its output.
-     */
-    protected startProcessBlocking(command_line: readonly string[]): string;
-    /**
-     * Starts a new process and sychronously reads/returns its output.
-     */
-    protected startProcessFireAndForget(command_line: readonly string[]): void;
-    /**
-     * In the current process, starts a new process and asychronously reads its output line by line.
-     * When a line is read, HandleProcessOutputLine is called with the line.
-     * If HandleProcessOutputLine returns true, the reading loop is terminated.
-     * This method is non-blocking and returns immediately.
-     */
-    protected startProcessAsyncReadLine(command_line: readonly string[]): void;
-    /**
-     * Called when a line is read from the process started by StartProcessReadLineThread.
+     * Called when a line of output is read from the process.
      * If this method returns true, the reading loop is terminated.
      */
-    protected abstract handleProcessOutputLine(line: string): boolean;
+    abstract handleProcessOutputLine(line: string): boolean;
 }
-export declare abstract class ProgressHandler {
+export declare abstract class ProgressHandler extends ProcessReadLineHandler {
     abstract onProgress(progress: number): void;
     abstract onComplete(assetPath: string): void;
     abstract onError(error: string): void;
+    handleProcessOutputLine(line: string): boolean;
 }
 export declare class UpdateOptions {
     #private;
@@ -165,10 +130,10 @@ export declare class UpdateOptions {
     getAllowDowngrade(): boolean;
     setExplicitChannel(explicitChannel: string): void;
     getExplicitChannel(): string;
-    setProgressHandler(progress: ProgressHandler | null): void;
-    getProgressHandler(): ProgressHandler | null;
+    setProgressHandler(progress: ProgressHandler): void;
+    getProgressHandler(): ProgressHandler;
 }
-export declare class UpdateManager extends Platform {
+export declare class UpdateManager {
     #private;
     setOptions(options: UpdateOptions | null): void;
     /**
@@ -188,5 +153,4 @@ export declare class UpdateManager extends Platform {
     applyUpdatesAndExit(assetPath: string): void;
     applyUpdatesAndRestart(assetPath: string, restartArgs: readonly string[]): void;
     waitExitThenApplyUpdates(assetPath: string, silent: boolean, restart: boolean, restartArgs: readonly string[]): void;
-    protected handleProcessOutputLine(line: string): boolean;
 }

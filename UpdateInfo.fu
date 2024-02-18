@@ -31,15 +31,15 @@ public class VelopackAsset
     /// The release notes in HTML format, transformed from Markdown when packaging the release.
     internal string() NotesHTML = "";
 
-    public static VelopackAsset#? FromJson(string json) throws Exception, JsonParseException
+    public static VelopackAsset# FromJson(string json) throws Exception, JsonParseException
     {
         JsonNode# node = JsonNode.Parse(json);
         return FromNode(node);
     }
 
-    public static VelopackAsset#? FromNode(JsonNode# node) throws Exception, JsonParseException
+    public static VelopackAsset# FromNode(JsonNode# node) throws Exception, JsonParseException
     {
-        VelopackAsset#? asset = new VelopackAsset();
+        VelopackAsset# asset = new VelopackAsset();
         foreach((string k, JsonNode# v) in node.AsObject()) 
         {
             switch (k.ToLower()) 
@@ -77,9 +77,9 @@ public class VelopackAsset
 
 public class UpdateInfo 
 {
-    internal VelopackAsset#? TargetFullRelease;
+    internal VelopackAsset# TargetFullRelease;
     internal bool IsDowngrade = false;
-    public static UpdateInfo#? FromJson(string json) throws Exception, JsonParseException
+    public static UpdateInfo# FromJson(string json) throws Exception, JsonParseException
     {
         JsonNode# node = JsonNode.Parse(json);
         UpdateInfo#? updateInfo = new UpdateInfo();
@@ -106,10 +106,10 @@ public class ProgressEvent
     internal int Progress = 0;
     internal string() Error = "";
 
-    public static ProgressEvent#? FromJson(string json) throws Exception, JsonParseException
+    public static ProgressEvent# FromJson(string json) throws Exception, JsonParseException
     {
         JsonNode# node = JsonNode.Parse(json);
-        ProgressEvent#? progressEvent = new ProgressEvent();
+        ProgressEvent# progressEvent = new ProgressEvent();
         foreach((string k, JsonNode# v) in node.AsObject()) 
         {
             switch (k.ToLower()) 

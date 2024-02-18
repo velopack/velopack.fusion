@@ -204,7 +204,7 @@ export class JsonNode
 class StringAppendable
 {
 	readonly #builder: StringWriter = new StringWriter();
-	#writer: TextWriter;
+	#writer: StringWriter;
 	#initialised: boolean;
 
 	public clear(): void
@@ -532,7 +532,7 @@ class JsonParser
 	}
 }
 
-export class Util
+class Util
 {
 	private constructor()
 	{
@@ -717,15 +717,15 @@ export class VelopackAsset
 	 */
 	notesHTML: string = "";
 
-	public static fromJson(json: string): VelopackAsset | null
+	public static fromJson(json: string): VelopackAsset
 	{
 		let node: JsonNode = JsonNode.parse(json);
 		return VelopackAsset.fromNode(node);
 	}
 
-	public static fromNode(node: JsonNode): VelopackAsset | null
+	public static fromNode(node: JsonNode): VelopackAsset
 	{
-		let asset: VelopackAsset | null = new VelopackAsset();
+		let asset: VelopackAsset = new VelopackAsset();
 		for (const [k, v] of Object.entries(node.asObject())) {
 			switch (k.toLowerCase()) {
 			case "id":
@@ -760,10 +760,10 @@ export class VelopackAsset
 
 export class UpdateInfo
 {
-	targetFullRelease: VelopackAsset | null;
+	targetFullRelease: VelopackAsset;
 	isDowngrade: boolean = false;
 
-	public static fromJson(json: string): UpdateInfo | null
+	public static fromJson(json: string): UpdateInfo
 	{
 		let node: JsonNode = JsonNode.parse(json);
 		let updateInfo: UpdateInfo | null = new UpdateInfo();
@@ -788,10 +788,10 @@ export class ProgressEvent
 	progress: number = 0;
 	error: string = "";
 
-	public static fromJson(json: string): ProgressEvent | null
+	public static fromJson(json: string): ProgressEvent
 	{
 		let node: JsonNode = JsonNode.parse(json);
-		let progressEvent: ProgressEvent | null = new ProgressEvent();
+		let progressEvent: ProgressEvent = new ProgressEvent();
 		for (const [k, v] of Object.entries(node.asObject())) {
 			switch (k.toLowerCase()) {
 			case "file":
@@ -812,13 +812,26 @@ export class ProgressEvent
 	}
 }
 
-export abstract class Platform
+export abstract class ProcessReadLineHandler
 {
+
+	/**
+	 * Called when a line of output is read from the process.
+	 * If this method returns true, the reading loop is terminated.
+	 */
+	public abstract handleProcessOutputLine(line: string): boolean;
+}
+
+class Process
+{
+	private constructor()
+	{
+	}
 
 	/**
 	 * Starts a new process and sychronously reads/returns its output.
 	 */
-	protected startProcessBlocking(command_line: readonly string[]): string
+	public static startProcessBlocking(command_line: readonly string[]): string
 	{
 		if (command_line.length == 0) {
 			throw new Error("Command line is empty");
@@ -828,9 +841,9 @@ export abstract class Platform
 	}
 
 	/**
-	 * Starts a new process and sychronously reads/returns its output.
+	 * Starts a new process and returns immediately.
 	 */
-	protected startProcessFireAndForget(command_line: readonly string[]): void
+	public static startProcessFireAndForget(command_line: readonly string[]): void
 	{
 		if (command_line.length == 0) {
 			throw new Error("Command line is empty");
@@ -843,7 +856,7 @@ export abstract class Platform
 	 * If HandleProcessOutputLine returns true, the reading loop is terminated.
 	 * This method is non-blocking and returns immediately.
 	 */
-	protected startProcessAsyncReadLine(command_line: readonly string[]): void
+	public static startProcessAsyncReadLine(command_line: readonly string[], handler: ProcessReadLineHandler): void
 	{
 		if (command_line.length == 0) {
 			throw new Error("Command line is empty");
@@ -854,18 +867,12 @@ export abstract class Platform
             child.stdout.resume()
             child.stdout.setEncoding("utf8")
             child.stdout.on("line", (data) => {
-                this.handleProcessOutputLine(data)
+                handler.handleProcessOutputLine(data)
             });
         }
-
-	/**
-	 * Called when a line is read from the process started by StartProcessReadLineThread.
-	 * If this method returns true, the reading loop is terminated.
-	 */
-	protected abstract handleProcessOutputLine(line: string): boolean;
 }
 
-export abstract class ProgressHandler
+export abstract class ProgressHandler extends ProcessReadLineHandler
 {
 
 	public abstract onProgress(progress: number): void;
@@ -873,6 +880,39 @@ export abstract class ProgressHandler
 	public abstract onComplete(assetPath: string): void;
 
 	public abstract onError(error: string): void;
+
+	public handleProcessOutputLine(line: string): boolean
+	{
+		let ev: ProgressEvent = ProgressEvent.fromJson(line);
+		if (ev.complete) {
+			this.onComplete(ev.file);
+			return true;
+		}
+		else if (ev.error.length > 0) {
+			this.onError(ev.error);
+			return true;
+		}
+		else {
+			this.onProgress(ev.progress);
+			return false;
+		}
+	}
+}
+
+class DefaultProgressHandler extends ProgressHandler
+{
+
+	public onProgress(progress: number): void
+	{
+	}
+
+	public onComplete(assetPath: string): void
+	{
+	}
+
+	public onError(error: string): void
+	{
+	}
 }
 
 export class UpdateOptions
@@ -880,7 +920,7 @@ export class UpdateOptions
 	#_allowDowngrade: boolean = false;
 	#_explicitChannel: string = "";
 	#_urlOrPath: string = "";
-	#_progress: ProgressHandler | null;
+	#_progress: ProgressHandler = new DefaultProgressHandler();
 
 	public setUrlOrPath(urlOrPath: string): void
 	{
@@ -912,18 +952,18 @@ export class UpdateOptions
 		return this.#_explicitChannel;
 	}
 
-	public setProgressHandler(progress: ProgressHandler | null): void
+	public setProgressHandler(progress: ProgressHandler): void
 	{
 		this.#_progress = progress;
 	}
 
-	public getProgressHandler(): ProgressHandler | null
+	public getProgressHandler(): ProgressHandler
 	{
 		return this.#_progress;
 	}
 }
 
-export class UpdateManager extends Platform
+export class UpdateManager
 {
 	#_options: UpdateOptions | null;
 
@@ -941,7 +981,7 @@ export class UpdateManager extends Platform
 		const command: string[] = [];
 		command.push(Util.getUpdateExePath());
 		command.push("get-version");
-		return this.startProcessBlocking(command);
+		return Process.startProcessBlocking(command);
 	}
 
 	/**
@@ -967,7 +1007,7 @@ export class UpdateManager extends Platform
 			command.push("--channel");
 			command.push(explicitChannel);
 		}
-		let output: string = this.startProcessBlocking(command);
+		let output: string = Process.startProcessBlocking(command);
 		if (output.length == 0 || output == "null") {
 			return null;
 		}
@@ -993,7 +1033,7 @@ export class UpdateManager extends Platform
 		command.push("json");
 		command.push("--name");
 		command.push(updateInfo.targetFullRelease.fileName);
-		this.startProcessAsyncReadLine(command);
+		Process.startProcessAsyncReadLine(command, this.#_options.getProgressHandler());
 	}
 
 	public applyUpdatesAndExit(assetPath: string): void
@@ -1029,30 +1069,7 @@ export class UpdateManager extends Platform
 			command.push("--");
 			command.push(...restartArgs);
 		}
-		this.startProcessFireAndForget(command);
-	}
-
-	protected handleProcessOutputLine(line: string): boolean
-	{
-		let ev: ProgressEvent | null = ProgressEvent.fromJson(line);
-		if (ev == null) {
-			return true;
-		}
-		if (this.#_options.getProgressHandler() == null) {
-			return true;
-		}
-		if (ev.complete) {
-			this.#_options.getProgressHandler().onComplete(ev.file);
-			return true;
-		}
-		else if (ev.error.length > 0) {
-			this.#_options.getProgressHandler().onError(ev.error);
-			return true;
-		}
-		else {
-			this.#_options.getProgressHandler().onProgress(ev.progress);
-			return false;
-		}
+		Process.startProcessFireAndForget(command);
 	}
 }
 

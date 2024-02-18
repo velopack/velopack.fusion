@@ -33,10 +33,17 @@ native {
 }
 #endif
 
-public abstract class Platform
+public abstract class ProcessReadLineHandler
+{
+    /// Called when a line of output is read from the process.
+    /// If this method returns true, the reading loop is terminated.
+    public abstract bool HandleProcessOutputLine!(string line);
+}
+
+static class Process
 {
     /// Starts a new process and sychronously reads/returns its output.
-    protected string() StartProcessBlocking(List<string()> command_line) throws Exception
+    public static string() StartProcessBlocking(List<string()> command_line) throws Exception
     {
         if (command_line.Count == 0) {
             throw Exception("Command line is empty");
@@ -97,8 +104,8 @@ public abstract class Platform
         return Util.StrTrim(ret);
     }
 
-    /// Starts a new process and sychronously reads/returns its output.
-    protected void StartProcessFireAndForget(List<string()> command_line) throws Exception
+    /// Starts a new process and returns immediately.
+    public static void StartProcessFireAndForget(List<string()> command_line) throws Exception
     {
         if (command_line.Count == 0) {
             throw Exception("Command line is empty");
@@ -126,7 +133,7 @@ public abstract class Platform
     /// When a line is read, HandleProcessOutputLine is called with the line. 
     /// If HandleProcessOutputLine returns true, the reading loop is terminated.
     /// This method is non-blocking and returns immediately.
-    protected void StartProcessAsyncReadLine!(List<string()> command_line) throws Exception
+    public static void StartProcessAsyncReadLine(List<string()> command_line, ProcessReadLineHandler handler) throws Exception
     {
         if (command_line.Count == 0) {
             throw Exception("Command line is empty");
@@ -148,7 +155,7 @@ public abstract class Platform
                         // bytesRead is 0, indicating the process has completed
                         // Process any remaining data in accumulatedData as the last line if needed
                         if (!accumulatedData.empty()) {
-                            handleProcessOutputLine(accumulatedData);
+                            handler->handleProcessOutputLine(accumulatedData);
                         }
                         return;
                     }
@@ -159,7 +166,7 @@ public abstract class Platform
                     size_t pos;
                     while ((pos = accumulatedData.find('\n')) != std::string::npos) {
                         std::string line = accumulatedData.substr(0, pos);
-                        if (handleProcessOutputLine(line)) {
+                        if (handler->handleProcessOutputLine(line)) {
                             return; // complete or err
                         }
                         accumulatedData.erase(0, pos + 1);
@@ -186,10 +193,10 @@ public abstract class Platform
             var process = new System.Diagnostics.Process();
             process.StartInfo = psi;
             process.ErrorDataReceived += (sender, e) => {
-                if (e.Data != null) HandleProcessOutputLine(e.Data);
+                if (e.Data != null) handler.HandleProcessOutputLine(e.Data);
             };
             process.OutputDataReceived += (sender, e) => {
-                if (e.Data != null) HandleProcessOutputLine(e.Data);
+                if (e.Data != null) handler.HandleProcessOutputLine(e.Data);
             };
 
             process.Start();
@@ -203,15 +210,11 @@ public abstract class Platform
             child.stdout.resume()
             child.stdout.setEncoding("utf8")
             child.stdout.on("line", (data) => {
-                this.handleProcessOutputLine(data)
+                handler.handleProcessOutputLine(data)
             });
         } 
 #else
         throw Exception("Unsupported platform");
 #endif
     }
-
-    /// Called when a line is read from the process started by StartProcessReadLineThread.
-    /// If this method returns true, the reading loop is terminated.
-    protected abstract bool HandleProcessOutputLine!(string() line);
 }

@@ -1,8 +1,36 @@
-public abstract class ProgressHandler 
+public abstract class ProgressHandler : ProcessReadLineHandler
 {
-    public abstract void OnProgress(int progress);
-    public abstract void OnComplete(string() assetPath);
-    public abstract void OnError(string() error);
+    public abstract void OnProgress!(int progress);
+    public abstract void OnComplete!(string() assetPath);
+    public abstract void OnError!(string() error);
+
+    public override bool HandleProcessOutputLine!(string() line) throws Exception, JsonParseException
+    {
+        ProgressEvent# ev = ProgressEvent.FromJson(line);
+
+        if (ev.Complete) {
+            OnComplete(ev.File);
+            return true;
+        } else if (ev.Error.Length > 0) {
+            OnError(ev.Error);
+            return true;
+        } else {
+            OnProgress(ev.Progress);
+            return false;
+        }
+    }
+}
+
+class DefaultProgressHandler : ProgressHandler
+{
+    public override void OnProgress!(int progress) {
+    }
+
+    public override void OnComplete!(string() assetPath) {
+    }
+
+    public override void OnError!(string() error) {
+    }
 }
 
 public class UpdateOptions
@@ -10,18 +38,18 @@ public class UpdateOptions
     bool _allowDowngrade = false;
     string() _explicitChannel = "";
     string() _urlOrPath = "";
-    ProgressHandler? _progress;
+    ProgressHandler# _progress = new DefaultProgressHandler();
     public void SetUrlOrPath!(string() urlOrPath) { _urlOrPath = urlOrPath; }
     public string() GetUrlOrPath() { return _urlOrPath; }
     public void SetAllowDowngrade!(bool allowDowngrade) { _allowDowngrade = allowDowngrade; }
     public bool GetAllowDowngrade() { return _allowDowngrade; }
     public void SetExplicitChannel!(string() explicitChannel) { _explicitChannel = explicitChannel; }
     public string() GetExplicitChannel() { return _explicitChannel; }
-    public void SetProgressHandler!(ProgressHandler? progress) { _progress = progress; }
-    public ProgressHandler? GetProgressHandler() { return _progress; }
+    public void SetProgressHandler!(ProgressHandler# progress) { _progress = progress; }
+    public ProgressHandler GetProgressHandler() { return _progress; }
 }
 
-public class UpdateManager : Platform
+public class UpdateManager
 {
     UpdateOptions? _options;
     public void SetOptions!(UpdateOptions? options) { _options = options; }
@@ -33,7 +61,7 @@ public class UpdateManager : Platform
         List<string()>() command;
         command.Add(Util.GetUpdateExePath());
         command.Add("get-version");
-        return StartProcessBlocking(command);
+        return Process.StartProcessBlocking(command);
     }
 
     /// This function will check for updates, and return information about the latest available release.
@@ -64,7 +92,7 @@ public class UpdateManager : Platform
             command.Add(explicitChannel);
         }
     
-        string() output = StartProcessBlocking(command);
+        string() output = Process.StartProcessBlocking(command);
 
         if (output.Length == 0 || output == "null")
         {
@@ -93,7 +121,7 @@ public class UpdateManager : Platform
         command.Add("json");
         command.Add("--name");
         command.Add(updateInfo.TargetFullRelease.FileName);
-        StartProcessAsyncReadLine(command);
+        Process.StartProcessAsyncReadLine(command, _options.GetProgressHandler());
     }
 
     public void ApplyUpdatesAndExit(string() assetPath) throws Exception 
@@ -133,33 +161,8 @@ public class UpdateManager : Platform
             command.AddRange(restartArgs);
         }
 
-        StartProcessFireAndForget(command);
+        Process.StartProcessFireAndForget(command);
     }
 
-    protected override bool HandleProcessOutputLine!(string() line) throws Exception, JsonParseException
-    {
-        ProgressEvent#? ev = ProgressEvent.FromJson(line);
-        if (ev == null)
-        {
-            // error parsing?
-            return true;
-        }
-
-        if (_options.GetProgressHandler() == null) 
-        {
-            // can stop parsing output if no progress handler is set
-            return true;
-        }
-
-        if (ev.Complete) {
-            _options.GetProgressHandler().OnComplete(ev.File);
-            return true;
-        } else if (ev.Error.Length > 0) {
-            _options.GetProgressHandler().OnError(ev.Error);
-            return true;
-        } else {
-            _options.GetProgressHandler().OnProgress(ev.Progress);
-            return false;
-        }
-    }
+   
 }

@@ -6,7 +6,7 @@ native {
 }
 #endif
 
-public static class Util
+static class Util
 {
     /// Returns the path of the current process.
     public static string() GetCurrentProcessPath() throws Exception

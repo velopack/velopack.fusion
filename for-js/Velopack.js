@@ -476,7 +476,7 @@ _JsonParser_text = new WeakMap(), _JsonParser_position = new WeakMap(), _JsonPar
             return JsonToken.NONE;
     }
 };
-export class Util {
+class Util {
     constructor() {
     }
     /**
@@ -720,11 +720,15 @@ export class ProgressEvent {
         return progressEvent;
     }
 }
-export class Platform {
+export class ProcessReadLineHandler {
+}
+class Process {
+    constructor() {
+    }
     /**
      * Starts a new process and sychronously reads/returns its output.
      */
-    startProcessBlocking(command_line) {
+    static startProcessBlocking(command_line) {
         if (command_line.length == 0) {
             throw new Error("Command line is empty");
         }
@@ -733,9 +737,9 @@ export class Platform {
         return Util.strTrim(ret);
     }
     /**
-     * Starts a new process and sychronously reads/returns its output.
+     * Starts a new process and returns immediately.
      */
-    startProcessFireAndForget(command_line) {
+    static startProcessFireAndForget(command_line) {
         if (command_line.length == 0) {
             throw new Error("Command line is empty");
         }
@@ -747,7 +751,7 @@ export class Platform {
      * If HandleProcessOutputLine returns true, the reading loop is terminated.
      * This method is non-blocking and returns immediately.
      */
-    startProcessAsyncReadLine(command_line) {
+    static startProcessAsyncReadLine(command_line, handler) {
         if (command_line.length == 0) {
             throw new Error("Command line is empty");
         }
@@ -756,18 +760,41 @@ export class Platform {
         child.stdout.resume();
         child.stdout.setEncoding("utf8");
         child.stdout.on("line", (data) => {
-            this.handleProcessOutputLine(data);
+            handler.handleProcessOutputLine(data);
         });
     }
 }
-export class ProgressHandler {
+export class ProgressHandler extends ProcessReadLineHandler {
+    handleProcessOutputLine(line) {
+        let ev = ProgressEvent.fromJson(line);
+        if (ev.complete) {
+            this.onComplete(ev.file);
+            return true;
+        }
+        else if (ev.error.length > 0) {
+            this.onError(ev.error);
+            return true;
+        }
+        else {
+            this.onProgress(ev.progress);
+            return false;
+        }
+    }
+}
+class DefaultProgressHandler extends ProgressHandler {
+    onProgress(progress) {
+    }
+    onComplete(assetPath) {
+    }
+    onError(error) {
+    }
 }
 export class UpdateOptions {
     constructor() {
         _UpdateOptions__allowDowngrade.set(this, false);
         _UpdateOptions__explicitChannel.set(this, "");
         _UpdateOptions__urlOrPath.set(this, "");
-        _UpdateOptions__progress.set(this, void 0);
+        _UpdateOptions__progress.set(this, new DefaultProgressHandler());
     }
     setUrlOrPath(urlOrPath) {
         __classPrivateFieldSet(this, _UpdateOptions__urlOrPath, urlOrPath, "f");
@@ -795,9 +822,8 @@ export class UpdateOptions {
     }
 }
 _UpdateOptions__allowDowngrade = new WeakMap(), _UpdateOptions__explicitChannel = new WeakMap(), _UpdateOptions__urlOrPath = new WeakMap(), _UpdateOptions__progress = new WeakMap();
-export class UpdateManager extends Platform {
+export class UpdateManager {
     constructor() {
-        super(...arguments);
         _UpdateManager__options.set(this, void 0);
     }
     setOptions(options) {
@@ -811,7 +837,7 @@ export class UpdateManager extends Platform {
         const command = [];
         command.push(Util.getUpdateExePath());
         command.push("get-version");
-        return this.startProcessBlocking(command);
+        return Process.startProcessBlocking(command);
     }
     /**
      * This function will check for updates, and return information about the latest available release.
@@ -835,7 +861,7 @@ export class UpdateManager extends Platform {
             command.push("--channel");
             command.push(explicitChannel);
         }
-        let output = this.startProcessBlocking(command);
+        let output = Process.startProcessBlocking(command);
         if (output.length == 0 || output == "null") {
             return null;
         }
@@ -859,7 +885,7 @@ export class UpdateManager extends Platform {
         command.push("json");
         command.push("--name");
         command.push(updateInfo.targetFullRelease.fileName);
-        this.startProcessAsyncReadLine(command);
+        Process.startProcessAsyncReadLine(command, __classPrivateFieldGet(this, _UpdateManager__options, "f").getProgressHandler());
     }
     applyUpdatesAndExit(assetPath) {
         const args = [];
@@ -889,28 +915,7 @@ export class UpdateManager extends Platform {
             command.push("--");
             command.push(...restartArgs);
         }
-        this.startProcessFireAndForget(command);
-    }
-    handleProcessOutputLine(line) {
-        let ev = ProgressEvent.fromJson(line);
-        if (ev == null) {
-            return true;
-        }
-        if (__classPrivateFieldGet(this, _UpdateManager__options, "f").getProgressHandler() == null) {
-            return true;
-        }
-        if (ev.complete) {
-            __classPrivateFieldGet(this, _UpdateManager__options, "f").getProgressHandler().onComplete(ev.file);
-            return true;
-        }
-        else if (ev.error.length > 0) {
-            __classPrivateFieldGet(this, _UpdateManager__options, "f").getProgressHandler().onError(ev.error);
-            return true;
-        }
-        else {
-            __classPrivateFieldGet(this, _UpdateManager__options, "f").getProgressHandler().onProgress(ev.progress);
-            return false;
-        }
+        Process.startProcessFireAndForget(command);
     }
 }
 _UpdateManager__options = new WeakMap();

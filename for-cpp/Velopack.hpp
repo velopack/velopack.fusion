@@ -1273,8 +1273,10 @@ enum class VelopackAssetType
 class VelopackAsset;
 class UpdateInfo;
 class ProgressEvent;
-class Platform;
+class ProcessReadLineHandler;
+class Process;
 class ProgressHandler;
+class DefaultProgressHandler;
 class UpdateOptions;
 class UpdateManager;
 
@@ -1302,11 +1304,11 @@ public:
 	/**
 	 * Reinterpret a JSON value as an object. Throws exception if the value type was not an object.
 	 */
-	const std::unordered_map<std::string, std::unique_ptr<JsonNode>> * asObject() const;
+	const std::unordered_map<std::string, std::shared_ptr<JsonNode>> * asObject() const;
 	/**
 	 * Reinterpret a JSON value as an array. Throws exception if the value type was not an array.
 	 */
-	const std::vector<std::unique_ptr<JsonNode>> * asArray() const;
+	const std::vector<std::shared_ptr<JsonNode>> * asArray() const;
 	/**
 	 * Reinterpret a JSON value as a number. Throws exception if the value type was not a double.
 	 */
@@ -1319,19 +1321,19 @@ public:
 	 * Reinterpret a JSON value as a string. Throws exception if the value type was not a string.
 	 */
 	std::string_view asString() const;
-	static std::unique_ptr<JsonNode> parse(std::string_view text);
+	static std::shared_ptr<JsonNode> parse(std::string_view text);
 public:
 	void initBool(bool value);
 	void initArray();
-	void addArrayChild(std::unique_ptr<JsonNode> child);
+	void addArrayChild(std::shared_ptr<JsonNode> child);
 	void initObject();
-	void addObjectChild(std::string_view key, std::unique_ptr<JsonNode> child);
+	void addObjectChild(std::string_view key, std::shared_ptr<JsonNode> child);
 	void initNumber(double value);
 	void initString(std::string_view value);
 private:
 	JsonNodeType type = JsonNodeType::null;
-	std::unordered_map<std::string, std::unique_ptr<JsonNode>> objectValue;
-	std::vector<std::unique_ptr<JsonNode>> arrayValue;
+	std::unordered_map<std::string, std::shared_ptr<JsonNode>> objectValue;
+	std::vector<std::shared_ptr<JsonNode>> arrayValue;
 	std::string stringValue;
 	double numberValue;
 	bool boolValue;
@@ -1363,13 +1365,13 @@ public:
 	bool peekWordbreak() const;
 	void eatWhitespace();
 	std::string readWord();
-	std::unique_ptr<JsonNode> parseNull();
-	std::unique_ptr<JsonNode> parseBool();
-	std::unique_ptr<JsonNode> parseNumber();
-	std::unique_ptr<JsonNode> parseString();
-	std::unique_ptr<JsonNode> parseObject();
-	std::unique_ptr<JsonNode> parseArray();
-	std::unique_ptr<JsonNode> parseValue();
+	std::shared_ptr<JsonNode> parseNull();
+	std::shared_ptr<JsonNode> parseBool();
+	std::shared_ptr<JsonNode> parseNumber();
+	std::shared_ptr<JsonNode> parseString();
+	std::shared_ptr<JsonNode> parseObject();
+	std::shared_ptr<JsonNode> parseArray();
+	std::shared_ptr<JsonNode> parseValue();
 private:
 	std::string text{""};
 	int position = 0;
@@ -1406,8 +1408,8 @@ class VelopackAsset
 {
 public:
 	VelopackAsset() = default;
-	static std::unique_ptr<VelopackAsset> fromJson(std::string_view json);
-	static std::unique_ptr<VelopackAsset> fromNode(std::unique_ptr<JsonNode> node);
+	static std::shared_ptr<VelopackAsset> fromJson(std::string_view json);
+	static std::shared_ptr<VelopackAsset> fromNode(std::shared_ptr<JsonNode> node);
 public:
 	/**
 	 * The name or Id of the package containing this release.
@@ -1447,9 +1449,9 @@ class UpdateInfo
 {
 public:
 	UpdateInfo() = default;
-	static std::unique_ptr<UpdateInfo> fromJson(std::string_view json);
+	static std::shared_ptr<UpdateInfo> fromJson(std::string_view json);
 public:
-	std::unique_ptr<VelopackAsset> targetFullRelease;
+	std::shared_ptr<VelopackAsset> targetFullRelease;
 	bool isDowngrade = false;
 };
 
@@ -1457,7 +1459,7 @@ class ProgressEvent
 {
 public:
 	ProgressEvent() = default;
-	static std::unique_ptr<ProgressEvent> fromJson(std::string_view json);
+	static std::shared_ptr<ProgressEvent> fromJson(std::string_view json);
 public:
 	std::string file{""};
 	bool complete = false;
@@ -1465,43 +1467,60 @@ public:
 	std::string error{""};
 };
 
-class Platform
+class ProcessReadLineHandler
 {
 public:
-	virtual ~Platform() = default;
+	virtual ~ProcessReadLineHandler() = default;
+	/**
+	 * Called when a line of output is read from the process.
+	 * If this method returns true, the reading loop is terminated.
+	 */
+	virtual bool handleProcessOutputLine(std::string_view line) = 0;
 protected:
-	Platform() = default;
+	ProcessReadLineHandler() = default;
+};
+
+class Process
+{
+public:
 	/**
 	 * Starts a new process and sychronously reads/returns its output.
 	 */
-	std::string startProcessBlocking(const std::vector<std::string> * command_line) const;
+	static std::string startProcessBlocking(const std::vector<std::string> * command_line);
 	/**
-	 * Starts a new process and sychronously reads/returns its output.
+	 * Starts a new process and returns immediately.
 	 */
-	void startProcessFireAndForget(const std::vector<std::string> * command_line) const;
+	static void startProcessFireAndForget(const std::vector<std::string> * command_line);
 	/**
 	 * In the current process, starts a new process and asychronously reads its output line by line.
 	 * When a line is read, HandleProcessOutputLine is called with the line. 
 	 * If HandleProcessOutputLine returns true, the reading loop is terminated.
 	 * This method is non-blocking and returns immediately.
 	 */
-	void startProcessAsyncReadLine(const std::vector<std::string> * command_line);
-	/**
-	 * Called when a line is read from the process started by StartProcessReadLineThread.
-	 * If this method returns true, the reading loop is terminated.
-	 */
-	virtual bool handleProcessOutputLine(std::string line) = 0;
+	static void startProcessAsyncReadLine(const std::vector<std::string> * command_line, const ProcessReadLineHandler * handler);
+private:
+	Process() = delete;
 };
 
-class ProgressHandler
+class ProgressHandler : public ProcessReadLineHandler
 {
 public:
 	virtual ~ProgressHandler() = default;
-	virtual void onProgress(int progress) const = 0;
-	virtual void onComplete(std::string assetPath) const = 0;
-	virtual void onError(std::string error) const = 0;
+	virtual void onProgress(int progress) = 0;
+	virtual void onComplete(std::string assetPath) = 0;
+	virtual void onError(std::string error) = 0;
+	bool handleProcessOutputLine(std::string line) override;
 protected:
 	ProgressHandler() = default;
+};
+
+class DefaultProgressHandler : public ProgressHandler
+{
+public:
+	DefaultProgressHandler() = default;
+	void onProgress(int progress) override;
+	void onComplete(std::string assetPath) override;
+	void onError(std::string error) override;
 };
 
 class UpdateOptions
@@ -1514,16 +1533,16 @@ public:
 	bool getAllowDowngrade() const;
 	void setExplicitChannel(std::string explicitChannel);
 	std::string getExplicitChannel() const;
-	void setProgressHandler(const ProgressHandler * progress);
+	void setProgressHandler(std::shared_ptr<ProgressHandler> progress);
 	const ProgressHandler * getProgressHandler() const;
 private:
 	bool _allowDowngrade = false;
 	std::string _explicitChannel{""};
 	std::string _urlOrPath{""};
-	const ProgressHandler * _progress;
+	std::shared_ptr<ProgressHandler> _progress = std::make_shared<DefaultProgressHandler>();
 };
 
-class UpdateManager : public Platform
+class UpdateManager
 {
 public:
 	UpdateManager() = default;
@@ -1536,17 +1555,15 @@ public:
 	/**
 	 * This function will check for updates, and return information about the latest available release.
 	 */
-	std::unique_ptr<UpdateInfo> checkForUpdates() const;
+	std::shared_ptr<UpdateInfo> checkForUpdates() const;
 	/**
 	 * This function will request the update download, and then return immediately.
 	 * To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
 	 */
-	void downloadUpdateAsync(std::unique_ptr<UpdateInfo> updateInfo);
+	void downloadUpdateAsync(std::shared_ptr<UpdateInfo> updateInfo);
 	void applyUpdatesAndExit(std::string assetPath) const;
 	void applyUpdatesAndRestart(std::string assetPath, const std::vector<std::string> * restartArgs) const;
 	void waitExitThenApplyUpdates(std::string assetPath, bool silent, bool restart, const std::vector<std::string> * restartArgs) const;
-protected:
-	bool handleProcessOutputLine(std::string line) override;
 private:
 	const UpdateOptions * _options;
 };

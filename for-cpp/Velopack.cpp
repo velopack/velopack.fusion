@@ -24,7 +24,7 @@ bool JsonNode::isNull() const
 	return this->type == JsonNodeType::null;
 }
 
-const std::unordered_map<std::string, std::unique_ptr<JsonNode>> * JsonNode::asObject() const
+const std::unordered_map<std::string, std::shared_ptr<JsonNode>> * JsonNode::asObject() const
 {
 	if (this->type != JsonNodeType::object) {
 		throw std::runtime_error("Cannot call AsObject on JsonNode which is not an object.");
@@ -32,7 +32,7 @@ const std::unordered_map<std::string, std::unique_ptr<JsonNode>> * JsonNode::asO
 	return &this->objectValue;
 }
 
-const std::vector<std::unique_ptr<JsonNode>> * JsonNode::asArray() const
+const std::vector<std::shared_ptr<JsonNode>> * JsonNode::asArray() const
 {
 	if (this->type != JsonNodeType::array) {
 		throw std::runtime_error("Cannot call AsArray on JsonNode which is not an array.");
@@ -64,9 +64,9 @@ std::string_view JsonNode::asString() const
 	return this->stringValue;
 }
 
-std::unique_ptr<JsonNode> JsonNode::parse(std::string_view text)
+std::shared_ptr<JsonNode> JsonNode::parse(std::string_view text)
 {
-	std::unique_ptr<JsonParser> parser = std::make_unique<JsonParser>();
+	std::shared_ptr<JsonParser> parser = std::make_shared<JsonParser>();
 	parser->load(text);
 	return parser->parseValue();
 }
@@ -88,7 +88,7 @@ void JsonNode::initArray()
 	this->type = JsonNodeType::array;
 }
 
-void JsonNode::addArrayChild(std::unique_ptr<JsonNode> child)
+void JsonNode::addArrayChild(std::shared_ptr<JsonNode> child)
 {
 	if (this->type != JsonNodeType::array) {
 		throw JsonParseException("Cannot call AddArrayChild on JsonNode which is not an array.");
@@ -104,7 +104,7 @@ void JsonNode::initObject()
 	this->type = JsonNodeType::object;
 }
 
-void JsonNode::addObjectChild(std::string_view key, std::unique_ptr<JsonNode> child)
+void JsonNode::addObjectChild(std::string_view key, std::shared_ptr<JsonNode> child)
 {
 	if (this->type != JsonNodeType::object) {
 		throw JsonParseException("Cannot call AddObjectChild on JsonNode which is not an object.");
@@ -276,23 +276,23 @@ std::string JsonParser::readWord()
 	return std::string(this->builder.toString());
 }
 
-std::unique_ptr<JsonNode> JsonParser::parseNull()
+std::shared_ptr<JsonNode> JsonParser::parseNull()
 {
 	readWord();
-	std::unique_ptr<JsonNode> node = std::make_unique<JsonNode>();
+	std::shared_ptr<JsonNode> node = std::make_shared<JsonNode>();
 	return node;
 }
 
-std::unique_ptr<JsonNode> JsonParser::parseBool()
+std::shared_ptr<JsonNode> JsonParser::parseBool()
 {
 	std::string boolValue{readWord()};
 	if (boolValue == "true") {
-		std::unique_ptr<JsonNode> node = std::make_unique<JsonNode>();
+		std::shared_ptr<JsonNode> node = std::make_shared<JsonNode>();
 		node->initBool(true);
 		return node;
 	}
 	else if (boolValue == "false") {
-		std::unique_ptr<JsonNode> node = std::make_unique<JsonNode>();
+		std::shared_ptr<JsonNode> node = std::make_shared<JsonNode>();
 		node->initBool(false);
 		return node;
 	}
@@ -301,18 +301,18 @@ std::unique_ptr<JsonNode> JsonParser::parseBool()
 	}
 }
 
-std::unique_ptr<JsonNode> JsonParser::parseNumber()
+std::shared_ptr<JsonNode> JsonParser::parseNumber()
 {
 	double d;
 	if ([&] { char *ciend; d = std::strtod(readWord().data(), &ciend); return *ciend == '\0'; }()) {
-		std::unique_ptr<JsonNode> node = std::make_unique<JsonNode>();
+		std::shared_ptr<JsonNode> node = std::make_shared<JsonNode>();
 		node->initNumber(d);
 		return node;
 	}
 	throw JsonParseException("Invalid number");
 }
 
-std::unique_ptr<JsonNode> JsonParser::parseString()
+std::shared_ptr<JsonNode> JsonParser::parseString()
 {
 	this->builder.clear();
 	read();
@@ -324,7 +324,7 @@ std::unique_ptr<JsonNode> JsonParser::parseString()
 		switch (c) {
 		case '"':
 			{
-				std::unique_ptr<JsonNode> node = std::make_unique<JsonNode>();
+				std::shared_ptr<JsonNode> node = std::make_shared<JsonNode>();
 				node->initString(this->builder.toString());
 				return node;
 			}
@@ -374,10 +374,10 @@ std::unique_ptr<JsonNode> JsonParser::parseString()
 	}
 }
 
-std::unique_ptr<JsonNode> JsonParser::parseObject()
+std::shared_ptr<JsonNode> JsonParser::parseObject()
 {
 	read();
-	std::unique_ptr<JsonNode> node = std::make_unique<JsonNode>();
+	std::shared_ptr<JsonNode> node = std::make_shared<JsonNode>();
 	node->initObject();
 	while (true) {
 		switch (peekToken()) {
@@ -391,7 +391,7 @@ std::unique_ptr<JsonNode> JsonParser::parseObject()
 			return node;
 		default:
 			{
-				std::unique_ptr<JsonNode> name = parseString();
+				std::shared_ptr<JsonNode> name = parseString();
 				if (peekToken() != JsonToken::colon)
 					throw JsonParseException("Expected colon");
 				read();
@@ -402,10 +402,10 @@ std::unique_ptr<JsonNode> JsonParser::parseObject()
 	}
 }
 
-std::unique_ptr<JsonNode> JsonParser::parseArray()
+std::shared_ptr<JsonNode> JsonParser::parseArray()
 {
 	read();
-	std::unique_ptr<JsonNode> node = std::make_unique<JsonNode>();
+	std::shared_ptr<JsonNode> node = std::make_shared<JsonNode>();
 	node->initArray();
 	bool expectComma = false;
 	while (true) {
@@ -433,7 +433,7 @@ std::unique_ptr<JsonNode> JsonParser::parseArray()
 	}
 }
 
-std::unique_ptr<JsonNode> JsonParser::parseValue()
+std::shared_ptr<JsonNode> JsonParser::parseValue()
 {
 	switch (peekToken()) {
 	case JsonToken::string:
@@ -549,15 +549,15 @@ void Util::exit(int code)
 {
 	 exit(code); }
 
-std::unique_ptr<VelopackAsset> VelopackAsset::fromJson(std::string_view json)
+std::shared_ptr<VelopackAsset> VelopackAsset::fromJson(std::string_view json)
 {
-	std::unique_ptr<JsonNode> node = JsonNode::parse(json);
+	std::shared_ptr<JsonNode> node = JsonNode::parse(json);
 	return fromNode(node);
 }
 
-std::unique_ptr<VelopackAsset> VelopackAsset::fromNode(std::unique_ptr<JsonNode> node)
+std::shared_ptr<VelopackAsset> VelopackAsset::fromNode(std::shared_ptr<JsonNode> node)
 {
-	std::unique_ptr<VelopackAsset> asset = std::make_unique<VelopackAsset>();
+	std::shared_ptr<VelopackAsset> asset = std::make_shared<VelopackAsset>();
 	for (const auto &[k, v] : *node->asObject()) {
 		if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "id")
 			asset->packageId = v->asString();
@@ -579,10 +579,10 @@ std::unique_ptr<VelopackAsset> VelopackAsset::fromNode(std::unique_ptr<JsonNode>
 	return asset;
 }
 
-std::unique_ptr<UpdateInfo> UpdateInfo::fromJson(std::string_view json)
+std::shared_ptr<UpdateInfo> UpdateInfo::fromJson(std::string_view json)
 {
-	std::unique_ptr<JsonNode> node = JsonNode::parse(json);
-	std::unique_ptr<UpdateInfo> updateInfo = std::make_unique<UpdateInfo>();
+	std::shared_ptr<JsonNode> node = JsonNode::parse(json);
+	std::shared_ptr<UpdateInfo> updateInfo = std::make_shared<UpdateInfo>();
 	for (const auto &[k, v] : *node->asObject()) {
 		if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "targetfullrelease")
 			updateInfo->targetFullRelease = VelopackAsset::fromNode(v);
@@ -592,10 +592,10 @@ std::unique_ptr<UpdateInfo> UpdateInfo::fromJson(std::string_view json)
 	return updateInfo;
 }
 
-std::unique_ptr<ProgressEvent> ProgressEvent::fromJson(std::string_view json)
+std::shared_ptr<ProgressEvent> ProgressEvent::fromJson(std::string_view json)
 {
-	std::unique_ptr<JsonNode> node = JsonNode::parse(json);
-	std::unique_ptr<ProgressEvent> progressEvent = std::make_unique<ProgressEvent>();
+	std::shared_ptr<JsonNode> node = JsonNode::parse(json);
+	std::shared_ptr<ProgressEvent> progressEvent = std::make_shared<ProgressEvent>();
 	for (const auto &[k, v] : *node->asObject()) {
 		if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "file")
 			progressEvent->file = v->asString();
@@ -609,7 +609,7 @@ std::unique_ptr<ProgressEvent> ProgressEvent::fromJson(std::string_view json)
 	return progressEvent;
 }
 
-std::string Platform::startProcessBlocking(const std::vector<std::string> * command_line) const
+std::string Process::startProcessBlocking(const std::vector<std::string> * command_line)
 {
 	if (std::ssize(*command_line) == 0) {
 		throw std::runtime_error("Command line is empty");
@@ -628,14 +628,14 @@ std::string Platform::startProcessBlocking(const std::vector<std::string> * comm
          return Util::strTrim(ret);
 }
 
-void Platform::startProcessFireAndForget(const std::vector<std::string> * command_line) const
+void Process::startProcessFireAndForget(const std::vector<std::string> * command_line)
 {
 	if (std::ssize(*command_line) == 0) {
 		throw std::runtime_error("Command line is empty");
 	}
 	 util_start_subprocess(command_line, subprocess_option_no_window); }
 
-void Platform::startProcessAsyncReadLine(const std::vector<std::string> * command_line)
+void Process::startProcessAsyncReadLine(const std::vector<std::string> * command_line, const ProcessReadLineHandler * handler)
 {
 	if (std::ssize(*command_line) == 0) {
 		throw std::runtime_error("Command line is empty");
@@ -656,7 +656,7 @@ void Platform::startProcessAsyncReadLine(const std::vector<std::string> * comman
                         // bytesRead is 0, indicating the process has completed
                         // Process any remaining data in accumulatedData as the last line if needed
                         if (!accumulatedData.empty()) {
-                            handleProcessOutputLine(accumulatedData);
+                            handler->handleProcessOutputLine(accumulatedData);
                         }
                         return;
                     }
@@ -667,7 +667,7 @@ void Platform::startProcessAsyncReadLine(const std::vector<std::string> * comman
                     size_t pos;
                     while ((pos = accumulatedData.find('\n')) != std::string::npos) {
                         std::string line = accumulatedData.substr(0, pos);
-                        if (handleProcessOutputLine(line)) {
+                        if (handler->handleProcessOutputLine(line)) {
                             return; // complete or err
                         }
                         accumulatedData.erase(0, pos + 1);
@@ -675,6 +675,35 @@ void Platform::startProcessAsyncReadLine(const std::vector<std::string> * comman
                 }
             });
         }
+
+bool ProgressHandler::handleProcessOutputLine(std::string line)
+{
+	std::shared_ptr<ProgressEvent> ev = ProgressEvent::fromJson(line);
+	if (ev->complete) {
+		onComplete(ev->file);
+		return true;
+	}
+	else if (!ev->error.empty()) {
+		onError(ev->error);
+		return true;
+	}
+	else {
+		onProgress(ev->progress);
+		return false;
+	}
+}
+
+void DefaultProgressHandler::onProgress(int progress)
+{
+}
+
+void DefaultProgressHandler::onComplete(std::string assetPath)
+{
+}
+
+void DefaultProgressHandler::onError(std::string error)
+{
+}
 
 void UpdateOptions::setUrlOrPath(std::string urlOrPath)
 {
@@ -706,14 +735,14 @@ std::string UpdateOptions::getExplicitChannel() const
 	return this->_explicitChannel;
 }
 
-void UpdateOptions::setProgressHandler(const ProgressHandler * progress)
+void UpdateOptions::setProgressHandler(std::shared_ptr<ProgressHandler> progress)
 {
 	this->_progress = progress;
 }
 
 const ProgressHandler * UpdateOptions::getProgressHandler() const
 {
-	return this->_progress;
+	return this->_progress.get();
 }
 
 void UpdateManager::setOptions(const UpdateOptions * options)
@@ -726,10 +755,10 @@ std::string UpdateManager::getCurrentVersion() const
 	std::vector<std::string> command;
 	command.push_back(Util::getUpdateExePath());
 	command.push_back("get-version");
-	return startProcessBlocking(&command);
+	return Process::startProcessBlocking(&command);
 }
 
-std::unique_ptr<UpdateInfo> UpdateManager::checkForUpdates() const
+std::shared_ptr<UpdateInfo> UpdateManager::checkForUpdates() const
 {
 	if (this->_options == nullptr) {
 		throw std::runtime_error("Please call SetOptions before trying to check for updates.");
@@ -749,14 +778,14 @@ std::unique_ptr<UpdateInfo> UpdateManager::checkForUpdates() const
 		command.push_back("--channel");
 		command.push_back(explicitChannel);
 	}
-	std::string output{startProcessBlocking(&command)};
+	std::string output{Process::startProcessBlocking(&command)};
 	if (output.empty() || output == "null") {
 		return nullptr;
 	}
 	return UpdateInfo::fromJson(output);
 }
 
-void UpdateManager::downloadUpdateAsync(std::unique_ptr<UpdateInfo> updateInfo)
+void UpdateManager::downloadUpdateAsync(std::shared_ptr<UpdateInfo> updateInfo)
 {
 	if (this->_options == nullptr) {
 		throw std::runtime_error("Please call SetOptions before trying to download updates.");
@@ -771,7 +800,7 @@ void UpdateManager::downloadUpdateAsync(std::unique_ptr<UpdateInfo> updateInfo)
 	command.push_back("json");
 	command.push_back("--name");
 	command.push_back(updateInfo->targetFullRelease->fileName);
-	startProcessAsyncReadLine(&command);
+	Process::startProcessAsyncReadLine(&command, this->_options->getProgressHandler());
 }
 
 void UpdateManager::applyUpdatesAndExit(std::string assetPath) const
@@ -807,30 +836,7 @@ void UpdateManager::waitExitThenApplyUpdates(std::string assetPath, bool silent,
 		command.push_back("--");
 		command.insert(command.end(), restartArgs->begin(), restartArgs->end());
 	}
-	startProcessFireAndForget(&command);
-}
-
-bool UpdateManager::handleProcessOutputLine(std::string line)
-{
-	std::unique_ptr<ProgressEvent> ev = ProgressEvent::fromJson(line);
-	if (ev == nullptr) {
-		return true;
-	}
-	if (this->_options->getProgressHandler() == nullptr) {
-		return true;
-	}
-	if (ev->complete) {
-		this->_options->getProgressHandler()->onComplete(ev->file);
-		return true;
-	}
-	else if (!ev->error.empty()) {
-		this->_options->getProgressHandler()->onError(ev->error);
-		return true;
-	}
-	else {
-		this->_options->getProgressHandler()->onProgress(ev->progress);
-		return false;
-	}
+	Process::startProcessFireAndForget(&command);
 }
 }
 

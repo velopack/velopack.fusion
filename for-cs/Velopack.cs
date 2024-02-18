@@ -518,7 +518,7 @@ namespace Velopack
 		}
 	}
 
-	public static class Util
+	static class Util
 	{
 
 		/// <summary>Returns the path of the current process.</summary>
@@ -800,11 +800,19 @@ namespace Velopack
 		}
 	}
 
-	public abstract class Platform
+	public abstract class ProcessReadLineHandler
+	{
+
+		/// <summary>Called when a line of output is read from the process.</summary>
+		/// <remarks>If this method returns true, the reading loop is terminated.</remarks>
+		public abstract bool HandleProcessOutputLine(string line);
+	}
+
+	static class Process
 	{
 
 		/// <summary>Starts a new process and sychronously reads/returns its output.</summary>
-		protected string StartProcessBlocking(List<string> command_line)
+		public static string StartProcessBlocking(List<string> command_line)
 		{
 			if (command_line.Count == 0) {
 				throw new Exception("Command line is empty");
@@ -844,8 +852,8 @@ namespace Velopack
         return Util.StrTrim(ret);
 		}
 
-		/// <summary>Starts a new process and sychronously reads/returns its output.</summary>
-		protected void StartProcessFireAndForget(List<string> command_line)
+		/// <summary>Starts a new process and returns immediately.</summary>
+		public static void StartProcessFireAndForget(List<string> command_line)
 		{
 			if (command_line.Count == 0) {
 				throw new Exception("Command line is empty");
@@ -864,7 +872,7 @@ namespace Velopack
 		/// <remarks>When a line is read, HandleProcessOutputLine is called with the line. 
 		/// If HandleProcessOutputLine returns true, the reading loop is terminated.
 		/// This method is non-blocking and returns immediately.</remarks>
-		protected void StartProcessAsyncReadLine(List<string> command_line)
+		public static void StartProcessAsyncReadLine(List<string> command_line, ProcessReadLineHandler handler)
 		{
 			if (command_line.Count == 0) {
 				throw new Exception("Command line is empty");
@@ -887,23 +895,19 @@ namespace Velopack
             var process = new System.Diagnostics.Process();
             process.StartInfo = psi;
             process.ErrorDataReceived += (sender, e) => {
-                if (e.Data != null) HandleProcessOutputLine(e.Data);
+                if (e.Data != null) handler.HandleProcessOutputLine(e.Data);
             };
             process.OutputDataReceived += (sender, e) => {
-                if (e.Data != null) HandleProcessOutputLine(e.Data);
+                if (e.Data != null) handler.HandleProcessOutputLine(e.Data);
             };
 
             process.Start();
             process.BeginErrorReadLine();
             process.BeginOutputReadLine();
         }
-
-		/// <summary>Called when a line is read from the process started by StartProcessReadLineThread.</summary>
-		/// <remarks>If this method returns true, the reading loop is terminated.</remarks>
-		protected abstract bool HandleProcessOutputLine(string line);
 	}
 
-	public abstract class ProgressHandler
+	public abstract class ProgressHandler : ProcessReadLineHandler
 	{
 
 		public abstract void OnProgress(int progress);
@@ -911,6 +915,39 @@ namespace Velopack
 		public abstract void OnComplete(string assetPath);
 
 		public abstract void OnError(string error);
+
+		public override bool HandleProcessOutputLine(string line)
+		{
+			ProgressEvent ev = ProgressEvent.FromJson(line);
+			if (ev.Complete) {
+				OnComplete(ev.File);
+				return true;
+			}
+			else if (ev.Error.Length > 0) {
+				OnError(ev.Error);
+				return true;
+			}
+			else {
+				OnProgress(ev.Progress);
+				return false;
+			}
+		}
+	}
+
+	class DefaultProgressHandler : ProgressHandler
+	{
+
+		public override void OnProgress(int progress)
+		{
+		}
+
+		public override void OnComplete(string assetPath)
+		{
+		}
+
+		public override void OnError(string error)
+		{
+		}
 	}
 
 	public class UpdateOptions
@@ -922,7 +959,7 @@ namespace Velopack
 
 		string _urlOrPath = "";
 
-		ProgressHandler _progress;
+		ProgressHandler _progress = new DefaultProgressHandler();
 
 		public void SetUrlOrPath(string urlOrPath)
 		{
@@ -965,7 +1002,7 @@ namespace Velopack
 		}
 	}
 
-	public class UpdateManager : Platform
+	public class UpdateManager
 	{
 
 		UpdateOptions _options;
@@ -982,7 +1019,7 @@ namespace Velopack
 			List<string> command = new List<string>();
 			command.Add(Util.GetUpdateExePath());
 			command.Add("get-version");
-			return StartProcessBlocking(command);
+			return Process.StartProcessBlocking(command);
 		}
 
 		/// <summary>This function will check for updates, and return information about the latest available release.</summary>
@@ -1006,7 +1043,7 @@ namespace Velopack
 				command.Add("--channel");
 				command.Add(explicitChannel);
 			}
-			string output = StartProcessBlocking(command);
+			string output = Process.StartProcessBlocking(command);
 			if (output.Length == 0 || output == "null") {
 				return null;
 			}
@@ -1030,7 +1067,7 @@ namespace Velopack
 			command.Add("json");
 			command.Add("--name");
 			command.Add(updateInfo.TargetFullRelease.FileName);
-			StartProcessAsyncReadLine(command);
+			Process.StartProcessAsyncReadLine(command, this._options.GetProgressHandler());
 		}
 
 		public void ApplyUpdatesAndExit(string assetPath)
@@ -1066,30 +1103,7 @@ namespace Velopack
 				command.Add("--");
 				command.AddRange(restartArgs);
 			}
-			StartProcessFireAndForget(command);
-		}
-
-		protected override bool HandleProcessOutputLine(string line)
-		{
-			ProgressEvent ev = ProgressEvent.FromJson(line);
-			if (ev == null) {
-				return true;
-			}
-			if (this._options.GetProgressHandler() == null) {
-				return true;
-			}
-			if (ev.Complete) {
-				this._options.GetProgressHandler().OnComplete(ev.File);
-				return true;
-			}
-			else if (ev.Error.Length > 0) {
-				this._options.GetProgressHandler().OnError(ev.Error);
-				return true;
-			}
-			else {
-				this._options.GetProgressHandler().OnProgress(ev.Progress);
-				return false;
-			}
+			Process.StartProcessFireAndForget(command);
 		}
 	}
 }
