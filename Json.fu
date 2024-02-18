@@ -1,61 +1,167 @@
-// class State {
-//     internal String() propertyName;
-//     internal JsonNode# container;
-//     internal JsonNodeType Type;
-// }
-
 public enum JsonNodeType
 {
     Null,
     Bool,
     Array,
     Object,
-    Int,
-    Double,
+    Number,
     String
 }
 
-// public class JsonNode
-// {
-//     /// Get the type of this node, such as string, object, array, etc.
-//     /// You should use this function and then call the corresponding
-//     /// AsObject, AsArray, AsString, etc. functions to get the actual
-//     /// parsed json information.
-//     // public JsonNodeType GetType();
-
-//     /// Reinterpret a JSON value as an object. Throws exception if the value type was not an object.
-//     // public Dictionary<string(), JsonNode#> AsObject();
-//     /// Reinterpret a JSON value as an array. Throws exception if the value type was not an array.
-//     // public List<JsonNode#> AsArray();
-//     /// Reinterpret a JSON value as an integer. Throws exception if the value type was not an integer.
-//     // public int AsInt();
-//     /// Reinterpret a JSON value as a double. Throws exception if the value type was not a double.
-//     // public double AsDouble();
-//     /// Reinterpret a JSON value as a boolean. Throws exception if the value type was not a boolean.
-//     // public bool AsBool();
-//     /// Reinterpret a JSON value as a string. Throws exception if the value type was not a string.
-//     // public string AsString();
-
-//     /// Try to parse a json string to a JsonNode object model. If the parsing fails,
-//     /// the JsonNode.Type will be null and this method will return false.
-//     // public bool TryParse(string jsonText);
-
-//     /// Parses the json text into a JsonNode object model, or throws an exception if the parsing fails.
-   
-// }
-
-// public class JsonParser
-// {
-    // public bool Parse(string jsonText)
-    // {
-
-    // }
-// }
-
 enum JsonToken { None, CurlyOpen, CurlyClose, SquareOpen, SquareClose, Colon, Comma, String, Number, Bool, Null }
 
+public class JsonParseException : Exception {
+}
+
+public class JsonNode
+{
+    JsonNodeType Type = JsonNodeType.Null;
+    Dictionary<string(), JsonNode#>() ObjectValue;
+    List<JsonNode#>() ArrayValue;
+    string() StringValue;
+    double NumberValue;
+    bool BoolValue;
+
+    /// Get the type of this node, such as string, object, array, etc.
+    /// You should use this function and then call the corresponding
+    /// AsObject, AsArray, AsString, etc. functions to get the actual
+    /// parsed json information.
+    public JsonNodeType GetType()
+    {
+        return Type;
+    }
+
+    /// Check if the JSON value is null.
+    public bool IsNull()
+    {
+        return Type == JsonNodeType.Null;
+    }
+
+    /// Reinterpret a JSON value as an object. Throws exception if the value type was not an object.
+    public Dictionary<string(), JsonNode#> AsObject() throws Exception
+    {
+        if (Type != JsonNodeType.Object)
+        {
+            throw Exception("Cannot call AsObject on JsonNode which is not an object.");
+        }
+        return ObjectValue;
+    }
+    /// Reinterpret a JSON value as an array. Throws exception if the value type was not an array.
+    public List<JsonNode#> AsArray() throws Exception
+    {
+        if (Type != JsonNodeType.Array)
+        {
+            throw Exception("Cannot call AsArray on JsonNode which is not an array.");
+        }
+        return ArrayValue;
+    }
+
+    /// Reinterpret a JSON value as a number. Throws exception if the value type was not a double.
+    public double AsNumber() throws Exception
+    {
+        if (Type != JsonNodeType.Number)
+        {
+            throw Exception("Cannot call AsNumber on JsonNode which is not a number.");
+        }
+        return NumberValue;
+    }
+
+    /// Reinterpret a JSON value as a boolean. Throws exception if the value type was not a boolean.
+    public bool AsBool() throws Exception
+    {
+        if (Type != JsonNodeType.Bool)
+        {
+            throw Exception("Cannot call AsBool on JsonNode which is not a boolean.");
+        }
+        return BoolValue;
+    }
+
+    /// Reinterpret a JSON value as a string. Throws exception if the value type was not a string.
+    public string AsString() throws Exception
+    {
+        if (Type != JsonNodeType.String)
+        {
+            throw Exception("Cannot call AsString on JsonNode which is not a string.");
+        }
+        return StringValue;
+    }
+
+    public static JsonNode# Parse(string text) throws Exception, JsonParseException
+    {
+        JsonParser# parser = new JsonParser();
+        parser.Load(text);
+        return parser.ParseValue();
+    }
+
+    internal void InitBool!(bool value) throws JsonParseException
+    {
+        if (Type != JsonNodeType.Null)
+        {
+            throw JsonParseException("Cannot call InitBool on JsonNode which is not null.");
+        }
+        Type = JsonNodeType.Bool;
+        BoolValue = value;
+    }
+
+    internal void InitArray!() throws JsonParseException
+    {
+        if (Type != JsonNodeType.Null)
+        {
+            throw JsonParseException("Cannot call InitArray on JsonNode which is not null.");
+        }
+        Type = JsonNodeType.Array;
+    }
+
+    internal void AddArrayChild!(JsonNode# child) throws JsonParseException
+    {
+        if (Type != JsonNodeType.Array)
+        {
+            throw JsonParseException("Cannot call AddArrayChild on JsonNode which is not an array.");
+        }
+        ArrayValue.Add(child);
+    }
+
+    internal void InitObject!() throws JsonParseException
+    {
+        if (Type != JsonNodeType.Null)
+        {
+            throw JsonParseException("Cannot call InitObject on JsonNode which is not null.");
+        }
+        Type = JsonNodeType.Object;
+    }
+
+    internal void AddObjectChild!(string key, JsonNode# child) throws JsonParseException
+    {
+        if (Type != JsonNodeType.Object)
+        {
+            throw JsonParseException("Cannot call AddObjectChild on JsonNode which is not an object.");
+        }
+        ObjectValue[key] = child;
+    }
+
+    internal void InitNumber!(double value) throws JsonParseException
+    {
+        if (Type != JsonNodeType.Null)
+        {
+            throw JsonParseException("Cannot call InitNumber on JsonNode which is not null.");
+        }
+        Type = JsonNodeType.Number;
+        NumberValue = value;
+    }
+
+    internal void InitString!(string value) throws JsonParseException
+    {
+        if (Type != JsonNodeType.Null)
+        {
+            throw JsonParseException("Cannot call InitString on JsonNode which is not null.");
+        }
+        Type = JsonNodeType.String;
+        StringValue = value;
+    }
+}
+
 // https://github.com/gering/Tiny-JSON/blob/master/Tiny-JSON/Tiny-JSON/JsonParser.cs
-public class JsonParser
+class JsonParser
 {
     string() text = "";
     int position = 0;
@@ -169,43 +275,74 @@ public class JsonParser
         return builder.ToString();
     }
 
-    public void ParseNull!() throws Exception 
+    public JsonNode# ParseNull!() throws JsonParseException 
     {
         if (PeekToken() != JsonToken.Null) {
-            throw Exception("Expected null");
+            throw JsonParseException("Expected null");
         }
         ReadWord();
+        JsonNode# node = new JsonNode();
+        return node;
     }
 
-    public double ParseNumber!() throws Exception 
+    public JsonNode# ParseBool!() throws JsonParseException 
+    {
+        if (PeekToken() != JsonToken.Bool) {
+            throw JsonParseException("Expected null");
+        }
+        string() boolValue = ReadWord();
+        if (boolValue == "true") {
+            JsonNode# node = new JsonNode();
+            node.InitBool(true);
+            return node;
+        } else if (boolValue == "false") {
+            JsonNode# node = new JsonNode();
+            node.InitBool(false);
+            return node;
+        } else {
+            throw JsonParseException("Invalid boolean");
+        }
+    }
+
+    public JsonNode# ParseNumber!() throws JsonParseException 
     {
         if (PeekToken() != JsonToken.Number) {
-            throw Exception("Expected number");
+            throw JsonParseException("Expected number");
         }
         double d;
         if (d.TryParse(ReadWord())) {
-            return d;
+            JsonNode# node = new JsonNode();
+            node.InitNumber(d);
+            return node;
         }
 
-        throw Exception("Invalid number");
+        throw JsonParseException("Invalid number");
     }
 
-    public string() ParseString!() throws Exception
+    public JsonNode# ParseString!() throws JsonParseException
     {
         if (PeekToken() != JsonToken.String) {
-            throw Exception("Expected string");
+            throw JsonParseException("Expected string");
         }
+
         builder.Clear();
         Read(); // ditch opening quote
       
+
         while (true) {
-            if (EndReached()) return "";
+            if (EndReached()) {
+                throw JsonParseException("Unterminated string");
+            }
             int c = Read();
             switch (c) {
                 case '"':
-                    return builder.ToString();
+                    JsonNode# node = new JsonNode();
+                    node.InitString(builder.ToString());
+                    return node;
                 case '\\':
-                    if (EndReached()) return "";
+                    if (EndReached()) {
+                        throw JsonParseException("Unterminated string");
+                    }
                     
                     c = Read();
                     switch (c) {
@@ -235,7 +372,7 @@ public class JsonParser
                             if (i.TryParse(hex, 16)) {
                                 writer.WriteChar(i);
                             } else {
-                                throw Exception("Invalid unicode escape");
+                                throw JsonParseException("Invalid unicode escape");
                             }
                             break;
                     }
@@ -246,35 +383,83 @@ public class JsonParser
             }
         }
     }
+
+    public JsonNode# ParseObject!() throws Exception, JsonParseException
+    {
+        if (PeekToken() != JsonToken.CurlyOpen) {
+            throw JsonParseException("Expected object");
+        }
+        Read(); // ditch opening brace
+
+        JsonNode# node = new JsonNode();
+        node.InitObject();
+
+        while (true) {
+            switch (PeekToken()) {
+            case JsonToken.None:
+                throw JsonParseException("Unterminated object");
+            case JsonToken.Comma:
+                Read(); // ditch comma
+                continue;
+            case JsonToken.CurlyClose:
+                Read(); // ditch closing brace
+                return node;
+            default:
+                JsonNode# name = ParseString();
+
+                if (PeekToken() != JsonToken.Colon) throw JsonParseException("Expected colon");
+                Read(); // ditch the colon
+
+                node.AddObjectChild(name.AsString(), ParseValue());
+                break;
+            }
+        }
+    }
+
+    public JsonNode# ParseValue!() throws Exception, JsonParseException
+    {
+        switch (PeekToken()) {
+        case JsonToken.String:		
+            return ParseString();
+        case JsonToken.Number:		
+            return ParseNumber();
+        case JsonToken.Bool:		
+            return ParseBool();
+        case JsonToken.Null:		
+            return ParseNull();
+        case JsonToken.CurlyOpen:	
+            return ParseObject();
+        case JsonToken.SquareOpen:	
+            return ParseArray();
+        default:
+            throw JsonParseException("Invalid token");
+        }
+    }
+
+	public JsonNode# ParseArray!() throws Exception, JsonParseException
+    {
+        if (PeekToken() != JsonToken.SquareOpen) {
+            throw JsonParseException("Expected array");
+        }
+        Read(); // ditch opening brace
+
+        JsonNode# node = new JsonNode();
+        node.InitArray();
+
+        while (true) {
+            switch (PeekToken()) {
+            case JsonToken.None:
+                throw JsonParseException("Unterminated array");		
+            case JsonToken.Comma:			
+                Read(); // ditch comma
+                continue;						
+            case JsonToken.SquareClose:	
+                Read(); // ditch closing brace
+                return node;
+            default:
+                node.AddArrayChild(ParseValue());
+                break;
+            }
+        }
+    }
 }
-
-// public class StringBuilder
-// {
-//     List<string()>() parts;
-
-//     public void AppendChar!(int text)
-//     {
-//         parts.Add($"{text}");
-//     }
-
-//     public void Append!(string text)
-//     {
-//         parts.Add(text);
-//     }
-
-//     public void AppendLine!(string text)
-//     {
-//         parts.Add(text);
-//         parts.Add("\n");
-//     }
-
-//     public string() ToString()
-//     {
-//         string() result = "";
-//         foreach (string() part in parts)
-//         {
-//             result = result + part;
-//         }
-//         return result;
-//     }
-// }

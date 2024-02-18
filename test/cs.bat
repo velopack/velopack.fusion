@@ -1,0 +1,1 @@
+..\fut.exe -o Json.cs -n Velopack ..\Json.fu
