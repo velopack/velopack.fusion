@@ -33,27 +33,18 @@ class DefaultProgressHandler : ProgressHandler
     }
 }
 
-public class UpdateOptions
+public class UpdateManager
 {
     bool _allowDowngrade = false;
     string() _explicitChannel = "";
     string() _urlOrPath = "";
     ProgressHandler# _progress = new DefaultProgressHandler();
-    public void SetUrlOrPath!(string() urlOrPath) { _urlOrPath = urlOrPath; }
-    public string() GetUrlOrPath() { return _urlOrPath; }
-    public void SetAllowDowngrade!(bool allowDowngrade) { _allowDowngrade = allowDowngrade; }
-    public bool GetAllowDowngrade() { return _allowDowngrade; }
-    public void SetExplicitChannel!(string() explicitChannel) { _explicitChannel = explicitChannel; }
-    public string() GetExplicitChannel() { return _explicitChannel; }
-    public void SetProgressHandler!(ProgressHandler# progress) { _progress = progress; }
-    public ProgressHandler GetProgressHandler() { return _progress; }
-}
 
-public class UpdateManager
-{
-    UpdateOptions? _options;
-    public void SetOptions!(UpdateOptions? options) { _options = options; }
- 
+    public void SetUrlOrPath!(string() urlOrPath) { _urlOrPath = urlOrPath; }
+    public void SetAllowDowngrade!(bool allowDowngrade) { _allowDowngrade = allowDowngrade; }
+    public void SetExplicitChannel!(string() explicitChannel) { _explicitChannel = explicitChannel; }
+    public void SetProgressHandler!(ProgressHandler# progress) { _progress = progress; }
+
     /// This function will return the current installed version of the application
     /// or throw, if the application is not installed.
     public string() GetCurrentVersion() throws Exception
@@ -67,29 +58,28 @@ public class UpdateManager
     /// This function will check for updates, and return information about the latest available release.
     public UpdateInfo#? CheckForUpdates() throws Exception
     {
-        if (_options == null)
+        if (_urlOrPath.Length == 0)
         {
-            throw Exception("Please call SetOptions before trying to check for updates.");
+            throw Exception("Please call SetUrlOrPath before trying to check for updates.");
         }
 
         List<string()>() command;
         command.Add(Util.GetUpdateExePath());
         command.Add("check");
         command.Add("--url");
-        command.Add(_options.GetUrlOrPath());
+        command.Add(_urlOrPath);
         command.Add("--format");
         command.Add("json");
 
-        if (_options.GetAllowDowngrade())
+        if (_allowDowngrade)
         {
             command.Add("--downgrade");
         }
 
-        string() explicitChannel = _options.GetExplicitChannel();
-        if (explicitChannel.Length > 0)
+        if (_explicitChannel.Length > 0)
         {
             command.Add("--channel");
-            command.Add(explicitChannel);
+            command.Add(_explicitChannel);
         }
     
         string() output = Process.StartProcessBlocking(command);
@@ -106,22 +96,22 @@ public class UpdateManager
     /// To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
     public void DownloadUpdateAsync!(UpdateInfo# updateInfo) throws Exception
     {
-        if (_options == null)
+        if (_urlOrPath.Length == 0)
         {
-            throw Exception("Please call SetOptions before trying to download updates.");
+            throw Exception("Please call SetUrlOrPath before trying to download updates.");
         }
 
         List<string()>() command;
         command.Add(Util.GetUpdateExePath());
         command.Add("download");
         command.Add("--url");
-        command.Add(_options.GetUrlOrPath());
+        command.Add(_urlOrPath);
         command.Add("--clean");
         command.Add("--format");
         command.Add("json");
         command.Add("--name");
         command.Add(updateInfo.TargetFullRelease.FileName);
-        Process.StartProcessAsyncReadLine(command, _options.GetProgressHandler());
+        Process.StartProcessAsyncReadLine(command, _progress);
     }
 
     public void ApplyUpdatesAndExit(string() assetPath) throws Exception 

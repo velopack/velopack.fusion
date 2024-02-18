@@ -950,7 +950,7 @@ namespace Velopack
 		}
 	}
 
-	public class UpdateOptions
+	public class UpdateManager
 	{
 
 		bool _allowDowngrade = false;
@@ -966,19 +966,9 @@ namespace Velopack
 			this._urlOrPath = urlOrPath;
 		}
 
-		public string GetUrlOrPath()
-		{
-			return this._urlOrPath;
-		}
-
 		public void SetAllowDowngrade(bool allowDowngrade)
 		{
 			this._allowDowngrade = allowDowngrade;
-		}
-
-		public bool GetAllowDowngrade()
-		{
-			return this._allowDowngrade;
 		}
 
 		public void SetExplicitChannel(string explicitChannel)
@@ -986,30 +976,9 @@ namespace Velopack
 			this._explicitChannel = explicitChannel;
 		}
 
-		public string GetExplicitChannel()
-		{
-			return this._explicitChannel;
-		}
-
 		public void SetProgressHandler(ProgressHandler progress)
 		{
 			this._progress = progress;
-		}
-
-		public ProgressHandler GetProgressHandler()
-		{
-			return this._progress;
-		}
-	}
-
-	public class UpdateManager
-	{
-
-		UpdateOptions _options;
-
-		public void SetOptions(UpdateOptions options)
-		{
-			this._options = options;
 		}
 
 		/// <summary>This function will return the current installed version of the application
@@ -1025,23 +994,22 @@ namespace Velopack
 		/// <summary>This function will check for updates, and return information about the latest available release.</summary>
 		public UpdateInfo CheckForUpdates()
 		{
-			if (this._options == null) {
-				throw new Exception("Please call SetOptions before trying to check for updates.");
+			if (this._urlOrPath.Length == 0) {
+				throw new Exception("Please call SetUrlOrPath before trying to check for updates.");
 			}
 			List<string> command = new List<string>();
 			command.Add(Util.GetUpdateExePath());
 			command.Add("check");
 			command.Add("--url");
-			command.Add(this._options.GetUrlOrPath());
+			command.Add(this._urlOrPath);
 			command.Add("--format");
 			command.Add("json");
-			if (this._options.GetAllowDowngrade()) {
+			if (this._allowDowngrade) {
 				command.Add("--downgrade");
 			}
-			string explicitChannel = this._options.GetExplicitChannel();
-			if (explicitChannel.Length > 0) {
+			if (this._explicitChannel.Length > 0) {
 				command.Add("--channel");
-				command.Add(explicitChannel);
+				command.Add(this._explicitChannel);
 			}
 			string output = Process.StartProcessBlocking(command);
 			if (output.Length == 0 || output == "null") {
@@ -1054,20 +1022,20 @@ namespace Velopack
 		/// <remarks>To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.</remarks>
 		public void DownloadUpdateAsync(UpdateInfo updateInfo)
 		{
-			if (this._options == null) {
-				throw new Exception("Please call SetOptions before trying to download updates.");
+			if (this._urlOrPath.Length == 0) {
+				throw new Exception("Please call SetUrlOrPath before trying to download updates.");
 			}
 			List<string> command = new List<string>();
 			command.Add(Util.GetUpdateExePath());
 			command.Add("download");
 			command.Add("--url");
-			command.Add(this._options.GetUrlOrPath());
+			command.Add(this._urlOrPath);
 			command.Add("--clean");
 			command.Add("--format");
 			command.Add("json");
 			command.Add("--name");
 			command.Add(updateInfo.TargetFullRelease.FileName);
-			Process.StartProcessAsyncReadLine(command, this._options.GetProgressHandler());
+			Process.StartProcessAsyncReadLine(command, this._progress);
 		}
 
 		public void ApplyUpdatesAndExit(string assetPath)

@@ -122,20 +122,12 @@ export declare abstract class ProgressHandler extends ProcessReadLineHandler {
     abstract onError(error: string): void;
     handleProcessOutputLine(line: string): boolean;
 }
-export declare class UpdateOptions {
-    #private;
-    setUrlOrPath(urlOrPath: string): void;
-    getUrlOrPath(): string;
-    setAllowDowngrade(allowDowngrade: boolean): void;
-    getAllowDowngrade(): boolean;
-    setExplicitChannel(explicitChannel: string): void;
-    getExplicitChannel(): string;
-    setProgressHandler(progress: ProgressHandler): void;
-    getProgressHandler(): ProgressHandler;
-}
 export declare class UpdateManager {
     #private;
-    setOptions(options: UpdateOptions | null): void;
+    setUrlOrPath(urlOrPath: string): void;
+    setAllowDowngrade(allowDowngrade: boolean): void;
+    setExplicitChannel(explicitChannel: string): void;
+    setProgressHandler(progress: ProgressHandler): void;
     /**
      * This function will return the current installed version of the application
      * or throw, if the application is not installed.

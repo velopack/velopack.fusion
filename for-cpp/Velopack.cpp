@@ -705,49 +705,24 @@ void DefaultProgressHandler::onError(std::string error)
 {
 }
 
-void UpdateOptions::setUrlOrPath(std::string urlOrPath)
+void UpdateManager::setUrlOrPath(std::string urlOrPath)
 {
 	this->_urlOrPath = urlOrPath;
 }
 
-std::string UpdateOptions::getUrlOrPath() const
-{
-	return this->_urlOrPath;
-}
-
-void UpdateOptions::setAllowDowngrade(bool allowDowngrade)
+void UpdateManager::setAllowDowngrade(bool allowDowngrade)
 {
 	this->_allowDowngrade = allowDowngrade;
 }
 
-bool UpdateOptions::getAllowDowngrade() const
-{
-	return this->_allowDowngrade;
-}
-
-void UpdateOptions::setExplicitChannel(std::string explicitChannel)
+void UpdateManager::setExplicitChannel(std::string explicitChannel)
 {
 	this->_explicitChannel = explicitChannel;
 }
 
-std::string UpdateOptions::getExplicitChannel() const
-{
-	return this->_explicitChannel;
-}
-
-void UpdateOptions::setProgressHandler(std::shared_ptr<ProgressHandler> progress)
+void UpdateManager::setProgressHandler(std::shared_ptr<ProgressHandler> progress)
 {
 	this->_progress = progress;
-}
-
-const ProgressHandler * UpdateOptions::getProgressHandler() const
-{
-	return this->_progress.get();
-}
-
-void UpdateManager::setOptions(const UpdateOptions * options)
-{
-	this->_options = options;
 }
 
 std::string UpdateManager::getCurrentVersion() const
@@ -760,23 +735,22 @@ std::string UpdateManager::getCurrentVersion() const
 
 std::shared_ptr<UpdateInfo> UpdateManager::checkForUpdates() const
 {
-	if (this->_options == nullptr) {
-		throw std::runtime_error("Please call SetOptions before trying to check for updates.");
+	if (this->_urlOrPath.empty()) {
+		throw std::runtime_error("Please call SetUrlOrPath before trying to check for updates.");
 	}
 	std::vector<std::string> command;
 	command.push_back(Util::getUpdateExePath());
 	command.push_back("check");
 	command.push_back("--url");
-	command.push_back(this->_options->getUrlOrPath());
+	command.push_back(this->_urlOrPath);
 	command.push_back("--format");
 	command.push_back("json");
-	if (this->_options->getAllowDowngrade()) {
+	if (this->_allowDowngrade) {
 		command.push_back("--downgrade");
 	}
-	std::string explicitChannel{this->_options->getExplicitChannel()};
-	if (!explicitChannel.empty()) {
+	if (!this->_explicitChannel.empty()) {
 		command.push_back("--channel");
-		command.push_back(explicitChannel);
+		command.push_back(this->_explicitChannel);
 	}
 	std::string output{Process::startProcessBlocking(&command)};
 	if (output.empty() || output == "null") {
@@ -787,20 +761,20 @@ std::shared_ptr<UpdateInfo> UpdateManager::checkForUpdates() const
 
 void UpdateManager::downloadUpdateAsync(std::shared_ptr<UpdateInfo> updateInfo)
 {
-	if (this->_options == nullptr) {
-		throw std::runtime_error("Please call SetOptions before trying to download updates.");
+	if (this->_urlOrPath.empty()) {
+		throw std::runtime_error("Please call SetUrlOrPath before trying to download updates.");
 	}
 	std::vector<std::string> command;
 	command.push_back(Util::getUpdateExePath());
 	command.push_back("download");
 	command.push_back("--url");
-	command.push_back(this->_options->getUrlOrPath());
+	command.push_back(this->_urlOrPath);
 	command.push_back("--clean");
 	command.push_back("--format");
 	command.push_back("json");
 	command.push_back("--name");
 	command.push_back(updateInfo->targetFullRelease->fileName);
-	Process::startProcessAsyncReadLine(&command, this->_options->getProgressHandler());
+	Process::startProcessAsyncReadLine(&command, this->_progress.get());
 }
 
 void UpdateManager::applyUpdatesAndExit(std::string assetPath) const

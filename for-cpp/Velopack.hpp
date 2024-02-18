@@ -1277,7 +1277,6 @@ class ProcessReadLineHandler;
 class Process;
 class ProgressHandler;
 class DefaultProgressHandler;
-class UpdateOptions;
 class UpdateManager;
 
 class JsonParseException : public std::runtime_error
@@ -1523,30 +1522,14 @@ public:
 	void onError(std::string error) override;
 };
 
-class UpdateOptions
-{
-public:
-	UpdateOptions() = default;
-	void setUrlOrPath(std::string urlOrPath);
-	std::string getUrlOrPath() const;
-	void setAllowDowngrade(bool allowDowngrade);
-	bool getAllowDowngrade() const;
-	void setExplicitChannel(std::string explicitChannel);
-	std::string getExplicitChannel() const;
-	void setProgressHandler(std::shared_ptr<ProgressHandler> progress);
-	const ProgressHandler * getProgressHandler() const;
-private:
-	bool _allowDowngrade = false;
-	std::string _explicitChannel{""};
-	std::string _urlOrPath{""};
-	std::shared_ptr<ProgressHandler> _progress = std::make_shared<DefaultProgressHandler>();
-};
-
 class UpdateManager
 {
 public:
 	UpdateManager() = default;
-	void setOptions(const UpdateOptions * options);
+	void setUrlOrPath(std::string urlOrPath);
+	void setAllowDowngrade(bool allowDowngrade);
+	void setExplicitChannel(std::string explicitChannel);
+	void setProgressHandler(std::shared_ptr<ProgressHandler> progress);
 	/**
 	 * This function will return the current installed version of the application
 	 * or throw, if the application is not installed.
@@ -1565,6 +1548,9 @@ public:
 	void applyUpdatesAndRestart(std::string assetPath, const std::vector<std::string> * restartArgs) const;
 	void waitExitThenApplyUpdates(std::string assetPath, bool silent, bool restart, const std::vector<std::string> * restartArgs) const;
 private:
-	const UpdateOptions * _options;
+	bool _allowDowngrade = false;
+	std::string _explicitChannel{""};
+	std::string _urlOrPath{""};
+	std::shared_ptr<ProgressHandler> _progress = std::make_shared<DefaultProgressHandler>();
 };
 }

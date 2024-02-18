@@ -915,7 +915,7 @@ class DefaultProgressHandler extends ProgressHandler
 	}
 }
 
-export class UpdateOptions
+export class UpdateManager
 {
 	#_allowDowngrade: boolean = false;
 	#_explicitChannel: string = "";
@@ -927,19 +927,9 @@ export class UpdateOptions
 		this.#_urlOrPath = urlOrPath;
 	}
 
-	public getUrlOrPath(): string
-	{
-		return this.#_urlOrPath;
-	}
-
 	public setAllowDowngrade(allowDowngrade: boolean): void
 	{
 		this.#_allowDowngrade = allowDowngrade;
-	}
-
-	public getAllowDowngrade(): boolean
-	{
-		return this.#_allowDowngrade;
 	}
 
 	public setExplicitChannel(explicitChannel: string): void
@@ -947,29 +937,9 @@ export class UpdateOptions
 		this.#_explicitChannel = explicitChannel;
 	}
 
-	public getExplicitChannel(): string
-	{
-		return this.#_explicitChannel;
-	}
-
 	public setProgressHandler(progress: ProgressHandler): void
 	{
 		this.#_progress = progress;
-	}
-
-	public getProgressHandler(): ProgressHandler
-	{
-		return this.#_progress;
-	}
-}
-
-export class UpdateManager
-{
-	#_options: UpdateOptions | null;
-
-	public setOptions(options: UpdateOptions | null): void
-	{
-		this.#_options = options;
 	}
 
 	/**
@@ -989,23 +959,22 @@ export class UpdateManager
 	 */
 	public checkForUpdates(): UpdateInfo | null
 	{
-		if (this.#_options == null) {
-			throw new Error("Please call SetOptions before trying to check for updates.");
+		if (this.#_urlOrPath.length == 0) {
+			throw new Error("Please call SetUrlOrPath before trying to check for updates.");
 		}
 		const command: string[] = [];
 		command.push(Util.getUpdateExePath());
 		command.push("check");
 		command.push("--url");
-		command.push(this.#_options.getUrlOrPath());
+		command.push(this.#_urlOrPath);
 		command.push("--format");
 		command.push("json");
-		if (this.#_options.getAllowDowngrade()) {
+		if (this.#_allowDowngrade) {
 			command.push("--downgrade");
 		}
-		let explicitChannel: string = this.#_options.getExplicitChannel();
-		if (explicitChannel.length > 0) {
+		if (this.#_explicitChannel.length > 0) {
 			command.push("--channel");
-			command.push(explicitChannel);
+			command.push(this.#_explicitChannel);
 		}
 		let output: string = Process.startProcessBlocking(command);
 		if (output.length == 0 || output == "null") {
@@ -1020,20 +989,20 @@ export class UpdateManager
 	 */
 	public downloadUpdateAsync(updateInfo: UpdateInfo): void
 	{
-		if (this.#_options == null) {
-			throw new Error("Please call SetOptions before trying to download updates.");
+		if (this.#_urlOrPath.length == 0) {
+			throw new Error("Please call SetUrlOrPath before trying to download updates.");
 		}
 		const command: string[] = [];
 		command.push(Util.getUpdateExePath());
 		command.push("download");
 		command.push("--url");
-		command.push(this.#_options.getUrlOrPath());
+		command.push(this.#_urlOrPath);
 		command.push("--clean");
 		command.push("--format");
 		command.push("json");
 		command.push("--name");
 		command.push(updateInfo.targetFullRelease.fileName);
-		Process.startProcessAsyncReadLine(command, this.#_options.getProgressHandler());
+		Process.startProcessAsyncReadLine(command, this.#_progress);
 	}
 
 	public applyUpdatesAndExit(assetPath: string): void

@@ -10,7 +10,7 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
     if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
     return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
-var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _StringAppendable_builder, _StringAppendable_writer, _StringAppendable_initialised, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _VelopackApp_instances, _VelopackApp_handleArgs, _UpdateOptions__allowDowngrade, _UpdateOptions__explicitChannel, _UpdateOptions__urlOrPath, _UpdateOptions__progress, _UpdateManager__options, _StringWriter_buf;
+var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _StringAppendable_builder, _StringAppendable_writer, _StringAppendable_initialised, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _VelopackApp_instances, _VelopackApp_handleArgs, _UpdateManager__allowDowngrade, _UpdateManager__explicitChannel, _UpdateManager__urlOrPath, _UpdateManager__progress, _StringWriter_buf;
 const app = require("electron").remote.app;
 const fs = require("fs");
 const { spawn, spawnSync } = require("child_process");
@@ -789,45 +789,24 @@ class DefaultProgressHandler extends ProgressHandler {
     onError(error) {
     }
 }
-export class UpdateOptions {
-    constructor() {
-        _UpdateOptions__allowDowngrade.set(this, false);
-        _UpdateOptions__explicitChannel.set(this, "");
-        _UpdateOptions__urlOrPath.set(this, "");
-        _UpdateOptions__progress.set(this, new DefaultProgressHandler());
-    }
-    setUrlOrPath(urlOrPath) {
-        __classPrivateFieldSet(this, _UpdateOptions__urlOrPath, urlOrPath, "f");
-    }
-    getUrlOrPath() {
-        return __classPrivateFieldGet(this, _UpdateOptions__urlOrPath, "f");
-    }
-    setAllowDowngrade(allowDowngrade) {
-        __classPrivateFieldSet(this, _UpdateOptions__allowDowngrade, allowDowngrade, "f");
-    }
-    getAllowDowngrade() {
-        return __classPrivateFieldGet(this, _UpdateOptions__allowDowngrade, "f");
-    }
-    setExplicitChannel(explicitChannel) {
-        __classPrivateFieldSet(this, _UpdateOptions__explicitChannel, explicitChannel, "f");
-    }
-    getExplicitChannel() {
-        return __classPrivateFieldGet(this, _UpdateOptions__explicitChannel, "f");
-    }
-    setProgressHandler(progress) {
-        __classPrivateFieldSet(this, _UpdateOptions__progress, progress, "f");
-    }
-    getProgressHandler() {
-        return __classPrivateFieldGet(this, _UpdateOptions__progress, "f");
-    }
-}
-_UpdateOptions__allowDowngrade = new WeakMap(), _UpdateOptions__explicitChannel = new WeakMap(), _UpdateOptions__urlOrPath = new WeakMap(), _UpdateOptions__progress = new WeakMap();
 export class UpdateManager {
     constructor() {
-        _UpdateManager__options.set(this, void 0);
+        _UpdateManager__allowDowngrade.set(this, false);
+        _UpdateManager__explicitChannel.set(this, "");
+        _UpdateManager__urlOrPath.set(this, "");
+        _UpdateManager__progress.set(this, new DefaultProgressHandler());
     }
-    setOptions(options) {
-        __classPrivateFieldSet(this, _UpdateManager__options, options, "f");
+    setUrlOrPath(urlOrPath) {
+        __classPrivateFieldSet(this, _UpdateManager__urlOrPath, urlOrPath, "f");
+    }
+    setAllowDowngrade(allowDowngrade) {
+        __classPrivateFieldSet(this, _UpdateManager__allowDowngrade, allowDowngrade, "f");
+    }
+    setExplicitChannel(explicitChannel) {
+        __classPrivateFieldSet(this, _UpdateManager__explicitChannel, explicitChannel, "f");
+    }
+    setProgressHandler(progress) {
+        __classPrivateFieldSet(this, _UpdateManager__progress, progress, "f");
     }
     /**
      * This function will return the current installed version of the application
@@ -843,23 +822,22 @@ export class UpdateManager {
      * This function will check for updates, and return information about the latest available release.
      */
     checkForUpdates() {
-        if (__classPrivateFieldGet(this, _UpdateManager__options, "f") == null) {
-            throw new Error("Please call SetOptions before trying to check for updates.");
+        if (__classPrivateFieldGet(this, _UpdateManager__urlOrPath, "f").length == 0) {
+            throw new Error("Please call SetUrlOrPath before trying to check for updates.");
         }
         const command = [];
         command.push(Util.getUpdateExePath());
         command.push("check");
         command.push("--url");
-        command.push(__classPrivateFieldGet(this, _UpdateManager__options, "f").getUrlOrPath());
+        command.push(__classPrivateFieldGet(this, _UpdateManager__urlOrPath, "f"));
         command.push("--format");
         command.push("json");
-        if (__classPrivateFieldGet(this, _UpdateManager__options, "f").getAllowDowngrade()) {
+        if (__classPrivateFieldGet(this, _UpdateManager__allowDowngrade, "f")) {
             command.push("--downgrade");
         }
-        let explicitChannel = __classPrivateFieldGet(this, _UpdateManager__options, "f").getExplicitChannel();
-        if (explicitChannel.length > 0) {
+        if (__classPrivateFieldGet(this, _UpdateManager__explicitChannel, "f").length > 0) {
             command.push("--channel");
-            command.push(explicitChannel);
+            command.push(__classPrivateFieldGet(this, _UpdateManager__explicitChannel, "f"));
         }
         let output = Process.startProcessBlocking(command);
         if (output.length == 0 || output == "null") {
@@ -872,20 +850,20 @@ export class UpdateManager {
      * To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
      */
     downloadUpdateAsync(updateInfo) {
-        if (__classPrivateFieldGet(this, _UpdateManager__options, "f") == null) {
-            throw new Error("Please call SetOptions before trying to download updates.");
+        if (__classPrivateFieldGet(this, _UpdateManager__urlOrPath, "f").length == 0) {
+            throw new Error("Please call SetUrlOrPath before trying to download updates.");
         }
         const command = [];
         command.push(Util.getUpdateExePath());
         command.push("download");
         command.push("--url");
-        command.push(__classPrivateFieldGet(this, _UpdateManager__options, "f").getUrlOrPath());
+        command.push(__classPrivateFieldGet(this, _UpdateManager__urlOrPath, "f"));
         command.push("--clean");
         command.push("--format");
         command.push("json");
         command.push("--name");
         command.push(updateInfo.targetFullRelease.fileName);
-        Process.startProcessAsyncReadLine(command, __classPrivateFieldGet(this, _UpdateManager__options, "f").getProgressHandler());
+        Process.startProcessAsyncReadLine(command, __classPrivateFieldGet(this, _UpdateManager__progress, "f"));
     }
     applyUpdatesAndExit(assetPath) {
         const args = [];
@@ -918,7 +896,7 @@ export class UpdateManager {
         Process.startProcessFireAndForget(command);
     }
 }
-_UpdateManager__options = new WeakMap();
+_UpdateManager__allowDowngrade = new WeakMap(), _UpdateManager__explicitChannel = new WeakMap(), _UpdateManager__urlOrPath = new WeakMap(), _UpdateManager__progress = new WeakMap();
 class StringWriter {
     constructor() {
         _StringWriter_buf.set(this, "");
