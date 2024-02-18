@@ -1344,7 +1344,7 @@ public:
 	StringAppendable() = default;
 	void clear();
 	void writeChar(int c);
-	std::string_view toString() const;
+	std::string toString() const;
 private:
 	std::ostringstream builder;
 	std::ostream * writer;
@@ -1474,7 +1474,7 @@ public:
 	 * Called when a line of output is read from the process.
 	 * If this method returns true, the reading loop is terminated.
 	 */
-	virtual bool handleProcessOutputLine(std::string_view line) = 0;
+	virtual bool handleProcessOutputLine(std::string line) = 0;
 protected:
 	ProcessReadLineHandler() = default;
 };
@@ -1496,7 +1496,7 @@ public:
 	 * If HandleProcessOutputLine returns true, the reading loop is terminated.
 	 * This method is non-blocking and returns immediately.
 	 */
-	static void startProcessAsyncReadLine(const std::vector<std::string> * command_line, const ProcessReadLineHandler * handler);
+	static void startProcessAsyncReadLine(const std::vector<std::string> * command_line, ProcessReadLineHandler * handler);
 private:
 	Process() = delete;
 };

@@ -144,9 +144,9 @@ void StringAppendable::writeChar(int c)
 	*this->writer << static_cast<char>(c);
 }
 
-std::string_view StringAppendable::toString() const
+std::string StringAppendable::toString() const
 {
-	return this->builder.str();
+	return std::string(this->builder.str());
 }
 
 void JsonParser::load(std::string_view text)
@@ -273,7 +273,7 @@ std::string JsonParser::readWord()
 	while (!endReached() && !peekWordbreak()) {
 		this->builder.writeChar(read());
 	}
-	return std::string(this->builder.toString());
+	return this->builder.toString();
 }
 
 std::shared_ptr<JsonNode> JsonParser::parseNull()
@@ -559,21 +559,21 @@ std::shared_ptr<VelopackAsset> VelopackAsset::fromNode(std::shared_ptr<JsonNode>
 {
 	std::shared_ptr<VelopackAsset> asset = std::make_shared<VelopackAsset>();
 	for (const auto &[k, v] : *node->asObject()) {
-		if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "id")
+		if ([&] { std::string data = std::string{k}; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "id")
 			asset->packageId = v->asString();
-		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "version")
+		else if ([&] { std::string data = std::string{k}; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "version")
 			asset->version = v->asString();
-		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "type")
-			asset->type = [&] { std::string data = v->asString(); std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "full" ? VelopackAssetType::full : VelopackAssetType::delta;
-		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "filename")
+		else if ([&] { std::string data = std::string{k}; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "type")
+			asset->type = [&] { std::string data = std::string{v->asString()}; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "full" ? VelopackAssetType::full : VelopackAssetType::delta;
+		else if ([&] { std::string data = std::string{k}; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "filename")
 			asset->fileName = v->asString();
-		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "sha1")
+		else if ([&] { std::string data = std::string{k}; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "sha1")
 			asset->sha1 = v->asString();
-		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "size")
+		else if ([&] { std::string data = std::string{k}; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "size")
 			asset->size = static_cast<int64_t>(v->asNumber());
-		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "markdown")
+		else if ([&] { std::string data = std::string{k}; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "markdown")
 			asset->notesMarkdown = v->asString();
-		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "html")
+		else if ([&] { std::string data = std::string{k}; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "html")
 			asset->notesHTML = v->asString();
 	}
 	return asset;
@@ -584,9 +584,9 @@ std::shared_ptr<UpdateInfo> UpdateInfo::fromJson(std::string_view json)
 	std::shared_ptr<JsonNode> node = JsonNode::parse(json);
 	std::shared_ptr<UpdateInfo> updateInfo = std::make_shared<UpdateInfo>();
 	for (const auto &[k, v] : *node->asObject()) {
-		if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "targetfullrelease")
+		if ([&] { std::string data = std::string{k}; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "targetfullrelease")
 			updateInfo->targetFullRelease = VelopackAsset::fromNode(v);
-		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "isdowngrade")
+		else if ([&] { std::string data = std::string{k}; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "isdowngrade")
 			updateInfo->isDowngrade = v->asBool();
 	}
 	return updateInfo;
@@ -597,13 +597,13 @@ std::shared_ptr<ProgressEvent> ProgressEvent::fromJson(std::string_view json)
 	std::shared_ptr<JsonNode> node = JsonNode::parse(json);
 	std::shared_ptr<ProgressEvent> progressEvent = std::make_shared<ProgressEvent>();
 	for (const auto &[k, v] : *node->asObject()) {
-		if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "file")
+		if ([&] { std::string data = std::string{k}; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "file")
 			progressEvent->file = v->asString();
-		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "complete")
+		else if ([&] { std::string data = std::string{k}; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "complete")
 			progressEvent->complete = v->asBool();
-		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "progress")
+		else if ([&] { std::string data = std::string{k}; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "progress")
 			progressEvent->progress = static_cast<int>(v->asNumber());
-		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "error")
+		else if ([&] { std::string data = std::string{k}; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "error")
 			progressEvent->error = v->asString();
 	}
 	return progressEvent;
@@ -635,7 +635,7 @@ void Process::startProcessFireAndForget(const std::vector<std::string> * command
 	}
 	 util_start_subprocess(command_line, subprocess_option_no_window); }
 
-void Process::startProcessAsyncReadLine(const std::vector<std::string> * command_line, const ProcessReadLineHandler * handler)
+void Process::startProcessAsyncReadLine(const std::vector<std::string> * command_line, ProcessReadLineHandler * handler)
 {
 	if (std::ssize(*command_line) == 0) {
 		throw std::runtime_error("Command line is empty");
@@ -643,7 +643,7 @@ void Process::startProcessAsyncReadLine(const std::vector<std::string> * command
 	 
 	        subprocess_s subprocess = util_start_subprocess(command_line, subprocess_option_no_window | subprocess_option_enable_async);
 
-            std::thread outputThread([subprocess, this]() mutable {
+            std::thread outputThread([subprocess, handler]() mutable {
                 const unsigned BUFFER_SIZE = 1024;
                 char readBuffer[BUFFER_SIZE];
                 std::string accumulatedData;

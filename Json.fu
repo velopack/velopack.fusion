@@ -194,7 +194,7 @@ class StringAppendable
         writer.WriteChar(c);
     }
 
-    public string ToString()
+    public string() ToString()
     {
         return builder.ToString();
     }

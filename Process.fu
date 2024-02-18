@@ -37,7 +37,7 @@ public abstract class ProcessReadLineHandler
 {
     /// Called when a line of output is read from the process.
     /// If this method returns true, the reading loop is terminated.
-    public abstract bool HandleProcessOutputLine!(string line);
+    public abstract bool HandleProcessOutputLine!(string() line);
 }
 
 static class Process
@@ -133,7 +133,7 @@ static class Process
     /// When a line is read, HandleProcessOutputLine is called with the line. 
     /// If HandleProcessOutputLine returns true, the reading loop is terminated.
     /// This method is non-blocking and returns immediately.
-    public static void StartProcessAsyncReadLine(List<string()> command_line, ProcessReadLineHandler handler) throws Exception
+    public static void StartProcessAsyncReadLine(List<string()> command_line, ProcessReadLineHandler! handler) throws Exception
     {
         if (command_line.Count == 0) {
             throw Exception("Command line is empty");
@@ -142,7 +142,7 @@ static class Process
         native { 
 	        subprocess_s subprocess = util_start_subprocess(command_line, subprocess_option_no_window | subprocess_option_enable_async);
 
-            std::thread outputThread([subprocess, this]() mutable {
+            std::thread outputThread([subprocess, handler]() mutable {
                 const unsigned BUFFER_SIZE = 1024;
                 char readBuffer[BUFFER_SIZE];
                 std::string accumulatedData;
