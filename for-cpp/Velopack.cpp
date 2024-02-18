@@ -547,7 +547,7 @@ std::string Util::getOsName()
 
 void Util::exit(int code)
 {
-	 exit(code); }
+	 ::exit(code); }
 
 std::shared_ptr<VelopackAsset> VelopackAsset::fromJson(std::string_view json)
 {

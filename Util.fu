@@ -128,7 +128,7 @@ static class Util
     public static void Exit(int code)
     {
 #if CPP
-        native { exit(code); }
+        native { ::exit(code); }
 #elif JS
         native { process.exit(code) }
 #elif CS
