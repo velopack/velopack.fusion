@@ -244,6 +244,16 @@ class JsonParser
 		return this.#position >= this.#text.length;
 	}
 
+	public readN(n: number): string
+	{
+		if (this.#position + n > this.#text.length) {
+			throw new JsonParseException("Unexpected end of input");
+		}
+		let result: string = this.#text.substring(this.#position, this.#position + n);
+		this.#position += n;
+		return result;
+	}
+
 	public read(): number
 	{
 		if (this.#position >= this.#text.length) {
@@ -271,7 +281,7 @@ class JsonParser
 	public peekWordbreak(): boolean
 	{
 		let c: number = this.peek();
-		return c == 32 || c == 44 || c == 58 || c == 34 || c == 123 || c == 125 || c == 91 || c == 93 || c == 9 || c == 10 || c == 13;
+		return c == 32 || c == 44 || c == 58 || c == 34 || c == 123 || c == 125 || c == 91 || c == 93 || c == 9 || c == 10 || c == 13 || c == 47;
 	}
 
 	#peekToken(): JsonToken
@@ -311,6 +321,24 @@ class JsonParser
 			return JsonToken.BOOL;
 		case 110:
 			return JsonToken.NULL;
+		case 47:
+			this.read();
+			if (this.peek() == 47) {
+				while (!this.endReached() && this.peek() != 10) {
+					this.read();
+				}
+				return this.#peekToken();
+			}
+			else if (this.peek() == 42) {
+				this.read();
+				while (!this.endReached()) {
+					if (this.read() == 42 && this.peek() == 47) {
+						this.read();
+						return this.#peekToken();
+					}
+				}
+			}
+			return JsonToken.NONE;
 		default:
 			return JsonToken.NONE;
 		}
@@ -329,17 +357,11 @@ class JsonParser
 		while (!this.endReached() && !this.peekWordbreak()) {
 			this.#builder.writeChar(this.read());
 		}
-		if (this.endReached()) {
-			return "";
-		}
 		return this.#builder.toString();
 	}
 
 	public parseNull(): JsonNode
 	{
-		if (this.#peekToken() != JsonToken.NULL) {
-			throw new JsonParseException("Expected null");
-		}
 		this.readWord();
 		let node: JsonNode = new JsonNode();
 		return node;
@@ -347,9 +369,6 @@ class JsonParser
 
 	public parseBool(): JsonNode
 	{
-		if (this.#peekToken() != JsonToken.BOOL) {
-			throw new JsonParseException("Expected null");
-		}
 		let boolValue: string = this.readWord();
 		if (boolValue == "true") {
 			let node: JsonNode = new JsonNode();
@@ -368,9 +387,6 @@ class JsonParser
 
 	public parseNumber(): JsonNode
 	{
-		if (this.#peekToken() != JsonToken.NUMBER) {
-			throw new JsonParseException("Expected number");
-		}
 		let d: number;
 		if (!isNaN(d = parseFloat(this.readWord()))) {
 			let node: JsonNode = new JsonNode();
@@ -382,9 +398,6 @@ class JsonParser
 
 	public parseString(): JsonNode
 	{
-		if (this.#peekToken() != JsonToken.STRING) {
-			throw new JsonParseException("Expected string");
-		}
 		this.#builder.clear();
 		this.read();
 		while (true) {
@@ -424,13 +437,8 @@ class JsonParser
 					this.#builder.writeChar(9);
 					break;
 				case 117:
-					const hex: StringAppendable = new StringAppendable();
-					hex.writeChar(this.read());
-					hex.writeChar(this.read());
-					hex.writeChar(this.read());
-					hex.writeChar(this.read());
 					let i: number;
-					if (!isNaN(i = parseInt(hex.toString(), 16))) {
+					if (!isNaN(i = parseInt(this.readN(4), 16))) {
 						this.#builder.writeChar(i);
 					}
 					else {
@@ -448,9 +456,6 @@ class JsonParser
 
 	public parseObject(): JsonNode
 	{
-		if (this.#peekToken() != JsonToken.CURLY_OPEN) {
-			throw new JsonParseException("Expected object");
-		}
 		this.read();
 		let node: JsonNode = new JsonNode();
 		node.initObject();
@@ -475,31 +480,8 @@ class JsonParser
 		}
 	}
 
-	public parseValue(): JsonNode
-	{
-		switch (this.#peekToken()) {
-		case JsonToken.STRING:
-			return this.parseString();
-		case JsonToken.NUMBER:
-			return this.parseNumber();
-		case JsonToken.BOOL:
-			return this.parseBool();
-		case JsonToken.NULL:
-			return this.parseNull();
-		case JsonToken.CURLY_OPEN:
-			return this.parseObject();
-		case JsonToken.SQUARE_OPEN:
-			return this.parseArray();
-		default:
-			throw new JsonParseException("Invalid token");
-		}
-	}
-
 	public parseArray(): JsonNode
 	{
-		if (this.#peekToken() != JsonToken.SQUARE_OPEN) {
-			throw new JsonParseException("Expected array");
-		}
 		this.read();
 		let node: JsonNode = new JsonNode();
 		node.initArray();
@@ -526,6 +508,26 @@ class JsonParser
 				node.addArrayChild(this.parseValue());
 				break;
 			}
+		}
+	}
+
+	public parseValue(): JsonNode
+	{
+		switch (this.#peekToken()) {
+		case JsonToken.STRING:
+			return this.parseString();
+		case JsonToken.NUMBER:
+			return this.parseNumber();
+		case JsonToken.BOOL:
+			return this.parseBool();
+		case JsonToken.NULL:
+			return this.parseNull();
+		case JsonToken.CURLY_OPEN:
+			return this.parseObject();
+		case JsonToken.SQUARE_OPEN:
+			return this.parseArray();
+		default:
+			throw new JsonParseException("Invalid token");
 		}
 	}
 }

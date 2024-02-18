@@ -8,10 +8,23 @@ public enum JsonNodeType
     String
 }
 
-enum JsonToken { None, CurlyOpen, CurlyClose, SquareOpen, SquareClose, Colon, Comma, String, Number, Bool, Null }
-
-public class JsonParseException : Exception {
+enum JsonToken 
+{ 
+    None, 
+    CurlyOpen, 
+    CurlyClose, 
+    SquareOpen, 
+    SquareClose, 
+    Colon, 
+    Comma, 
+    String, 
+    Number, 
+    Bool, 
+    Null
 }
+
+public class JsonParseException : Exception 
+{ }
 
 public class JsonNode
 {
@@ -205,6 +218,17 @@ class JsonParser
         return position >= text.Length;
     }
 
+    public string() ReadN!(int n) throws JsonParseException
+    {
+        if (position + n > text.Length)
+        {
+            throw JsonParseException("Unexpected end of input");
+        }
+        string() result = text.Substring(position, n);
+        position += n;
+        return result;
+    }
+
     public int Read!()
     {
         if (position >= text.Length)
@@ -235,7 +259,7 @@ class JsonParser
     {
         int c = Peek();
         return c == ' ' || c == ',' || c == ':' || c == '\"' || c == '{' || c == '}' 
-            || c == '[' || c == ']' || c == '\t' || c == '\n' || c == '\r';
+            || c == '[' || c == ']' || c == '\t' || c == '\n' || c == '\r' || c == '/';
     }
 
     JsonToken PeekToken!() {
@@ -273,6 +297,24 @@ class JsonParser
                 return JsonToken.Bool;
             case 'n':
                 return JsonToken.Null;
+            case '/':
+                // ignore / skip past line and blockcomments
+                Read(); // skip the first /
+                if (Peek() == '/') { // line comment, read to next \n
+                    while (!EndReached() && Peek() != '\n') {
+                        Read();
+                    }
+                    return PeekToken();
+                } else if (Peek() == '*') { // block comment, read to */
+                    Read(); // skip the *
+                    while (!EndReached()) {
+                        if (Read() == '*' && Peek() == '/') {
+                            Read(); // skip the /
+                            return PeekToken();
+                        }
+                    }
+                }
+                return JsonToken.None;
             default:
                 return JsonToken.None;
         }
@@ -293,17 +335,11 @@ class JsonParser
         {
             builder.WriteChar(Read());
         }
-        if (EndReached()) {
-            return "";
-        }
         return builder.ToString();
     }
 
     public JsonNode# ParseNull!() throws JsonParseException 
     {
-        if (PeekToken() != JsonToken.Null) {
-            throw JsonParseException("Expected null");
-        }
         ReadWord();
         JsonNode# node = new JsonNode();
         return node;
@@ -311,9 +347,6 @@ class JsonParser
 
     public JsonNode# ParseBool!() throws JsonParseException 
     {
-        if (PeekToken() != JsonToken.Bool) {
-            throw JsonParseException("Expected null");
-        }
         string() boolValue = ReadWord();
         if (boolValue == "true") {
             JsonNode# node = new JsonNode();
@@ -330,9 +363,6 @@ class JsonParser
 
     public JsonNode# ParseNumber!() throws JsonParseException 
     {
-        if (PeekToken() != JsonToken.Number) {
-            throw JsonParseException("Expected number");
-        }
         double d;
         if (d.TryParse(ReadWord())) {
             JsonNode# node = new JsonNode();
@@ -345,14 +375,9 @@ class JsonParser
 
     public JsonNode# ParseString!() throws JsonParseException
     {
-        if (PeekToken() != JsonToken.String) {
-            throw JsonParseException("Expected string");
-        }
-
         builder.Clear();
         Read(); // ditch opening quote
       
-
         while (true) {
             if (EndReached()) {
                 throw JsonParseException("Unterminated string");
@@ -391,13 +416,8 @@ class JsonParser
                             builder.WriteChar('\t');
                             break;
                         case 'u':
-                            StringAppendable() hex;
-                            hex.WriteChar(Read());
-                            hex.WriteChar(Read());
-                            hex.WriteChar(Read());
-                            hex.WriteChar(Read());
                             int i;
-                            if (i.TryParse(hex.ToString(), 16)) {
+                            if (i.TryParse(ReadN(4), 16)) {
                                 builder.WriteChar(i);
                             } else {
                                 throw JsonParseException("Invalid unicode escape");
@@ -414,11 +434,7 @@ class JsonParser
 
     public JsonNode# ParseObject!() throws Exception, JsonParseException
     {
-        if (PeekToken() != JsonToken.CurlyOpen) {
-            throw JsonParseException("Expected object");
-        }
         Read(); // ditch opening brace
-
         JsonNode# node = new JsonNode();
         node.InitObject();
 
@@ -444,33 +460,9 @@ class JsonParser
         }
     }
 
-    public JsonNode# ParseValue!() throws Exception, JsonParseException
-    {
-        switch (PeekToken()) {
-        case JsonToken.String:		
-            return ParseString();
-        case JsonToken.Number:		
-            return ParseNumber();
-        case JsonToken.Bool:		
-            return ParseBool();
-        case JsonToken.Null:		
-            return ParseNull();
-        case JsonToken.CurlyOpen:	
-            return ParseObject();
-        case JsonToken.SquareOpen:	
-            return ParseArray();
-        default:
-            throw JsonParseException("Invalid token");
-        }
-    }
-
 	public JsonNode# ParseArray!() throws Exception, JsonParseException
     {
-        if (PeekToken() != JsonToken.SquareOpen) {
-            throw JsonParseException("Expected array");
-        }
         Read(); // ditch opening brace
-
         JsonNode# node = new JsonNode();
         node.InitArray();
 
@@ -497,6 +489,26 @@ class JsonParser
                 node.AddArrayChild(ParseValue());
                 break;
             }
+        }
+    }
+
+    public JsonNode# ParseValue!() throws Exception, JsonParseException
+    {
+        switch (PeekToken()) {
+        case JsonToken.String:		
+            return ParseString();
+        case JsonToken.Number:		
+            return ParseNumber();
+        case JsonToken.Bool:		
+            return ParseBool();
+        case JsonToken.Null:		
+            return ParseNull();
+        case JsonToken.CurlyOpen:	
+            return ParseObject();
+        case JsonToken.SquareOpen:	
+            return ParseArray();
+        default:
+            throw JsonParseException("Invalid token");
         }
     }
 }

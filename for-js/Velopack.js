@@ -217,6 +217,14 @@ class JsonParser {
     endReached() {
         return __classPrivateFieldGet(this, _JsonParser_position, "f") >= __classPrivateFieldGet(this, _JsonParser_text, "f").length;
     }
+    readN(n) {
+        if (__classPrivateFieldGet(this, _JsonParser_position, "f") + n > __classPrivateFieldGet(this, _JsonParser_text, "f").length) {
+            throw new JsonParseException("Unexpected end of input");
+        }
+        let result = __classPrivateFieldGet(this, _JsonParser_text, "f").substring(__classPrivateFieldGet(this, _JsonParser_position, "f"), __classPrivateFieldGet(this, _JsonParser_position, "f") + n);
+        __classPrivateFieldSet(this, _JsonParser_position, __classPrivateFieldGet(this, _JsonParser_position, "f") + n, "f");
+        return result;
+    }
     read() {
         var _a;
         if (__classPrivateFieldGet(this, _JsonParser_position, "f") >= __classPrivateFieldGet(this, _JsonParser_text, "f").length) {
@@ -238,7 +246,7 @@ class JsonParser {
     }
     peekWordbreak() {
         let c = this.peek();
-        return c == 32 || c == 44 || c == 58 || c == 34 || c == 123 || c == 125 || c == 91 || c == 93 || c == 9 || c == 10 || c == 13;
+        return c == 32 || c == 44 || c == 58 || c == 34 || c == 123 || c == 125 || c == 91 || c == 93 || c == 9 || c == 10 || c == 13 || c == 47;
     }
     eatWhitespace() {
         while (!this.endReached() && this.peekWhitespace()) {
@@ -250,23 +258,14 @@ class JsonParser {
         while (!this.endReached() && !this.peekWordbreak()) {
             __classPrivateFieldGet(this, _JsonParser_builder, "f").writeChar(this.read());
         }
-        if (this.endReached()) {
-            return "";
-        }
         return __classPrivateFieldGet(this, _JsonParser_builder, "f").toString();
     }
     parseNull() {
-        if (__classPrivateFieldGet(this, _JsonParser_instances, "m", _JsonParser_peekToken).call(this) != JsonToken.NULL) {
-            throw new JsonParseException("Expected null");
-        }
         this.readWord();
         let node = new JsonNode();
         return node;
     }
     parseBool() {
-        if (__classPrivateFieldGet(this, _JsonParser_instances, "m", _JsonParser_peekToken).call(this) != JsonToken.BOOL) {
-            throw new JsonParseException("Expected null");
-        }
         let boolValue = this.readWord();
         if (boolValue == "true") {
             let node = new JsonNode();
@@ -283,9 +282,6 @@ class JsonParser {
         }
     }
     parseNumber() {
-        if (__classPrivateFieldGet(this, _JsonParser_instances, "m", _JsonParser_peekToken).call(this) != JsonToken.NUMBER) {
-            throw new JsonParseException("Expected number");
-        }
         let d;
         if (!isNaN(d = parseFloat(this.readWord()))) {
             let node = new JsonNode();
@@ -295,9 +291,6 @@ class JsonParser {
         throw new JsonParseException("Invalid number");
     }
     parseString() {
-        if (__classPrivateFieldGet(this, _JsonParser_instances, "m", _JsonParser_peekToken).call(this) != JsonToken.STRING) {
-            throw new JsonParseException("Expected string");
-        }
         __classPrivateFieldGet(this, _JsonParser_builder, "f").clear();
         this.read();
         while (true) {
@@ -337,13 +330,8 @@ class JsonParser {
                             __classPrivateFieldGet(this, _JsonParser_builder, "f").writeChar(9);
                             break;
                         case 117:
-                            const hex = new StringAppendable();
-                            hex.writeChar(this.read());
-                            hex.writeChar(this.read());
-                            hex.writeChar(this.read());
-                            hex.writeChar(this.read());
                             let i;
-                            if (!isNaN(i = parseInt(hex.toString(), 16))) {
+                            if (!isNaN(i = parseInt(this.readN(4), 16))) {
                                 __classPrivateFieldGet(this, _JsonParser_builder, "f").writeChar(i);
                             }
                             else {
@@ -359,9 +347,6 @@ class JsonParser {
         }
     }
     parseObject() {
-        if (__classPrivateFieldGet(this, _JsonParser_instances, "m", _JsonParser_peekToken).call(this) != JsonToken.CURLY_OPEN) {
-            throw new JsonParseException("Expected object");
-        }
         this.read();
         let node = new JsonNode();
         node.initObject();
@@ -385,28 +370,7 @@ class JsonParser {
             }
         }
     }
-    parseValue() {
-        switch (__classPrivateFieldGet(this, _JsonParser_instances, "m", _JsonParser_peekToken).call(this)) {
-            case JsonToken.STRING:
-                return this.parseString();
-            case JsonToken.NUMBER:
-                return this.parseNumber();
-            case JsonToken.BOOL:
-                return this.parseBool();
-            case JsonToken.NULL:
-                return this.parseNull();
-            case JsonToken.CURLY_OPEN:
-                return this.parseObject();
-            case JsonToken.SQUARE_OPEN:
-                return this.parseArray();
-            default:
-                throw new JsonParseException("Invalid token");
-        }
-    }
     parseArray() {
-        if (__classPrivateFieldGet(this, _JsonParser_instances, "m", _JsonParser_peekToken).call(this) != JsonToken.SQUARE_OPEN) {
-            throw new JsonParseException("Expected array");
-        }
         this.read();
         let node = new JsonNode();
         node.initArray();
@@ -433,6 +397,24 @@ class JsonParser {
                     node.addArrayChild(this.parseValue());
                     break;
             }
+        }
+    }
+    parseValue() {
+        switch (__classPrivateFieldGet(this, _JsonParser_instances, "m", _JsonParser_peekToken).call(this)) {
+            case JsonToken.STRING:
+                return this.parseString();
+            case JsonToken.NUMBER:
+                return this.parseNumber();
+            case JsonToken.BOOL:
+                return this.parseBool();
+            case JsonToken.NULL:
+                return this.parseNull();
+            case JsonToken.CURLY_OPEN:
+                return this.parseObject();
+            case JsonToken.SQUARE_OPEN:
+                return this.parseArray();
+            default:
+                throw new JsonParseException("Invalid token");
         }
     }
 }
@@ -472,6 +454,24 @@ _JsonParser_text = new WeakMap(), _JsonParser_position = new WeakMap(), _JsonPar
             return JsonToken.BOOL;
         case 110:
             return JsonToken.NULL;
+        case 47:
+            this.read();
+            if (this.peek() == 47) {
+                while (!this.endReached() && this.peek() != 10) {
+                    this.read();
+                }
+                return __classPrivateFieldGet(this, _JsonParser_instances, "m", _JsonParser_peekToken).call(this);
+            }
+            else if (this.peek() == 42) {
+                this.read();
+                while (!this.endReached()) {
+                    if (this.read() == 42 && this.peek() == 47) {
+                        this.read();
+                        return __classPrivateFieldGet(this, _JsonParser_instances, "m", _JsonParser_peekToken).call(this);
+                    }
+                }
+            }
+            return JsonToken.NONE;
         default:
             return JsonToken.NONE;
     }

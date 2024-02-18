@@ -159,6 +159,16 @@ bool JsonParser::endReached() const
 	return this->position >= std::ssize(this->text);
 }
 
+std::string JsonParser::readN(int n)
+{
+	if (this->position + n > std::ssize(this->text)) {
+		throw JsonParseException("Unexpected end of input");
+	}
+	std::string result{this->text.substr(this->position, n)};
+	this->position += n;
+	return result;
+}
+
 int JsonParser::read()
 {
 	if (this->position >= std::ssize(this->text)) {
@@ -186,7 +196,7 @@ bool JsonParser::peekWhitespace() const
 bool JsonParser::peekWordbreak() const
 {
 	int c = peek();
-	return c == ' ' || c == ',' || c == ':' || c == '"' || c == '{' || c == '}' || c == '[' || c == ']' || c == '\t' || c == '\n' || c == '\r';
+	return c == ' ' || c == ',' || c == ':' || c == '"' || c == '{' || c == '}' || c == '[' || c == ']' || c == '\t' || c == '\n' || c == '\r' || c == '/';
 }
 
 JsonToken JsonParser::peekToken()
@@ -226,6 +236,24 @@ JsonToken JsonParser::peekToken()
 		return JsonToken::bool_;
 	case 'n':
 		return JsonToken::null;
+	case '/':
+		read();
+		if (peek() == '/') {
+			while (!endReached() && peek() != '\n') {
+				read();
+			}
+			return peekToken();
+		}
+		else if (peek() == '*') {
+			read();
+			while (!endReached()) {
+				if (read() == '*' && peek() == '/') {
+					read();
+					return peekToken();
+				}
+			}
+		}
+		return JsonToken::none;
 	default:
 		return JsonToken::none;
 	}
@@ -244,17 +272,11 @@ std::string JsonParser::readWord()
 	while (!endReached() && !peekWordbreak()) {
 		this->builder.writeChar(read());
 	}
-	if (endReached()) {
-		return "";
-	}
 	return std::string(this->builder.toString());
 }
 
 std::unique_ptr<JsonNode> JsonParser::parseNull()
 {
-	if (peekToken() != JsonToken::null) {
-		throw JsonParseException("Expected null");
-	}
 	readWord();
 	std::unique_ptr<JsonNode> node = std::make_unique<JsonNode>();
 	return node;
@@ -262,9 +284,6 @@ std::unique_ptr<JsonNode> JsonParser::parseNull()
 
 std::unique_ptr<JsonNode> JsonParser::parseBool()
 {
-	if (peekToken() != JsonToken::bool_) {
-		throw JsonParseException("Expected null");
-	}
 	std::string boolValue{readWord()};
 	if (boolValue == "true") {
 		std::unique_ptr<JsonNode> node = std::make_unique<JsonNode>();
@@ -283,9 +302,6 @@ std::unique_ptr<JsonNode> JsonParser::parseBool()
 
 std::unique_ptr<JsonNode> JsonParser::parseNumber()
 {
-	if (peekToken() != JsonToken::number) {
-		throw JsonParseException("Expected number");
-	}
 	double d;
 	if ([&] { char *ciend; d = std::strtod(readWord().data(), &ciend); return *ciend == '\0'; }()) {
 		std::unique_ptr<JsonNode> node = std::make_unique<JsonNode>();
@@ -297,9 +313,6 @@ std::unique_ptr<JsonNode> JsonParser::parseNumber()
 
 std::unique_ptr<JsonNode> JsonParser::parseString()
 {
-	if (peekToken() != JsonToken::string) {
-		throw JsonParseException("Expected string");
-	}
 	this->builder.clear();
 	read();
 	while (true) {
@@ -342,13 +355,8 @@ std::unique_ptr<JsonNode> JsonParser::parseString()
 				break;
 			case 'u':
 				{
-					StringAppendable hex;
-					hex.writeChar(read());
-					hex.writeChar(read());
-					hex.writeChar(read());
-					hex.writeChar(read());
 					int i;
-					if ([&] { char *ciend; i = std::strtol(hex.toString().data(), &ciend, 16); return *ciend == '\0'; }()) {
+					if ([&] { char *ciend; i = std::strtol(readN(4).data(), &ciend, 16); return *ciend == '\0'; }()) {
 						this->builder.writeChar(i);
 					}
 					else {
@@ -367,9 +375,6 @@ std::unique_ptr<JsonNode> JsonParser::parseString()
 
 std::unique_ptr<JsonNode> JsonParser::parseObject()
 {
-	if (peekToken() != JsonToken::curlyOpen) {
-		throw JsonParseException("Expected object");
-	}
 	read();
 	std::unique_ptr<JsonNode> node = std::make_unique<JsonNode>();
 	node->initObject();
@@ -396,31 +401,8 @@ std::unique_ptr<JsonNode> JsonParser::parseObject()
 	}
 }
 
-std::unique_ptr<JsonNode> JsonParser::parseValue()
-{
-	switch (peekToken()) {
-	case JsonToken::string:
-		return parseString();
-	case JsonToken::number:
-		return parseNumber();
-	case JsonToken::bool_:
-		return parseBool();
-	case JsonToken::null:
-		return parseNull();
-	case JsonToken::curlyOpen:
-		return parseObject();
-	case JsonToken::squareOpen:
-		return parseArray();
-	default:
-		throw JsonParseException("Invalid token");
-	}
-}
-
 std::unique_ptr<JsonNode> JsonParser::parseArray()
 {
-	if (peekToken() != JsonToken::squareOpen) {
-		throw JsonParseException("Expected array");
-	}
 	read();
 	std::unique_ptr<JsonNode> node = std::make_unique<JsonNode>();
 	node->initArray();
@@ -447,6 +429,26 @@ std::unique_ptr<JsonNode> JsonParser::parseArray()
 			node->addArrayChild(parseValue());
 			break;
 		}
+	}
+}
+
+std::unique_ptr<JsonNode> JsonParser::parseValue()
+{
+	switch (peekToken()) {
+	case JsonToken::string:
+		return parseString();
+	case JsonToken::number:
+		return parseNumber();
+	case JsonToken::bool_:
+		return parseBool();
+	case JsonToken::null:
+		return parseNull();
+	case JsonToken::curlyOpen:
+		return parseObject();
+	case JsonToken::squareOpen:
+		return parseArray();
+	default:
+		throw JsonParseException("Invalid token");
 	}
 }
 

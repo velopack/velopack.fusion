@@ -229,6 +229,16 @@ namespace Velopack
 			return this.position >= this.text.Length;
 		}
 
+		public string ReadN(int n)
+		{
+			if (this.position + n > this.text.Length) {
+				throw new JsonParseException("Unexpected end of input");
+			}
+			string result = this.text.Substring(this.position, n);
+			this.position += n;
+			return result;
+		}
+
 		public int Read()
 		{
 			if (this.position >= this.text.Length) {
@@ -256,7 +266,7 @@ namespace Velopack
 		public bool PeekWordbreak()
 		{
 			int c = Peek();
-			return c == ' ' || c == ',' || c == ':' || c == '"' || c == '{' || c == '}' || c == '[' || c == ']' || c == '\t' || c == '\n' || c == '\r';
+			return c == ' ' || c == ',' || c == ':' || c == '"' || c == '{' || c == '}' || c == '[' || c == ']' || c == '\t' || c == '\n' || c == '\r' || c == '/';
 		}
 
 		JsonToken PeekToken()
@@ -296,6 +306,24 @@ namespace Velopack
 				return JsonToken.Bool;
 			case 'n':
 				return JsonToken.Null;
+			case '/':
+				Read();
+				if (Peek() == '/') {
+					while (!EndReached() && Peek() != '\n') {
+						Read();
+					}
+					return PeekToken();
+				}
+				else if (Peek() == '*') {
+					Read();
+					while (!EndReached()) {
+						if (Read() == '*' && Peek() == '/') {
+							Read();
+							return PeekToken();
+						}
+					}
+				}
+				return JsonToken.None;
 			default:
 				return JsonToken.None;
 			}
@@ -314,17 +342,11 @@ namespace Velopack
 			while (!EndReached() && !PeekWordbreak()) {
 				this.builder.WriteChar(Read());
 			}
-			if (EndReached()) {
-				return "";
-			}
 			return this.builder.ToString();
 		}
 
 		public JsonNode ParseNull()
 		{
-			if (PeekToken() != JsonToken.Null) {
-				throw new JsonParseException("Expected null");
-			}
 			ReadWord();
 			JsonNode node = new JsonNode();
 			return node;
@@ -332,9 +354,6 @@ namespace Velopack
 
 		public JsonNode ParseBool()
 		{
-			if (PeekToken() != JsonToken.Bool) {
-				throw new JsonParseException("Expected null");
-			}
 			string boolValue = ReadWord();
 			if (boolValue == "true") {
 				JsonNode node = new JsonNode();
@@ -353,9 +372,6 @@ namespace Velopack
 
 		public JsonNode ParseNumber()
 		{
-			if (PeekToken() != JsonToken.Number) {
-				throw new JsonParseException("Expected number");
-			}
 			double d;
 			if (double.TryParse(ReadWord(), out d)) {
 				JsonNode node = new JsonNode();
@@ -367,9 +383,6 @@ namespace Velopack
 
 		public JsonNode ParseString()
 		{
-			if (PeekToken() != JsonToken.String) {
-				throw new JsonParseException("Expected string");
-			}
 			this.builder.Clear();
 			Read();
 			while (true) {
@@ -409,13 +422,8 @@ namespace Velopack
 						this.builder.WriteChar('\t');
 						break;
 					case 'u':
-						StringAppendable hex = new StringAppendable();
-						hex.WriteChar(Read());
-						hex.WriteChar(Read());
-						hex.WriteChar(Read());
-						hex.WriteChar(Read());
 						int i;
-						if (int.TryParse(hex.ToString(), NumberStyles.HexNumber, null, out i)) {
+						if (int.TryParse(ReadN(4), NumberStyles.HexNumber, null, out i)) {
 							this.builder.WriteChar(i);
 						}
 						else {
@@ -433,9 +441,6 @@ namespace Velopack
 
 		public JsonNode ParseObject()
 		{
-			if (PeekToken() != JsonToken.CurlyOpen) {
-				throw new JsonParseException("Expected object");
-			}
 			Read();
 			JsonNode node = new JsonNode();
 			node.InitObject();
@@ -460,31 +465,8 @@ namespace Velopack
 			}
 		}
 
-		public JsonNode ParseValue()
-		{
-			switch (PeekToken()) {
-			case JsonToken.String:
-				return ParseString();
-			case JsonToken.Number:
-				return ParseNumber();
-			case JsonToken.Bool:
-				return ParseBool();
-			case JsonToken.Null:
-				return ParseNull();
-			case JsonToken.CurlyOpen:
-				return ParseObject();
-			case JsonToken.SquareOpen:
-				return ParseArray();
-			default:
-				throw new JsonParseException("Invalid token");
-			}
-		}
-
 		public JsonNode ParseArray()
 		{
-			if (PeekToken() != JsonToken.SquareOpen) {
-				throw new JsonParseException("Expected array");
-			}
 			Read();
 			JsonNode node = new JsonNode();
 			node.InitArray();
@@ -511,6 +493,26 @@ namespace Velopack
 					node.AddArrayChild(ParseValue());
 					break;
 				}
+			}
+		}
+
+		public JsonNode ParseValue()
+		{
+			switch (PeekToken()) {
+			case JsonToken.String:
+				return ParseString();
+			case JsonToken.Number:
+				return ParseNumber();
+			case JsonToken.Bool:
+				return ParseBool();
+			case JsonToken.Null:
+				return ParseNull();
+			case JsonToken.CurlyOpen:
+				return ParseObject();
+			case JsonToken.SquareOpen:
+				return ParseArray();
+			default:
+				throw new JsonParseException("Invalid token");
 			}
 		}
 	}

@@ -26123,6 +26123,7 @@ public:
 	JsonParser() = default;
 	void load(std::string_view text);
 	bool endReached() const;
+	std::string readN(int n);
 	int read();
 	int peek() const;
 	bool peekWhitespace() const;
@@ -26134,8 +26135,8 @@ public:
 	std::unique_ptr<JsonNode> parseNumber();
 	std::unique_ptr<JsonNode> parseString();
 	std::unique_ptr<JsonNode> parseObject();
-	std::unique_ptr<JsonNode> parseValue();
 	std::unique_ptr<JsonNode> parseArray();
+	std::unique_ptr<JsonNode> parseValue();
 private:
 	std::string text{""};
 	int position = 0;
