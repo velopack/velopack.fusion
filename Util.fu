@@ -1,3 +1,4 @@
+
 #if JS
 native {
     const app = require("electron").remote.app;

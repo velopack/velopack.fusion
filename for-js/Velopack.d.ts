@@ -1,3 +1,56 @@
+export declare enum JsonNodeType {
+    NULL = 0,
+    BOOL = 1,
+    ARRAY = 2,
+    OBJECT = 3,
+    NUMBER = 4,
+    STRING = 5
+}
+export declare class JsonParseException extends Error {
+    name: string;
+}
+export declare class JsonNode {
+    #private;
+    /**
+     * Get the type of this node, such as string, object, array, etc.
+     * You should use this function and then call the corresponding
+     * AsObject, AsArray, AsString, etc. functions to get the actual
+     * parsed json information.
+     */
+    getType(): JsonNodeType;
+    /**
+     * Check if the JSON value is null.
+     */
+    isNull(): boolean;
+    /**
+     * Reinterpret a JSON value as an object. Throws exception if the value type was not an object.
+     */
+    asObject(): Readonly<Record<string, JsonNode>>;
+    /**
+     * Reinterpret a JSON value as an array. Throws exception if the value type was not an array.
+     */
+    asArray(): readonly JsonNode[];
+    /**
+     * Reinterpret a JSON value as a number. Throws exception if the value type was not a double.
+     */
+    asNumber(): number;
+    /**
+     * Reinterpret a JSON value as a boolean. Throws exception if the value type was not a boolean.
+     */
+    asBool(): boolean;
+    /**
+     * Reinterpret a JSON value as a string. Throws exception if the value type was not a string.
+     */
+    asString(): string;
+    static parse(text: string): JsonNode;
+    initBool(value: boolean): void;
+    initArray(): void;
+    addArrayChild(child: JsonNode): void;
+    initObject(): void;
+    addObjectChild(key: string, child: JsonNode): void;
+    initNumber(value: number): void;
+    initString(value: string): void;
+}
 export declare class Util {
     private constructor();
     /**

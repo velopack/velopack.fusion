@@ -25989,13 +25989,45 @@ subprocess_s util_start_subprocess(const std::vector<std::string>* command_line,
 // Generated automatically with "fut". Do not edit.
 #pragma once
 #include <cstdint>
+#include <iostream>
 #include <memory>
+#include <sstream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <vector>
 
 namespace Velopack
 {
+
+enum class JsonNodeType
+{
+	null,
+	bool_,
+	array,
+	object,
+	number,
+	string
+};
+
+enum class JsonToken
+{
+	none,
+	curlyOpen,
+	curlyClose,
+	squareOpen,
+	squareClose,
+	colon,
+	comma,
+	string,
+	number,
+	bool_,
+	null
+};
+class JsonParseException;
+class JsonNode;
+class JsonParser;
 class Util;
 
 enum class VelopackAssetType
@@ -26011,6 +26043,92 @@ class Platform;
 class ProgressHandler;
 class UpdateOptions;
 class UpdateManager;
+
+class JsonParseException : public std::runtime_error
+{
+public:
+	using std::runtime_error::runtime_error;
+};
+
+class JsonNode
+{
+public:
+	JsonNode() = default;
+	/**
+	 * Get the type of this node, such as string, object, array, etc.
+	 * You should use this function and then call the corresponding
+	 * AsObject, AsArray, AsString, etc. functions to get the actual
+	 * parsed json information.
+	 */
+	JsonNodeType getType() const;
+	/**
+	 * Check if the JSON value is null.
+	 */
+	bool isNull() const;
+	/**
+	 * Reinterpret a JSON value as an object. Throws exception if the value type was not an object.
+	 */
+	const std::unordered_map<std::string, std::unique_ptr<JsonNode>> * asObject() const;
+	/**
+	 * Reinterpret a JSON value as an array. Throws exception if the value type was not an array.
+	 */
+	const std::vector<std::unique_ptr<JsonNode>> * asArray() const;
+	/**
+	 * Reinterpret a JSON value as a number. Throws exception if the value type was not a double.
+	 */
+	double asNumber() const;
+	/**
+	 * Reinterpret a JSON value as a boolean. Throws exception if the value type was not a boolean.
+	 */
+	bool asBool() const;
+	/**
+	 * Reinterpret a JSON value as a string. Throws exception if the value type was not a string.
+	 */
+	std::string_view asString() const;
+	static std::unique_ptr<JsonNode> parse(std::string_view text);
+public:
+	void initBool(bool value);
+	void initArray();
+	void addArrayChild(std::unique_ptr<JsonNode> child);
+	void initObject();
+	void addObjectChild(std::string_view key, std::unique_ptr<JsonNode> child);
+	void initNumber(double value);
+	void initString(std::string_view value);
+private:
+	JsonNodeType type = JsonNodeType::null;
+	std::unordered_map<std::string, std::unique_ptr<JsonNode>> objectValue;
+	std::vector<std::unique_ptr<JsonNode>> arrayValue;
+	std::string stringValue;
+	double numberValue;
+	bool boolValue;
+};
+
+class JsonParser
+{
+public:
+	JsonParser() = default;
+	void load(std::string_view text);
+	bool endReached() const;
+	int read();
+	int peek() const;
+	bool peekWhitespace() const;
+	bool peekWordbreak() const;
+	void eatWhitespace();
+	std::string readWord();
+	std::unique_ptr<JsonNode> parseNull();
+	std::unique_ptr<JsonNode> parseBool();
+	std::unique_ptr<JsonNode> parseNumber();
+	std::unique_ptr<JsonNode> parseString();
+	std::unique_ptr<JsonNode> parseObject();
+	std::unique_ptr<JsonNode> parseValue();
+	std::unique_ptr<JsonNode> parseArray();
+private:
+	std::string text{""};
+	int position = 0;
+	std::ostringstream builder;
+	std::ostream * writer;
+	JsonToken peekToken();
+};
 
 class Util
 {

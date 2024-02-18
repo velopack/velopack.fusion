@@ -23,6 +23,477 @@
         })
     }
 
+export enum JsonNodeType {
+	NULL,
+	BOOL,
+	ARRAY,
+	OBJECT,
+	NUMBER,
+	STRING,
+}
+
+enum JsonToken {
+	NONE,
+	CURLY_OPEN,
+	CURLY_CLOSE,
+	SQUARE_OPEN,
+	SQUARE_CLOSE,
+	COLON,
+	COMMA,
+	STRING,
+	NUMBER,
+	BOOL,
+	NULL,
+}
+
+export class JsonParseException extends Error
+{
+	name = "JsonParseException";
+}
+
+export class JsonNode
+{
+	#type: JsonNodeType = JsonNodeType.NULL;
+	readonly #objectValue: Record<string, JsonNode> = {};
+	readonly #arrayValue: JsonNode[] = [];
+	#stringValue: string;
+	#numberValue: number;
+	#boolValue: boolean;
+
+	/**
+	 * Get the type of this node, such as string, object, array, etc.
+	 * You should use this function and then call the corresponding
+	 * AsObject, AsArray, AsString, etc. functions to get the actual
+	 * parsed json information.
+	 */
+	public getType(): JsonNodeType
+	{
+		return this.#type;
+	}
+
+	/**
+	 * Check if the JSON value is null.
+	 */
+	public isNull(): boolean
+	{
+		return this.#type == JsonNodeType.NULL;
+	}
+
+	/**
+	 * Reinterpret a JSON value as an object. Throws exception if the value type was not an object.
+	 */
+	public asObject(): Readonly<Record<string, JsonNode>>
+	{
+		if (this.#type != JsonNodeType.OBJECT) {
+			throw new Error("Cannot call AsObject on JsonNode which is not an object.");
+		}
+		return this.#objectValue;
+	}
+
+	/**
+	 * Reinterpret a JSON value as an array. Throws exception if the value type was not an array.
+	 */
+	public asArray(): readonly JsonNode[]
+	{
+		if (this.#type != JsonNodeType.ARRAY) {
+			throw new Error("Cannot call AsArray on JsonNode which is not an array.");
+		}
+		return this.#arrayValue;
+	}
+
+	/**
+	 * Reinterpret a JSON value as a number. Throws exception if the value type was not a double.
+	 */
+	public asNumber(): number
+	{
+		if (this.#type != JsonNodeType.NUMBER) {
+			throw new Error("Cannot call AsNumber on JsonNode which is not a number.");
+		}
+		return this.#numberValue;
+	}
+
+	/**
+	 * Reinterpret a JSON value as a boolean. Throws exception if the value type was not a boolean.
+	 */
+	public asBool(): boolean
+	{
+		if (this.#type != JsonNodeType.BOOL) {
+			throw new Error("Cannot call AsBool on JsonNode which is not a boolean.");
+		}
+		return this.#boolValue;
+	}
+
+	/**
+	 * Reinterpret a JSON value as a string. Throws exception if the value type was not a string.
+	 */
+	public asString(): string
+	{
+		if (this.#type != JsonNodeType.STRING) {
+			throw new Error("Cannot call AsString on JsonNode which is not a string.");
+		}
+		return this.#stringValue;
+	}
+
+	public static parse(text: string): JsonNode
+	{
+		let parser: JsonParser = new JsonParser();
+		parser.load(text);
+		return parser.parseValue();
+	}
+
+	initBool(value: boolean): void
+	{
+		if (this.#type != JsonNodeType.NULL) {
+			throw new JsonParseException("Cannot call InitBool on JsonNode which is not null.");
+		}
+		this.#type = JsonNodeType.BOOL;
+		this.#boolValue = value;
+	}
+
+	initArray(): void
+	{
+		if (this.#type != JsonNodeType.NULL) {
+			throw new JsonParseException("Cannot call InitArray on JsonNode which is not null.");
+		}
+		this.#type = JsonNodeType.ARRAY;
+	}
+
+	addArrayChild(child: JsonNode): void
+	{
+		if (this.#type != JsonNodeType.ARRAY) {
+			throw new JsonParseException("Cannot call AddArrayChild on JsonNode which is not an array.");
+		}
+		this.#arrayValue.push(child);
+	}
+
+	initObject(): void
+	{
+		if (this.#type != JsonNodeType.NULL) {
+			throw new JsonParseException("Cannot call InitObject on JsonNode which is not null.");
+		}
+		this.#type = JsonNodeType.OBJECT;
+	}
+
+	addObjectChild(key: string, child: JsonNode): void
+	{
+		if (this.#type != JsonNodeType.OBJECT) {
+			throw new JsonParseException("Cannot call AddObjectChild on JsonNode which is not an object.");
+		}
+		this.#objectValue[key] = child;
+	}
+
+	initNumber(value: number): void
+	{
+		if (this.#type != JsonNodeType.NULL) {
+			throw new JsonParseException("Cannot call InitNumber on JsonNode which is not null.");
+		}
+		this.#type = JsonNodeType.NUMBER;
+		this.#numberValue = value;
+	}
+
+	initString(value: string): void
+	{
+		if (this.#type != JsonNodeType.NULL) {
+			throw new JsonParseException("Cannot call InitString on JsonNode which is not null.");
+		}
+		this.#type = JsonNodeType.STRING;
+		this.#stringValue = value;
+	}
+}
+
+class JsonParser
+{
+	#text: string = "";
+	#position: number = 0;
+	readonly #builder: StringWriter = new StringWriter();
+	#writer: TextWriter;
+
+	public load(text: string): void
+	{
+		this.#text = text;
+		this.#position = 0;
+		this.#builder.clear();
+		this.#writer = this.#builder;
+	}
+
+	public endReached(): boolean
+	{
+		return this.#position >= this.#text.length;
+	}
+
+	public read(): number
+	{
+		if (this.#position >= this.#text.length) {
+			return -1;
+		}
+		let c: number = this.#text.charCodeAt(this.#position);
+		this.#position++;
+		return c;
+	}
+
+	public peek(): number
+	{
+		if (this.#position >= this.#text.length) {
+			return -1;
+		}
+		return this.#text.charCodeAt(this.#position);
+	}
+
+	public peekWhitespace(): boolean
+	{
+		let c: number = this.peek();
+		return c == 32 || c == 9 || c == 10 || c == 13;
+	}
+
+	public peekWordbreak(): boolean
+	{
+		let c: number = this.peek();
+		return c == 32 || c == 44 || c == 58 || c == 34 || c == 123 || c == 125 || c == 91 || c == 93 || c == 9 || c == 10 || c == 13;
+	}
+
+	#peekToken(): JsonToken
+	{
+		this.eatWhitespace();
+		if (this.endReached())
+			return JsonToken.NONE;
+		switch (this.peek()) {
+		case 123:
+			return JsonToken.CURLY_OPEN;
+		case 125:
+			return JsonToken.CURLY_CLOSE;
+		case 91:
+			return JsonToken.SQUARE_OPEN;
+		case 93:
+			return JsonToken.SQUARE_CLOSE;
+		case 44:
+			return JsonToken.COMMA;
+		case 34:
+			return JsonToken.STRING;
+		case 58:
+			return JsonToken.COLON;
+		case 48:
+		case 49:
+		case 50:
+		case 51:
+		case 52:
+		case 53:
+		case 54:
+		case 55:
+		case 56:
+		case 57:
+		case 45:
+			return JsonToken.NUMBER;
+		case 116:
+		case 102:
+			return JsonToken.BOOL;
+		case 110:
+			return JsonToken.NULL;
+		default:
+			return JsonToken.NONE;
+		}
+	}
+
+	public eatWhitespace(): void
+	{
+		while (!this.endReached() && this.peekWhitespace()) {
+			this.read();
+		}
+	}
+
+	public readWord(): string
+	{
+		this.#builder.clear();
+		while (!this.endReached() && !this.peekWordbreak()) {
+			this.#writer.write(String.fromCharCode(this.read()));
+		}
+		if (this.endReached()) {
+			return "";
+		}
+		return this.#builder.toString();
+	}
+
+	public parseNull(): JsonNode
+	{
+		if (this.#peekToken() != JsonToken.NULL) {
+			throw new JsonParseException("Expected null");
+		}
+		this.readWord();
+		let node: JsonNode = new JsonNode();
+		return node;
+	}
+
+	public parseBool(): JsonNode
+	{
+		if (this.#peekToken() != JsonToken.BOOL) {
+			throw new JsonParseException("Expected null");
+		}
+		let boolValue: string = this.readWord();
+		if (boolValue == "true") {
+			let node: JsonNode = new JsonNode();
+			node.initBool(true);
+			return node;
+		}
+		else if (boolValue == "false") {
+			let node: JsonNode = new JsonNode();
+			node.initBool(false);
+			return node;
+		}
+		else {
+			throw new JsonParseException("Invalid boolean");
+		}
+	}
+
+	public parseNumber(): JsonNode
+	{
+		if (this.#peekToken() != JsonToken.NUMBER) {
+			throw new JsonParseException("Expected number");
+		}
+		let d: number;
+		if (!isNaN(d = parseFloat(this.readWord()))) {
+			let node: JsonNode = new JsonNode();
+			node.initNumber(d);
+			return node;
+		}
+		throw new JsonParseException("Invalid number");
+	}
+
+	public parseString(): JsonNode
+	{
+		if (this.#peekToken() != JsonToken.STRING) {
+			throw new JsonParseException("Expected string");
+		}
+		this.#builder.clear();
+		this.read();
+		while (true) {
+			if (this.endReached()) {
+				throw new JsonParseException("Unterminated string");
+			}
+			let c: number = this.read();
+			switch (c) {
+			case 34:
+				let node: JsonNode = new JsonNode();
+				node.initString(this.#builder.toString());
+				return node;
+			case 92:
+				if (this.endReached()) {
+					throw new JsonParseException("Unterminated string");
+				}
+				c = this.read();
+				switch (c) {
+				case 34:
+				case 92:
+				case 47:
+					this.#writer.write(String.fromCharCode(c));
+					break;
+				case 98:
+					this.#writer.write(String.fromCharCode(8));
+					break;
+				case 102:
+					this.#writer.write(String.fromCharCode(12));
+					break;
+				case 110:
+					this.#writer.write(String.fromCharCode(10));
+					break;
+				case 114:
+					this.#writer.write(String.fromCharCode(13));
+					break;
+				case 116:
+					this.#writer.write(String.fromCharCode(9));
+					break;
+				case 117:
+					let hex: string = `${this.read()}${this.read()}${this.read()}${this.read()}`;
+					let i: number;
+					if (!isNaN(i = parseInt(hex, 16))) {
+						this.#writer.write(String.fromCharCode(i));
+					}
+					else {
+						throw new JsonParseException("Invalid unicode escape");
+					}
+					break;
+				}
+				break;
+			default:
+				this.#writer.write(String.fromCharCode(c));
+				break;
+			}
+		}
+	}
+
+	public parseObject(): JsonNode
+	{
+		if (this.#peekToken() != JsonToken.CURLY_OPEN) {
+			throw new JsonParseException("Expected object");
+		}
+		this.read();
+		let node: JsonNode = new JsonNode();
+		node.initObject();
+		while (true) {
+			switch (this.#peekToken()) {
+			case JsonToken.NONE:
+				throw new JsonParseException("Unterminated object");
+			case JsonToken.COMMA:
+				this.read();
+				continue;
+			case JsonToken.CURLY_CLOSE:
+				this.read();
+				return node;
+			default:
+				let name: JsonNode = this.parseString();
+				if (this.#peekToken() != JsonToken.COLON)
+					throw new JsonParseException("Expected colon");
+				this.read();
+				node.addObjectChild(name.asString(), this.parseValue());
+				break;
+			}
+		}
+	}
+
+	public parseValue(): JsonNode
+	{
+		switch (this.#peekToken()) {
+		case JsonToken.STRING:
+			return this.parseString();
+		case JsonToken.NUMBER:
+			return this.parseNumber();
+		case JsonToken.BOOL:
+			return this.parseBool();
+		case JsonToken.NULL:
+			return this.parseNull();
+		case JsonToken.CURLY_OPEN:
+			return this.parseObject();
+		case JsonToken.SQUARE_OPEN:
+			return this.parseArray();
+		default:
+			throw new JsonParseException("Invalid token");
+		}
+	}
+
+	public parseArray(): JsonNode
+	{
+		if (this.#peekToken() != JsonToken.SQUARE_OPEN) {
+			throw new JsonParseException("Expected array");
+		}
+		this.read();
+		let node: JsonNode = new JsonNode();
+		node.initArray();
+		while (true) {
+			switch (this.#peekToken()) {
+			case JsonToken.NONE:
+				throw new JsonParseException("Unterminated array");
+			case JsonToken.COMMA:
+				this.read();
+				continue;
+			case JsonToken.SQUARE_CLOSE:
+				this.read();
+				return node;
+			default:
+				node.addArrayChild(this.parseValue());
+				break;
+			}
+		}
+	}
+}
+
 export class Util
 {
 	private constructor()
@@ -566,5 +1037,25 @@ export class UpdateManager extends Platform
 			this.#_options.getProgressHandler().onProgress(ev.progress);
 			return false;
 		}
+	}
+}
+
+class StringWriter
+{
+	#buf = "";
+
+	write(s)
+	{
+		this.#buf += s;
+	}
+
+	clear()
+	{
+		this.#buf = "";
+	}
+
+	toString()
+	{
+		return this.#buf;
 	}
 }
