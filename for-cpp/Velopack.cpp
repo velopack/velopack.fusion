@@ -6,6 +6,7 @@
     #include <sstream>
     #include <thread>
 #include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <regex>
 #include "Velopack.hpp"
@@ -550,107 +551,69 @@ void Util::exit(int code)
 
 std::unique_ptr<VelopackAsset> VelopackAsset::fromJson(std::string_view json)
 {
-	std::string id{""};
-	std::string version{""};
-	std::string type{""};
-	std::string filename{""};
-	std::string sha1{""};
-	std::string size{""};
-	std::string markdown{""};
-	std::string html{""};
-	 
-            auto obj = nlohmann::json::parse(json);
-            for (auto& el : obj.items()) {
-                std::string key = el.key();
-                if (ci_equal(key, "id")) id = el.value();
-                else if (ci_equal(key, "version")) version = el.value();
-                else if (ci_equal(key, "type")) type = el.value();
-                else if (ci_equal(key, "filename")) filename = el.value();
-                else if (ci_equal(key, "sha1")) sha1 = el.value();
-                else if (ci_equal(key, "size")) size = el.value();
-                else if (ci_equal(key, "markdown")) markdown = el.value();
-                else if (ci_equal(key, "html")) html = el.value();
-            }
-        std::unique_ptr<VelopackAsset> asset = std::make_unique<VelopackAsset>();
-	asset->packageId = id;
-	asset->version = version;
-	asset->fileName = filename;
-	asset->sha1 = sha1;
-	asset->notesMarkdown = markdown;
-	asset->notesHTML = html;
-	int i;
-	if ([&] { char *ciend; i = std::strtol(size.data(), &ciend, 10); return *ciend == '\0'; }()) {
-		asset->size = i;
-	}
-	if (type == "full" || type == "Full") {
-		asset->type = VelopackAssetType::full;
-	}
-	else if (type == "delta" || type == "Delta") {
-		asset->type = VelopackAssetType::delta;
+	std::unique_ptr<JsonNode> node = JsonNode::parse(json);
+	return fromNode(node);
+}
+
+std::unique_ptr<VelopackAsset> VelopackAsset::fromNode(std::unique_ptr<JsonNode> node)
+{
+	std::unique_ptr<VelopackAsset> asset = std::make_unique<VelopackAsset>();
+	for (const auto &[k, v] : *node->asObject()) {
+		if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "id")
+			asset->packageId = v->asString();
+		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "version")
+			asset->version = v->asString();
+		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "type")
+			asset->type = [&] { std::string data = v->asString(); std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "full" ? VelopackAssetType::full : VelopackAssetType::delta;
+		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "filename")
+			asset->fileName = v->asString();
+		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "sha1")
+			asset->sha1 = v->asString();
+		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "size")
+			asset->size = static_cast<int64_t>(v->asNumber());
+		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "markdown")
+			asset->notesMarkdown = v->asString();
+		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "html")
+			asset->notesHTML = v->asString();
 	}
 	return asset;
 }
 
 std::unique_ptr<UpdateInfo> UpdateInfo::fromJson(std::string_view json)
 {
-	std::string assetJson{""};
-	bool isDowngrade = false;
-	
-            auto obj = nlohmann::json::parse(json);
-            for (auto& el : obj.items()) {
-                std::string key = el.key();
-                if (ci_equal(key, "targetfullrelease")) {
-                    assetJson = el.value().dump();
-                } else if (ci_equal(key, "isdowngrade")) {
-                    isDowngrade = el.value().get<bool>();
-                }
-            }
-        if (assetJson.empty()) {
-		return nullptr;
-	}
+	std::unique_ptr<JsonNode> node = JsonNode::parse(json);
 	std::unique_ptr<UpdateInfo> updateInfo = std::make_unique<UpdateInfo>();
-	updateInfo->targetFullRelease = VelopackAsset::fromJson(assetJson);
-	updateInfo->isDowngrade = isDowngrade;
+	for (const auto &[k, v] : *node->asObject()) {
+		if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "targetfullrelease")
+			updateInfo->targetFullRelease = VelopackAsset::fromNode(v);
+		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "isdowngrade")
+			updateInfo->isDowngrade = v->asBool();
+	}
 	return updateInfo;
 }
 
 std::unique_ptr<ProgressEvent> ProgressEvent::fromJson(std::string_view json)
 {
-	std::string file{""};
-	bool complete = false;
-	int progress = 0;
-	std::string error{""};
-	
-            auto obj = nlohmann::json::parse(json);
-            // Helper lambda to perform case-insensitive comparison
-            auto ci_equal = [](const std::string& a, const std::string& b) {
-                return std::equal(a.begin(), a.end(), b.begin(), b.end(),
-                    [](char a, char b) {
-                        return tolower(a) == tolower(b);
-                    });
-            };
-            for (auto& el : obj.items()) {
-                std::string key = el.key();
-                if (ci_equal(key, "file")) {
-                    file = el.value();
-                } else if (ci_equal(key, "complete")) {
-                    complete = el.value().get<bool>();
-                } else if (ci_equal(key, "progress")) {
-                    progress = el.value().get<int>();
-                } else if (ci_equal(key, "error")) {
-                    error = el.value();
-                }
-            }
-        std::unique_ptr<ProgressEvent> progressEvent = std::make_unique<ProgressEvent>();
-	progressEvent->file = file;
-	progressEvent->complete = complete;
-	progressEvent->progress = progress;
-	progressEvent->error = error;
+	std::unique_ptr<JsonNode> node = JsonNode::parse(json);
+	std::unique_ptr<ProgressEvent> progressEvent = std::make_unique<ProgressEvent>();
+	for (const auto &[k, v] : *node->asObject()) {
+		if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "file")
+			progressEvent->file = v->asString();
+		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "complete")
+			progressEvent->complete = v->asBool();
+		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "progress")
+			progressEvent->progress = static_cast<int>(v->asNumber());
+		else if ([&] { std::string data = k; std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c) { return std::tolower(c); }); return data; }() == "error")
+			progressEvent->error = v->asString();
+	}
 	return progressEvent;
 }
 
 std::string Platform::startProcessBlocking(const std::vector<std::string> * command_line) const
 {
+	if (std::ssize(*command_line) == 0) {
+		throw std::runtime_error("Command line is empty");
+	}
 	std::string ret{""};
 	 
 	        subprocess_s subprocess = util_start_subprocess(command_line, subprocess_option_no_window);
@@ -667,10 +630,16 @@ std::string Platform::startProcessBlocking(const std::vector<std::string> * comm
 
 void Platform::startProcessFireAndForget(const std::vector<std::string> * command_line) const
 {
+	if (std::ssize(*command_line) == 0) {
+		throw std::runtime_error("Command line is empty");
+	}
 	 util_start_subprocess(command_line, subprocess_option_no_window); }
 
 void Platform::startProcessAsyncReadLine(const std::vector<std::string> * command_line)
 {
+	if (std::ssize(*command_line) == 0) {
+		throw std::runtime_error("Command line is empty");
+	}
 	 
 	        subprocess_s subprocess = util_start_subprocess(command_line, subprocess_option_no_window | subprocess_option_enable_async);
 

@@ -635,61 +635,38 @@ export class VelopackAsset {
         this.notesHTML = "";
     }
     static fromJson(json) {
-        let id = "";
-        let version = "";
-        let type = "";
-        let filename = "";
-        let sha1 = "";
-        let size = "";
-        let markdown = "";
-        let html = "";
-        const obj = JSON.parse(json);
-        Object.keys(obj).forEach(key => {
-            // Convert both key and field names to lowercase for case-insensitive comparison
-            switch (key.toLowerCase()) {
+        let node = JsonNode.parse(json);
+        return VelopackAsset.fromNode(node);
+    }
+    static fromNode(node) {
+        let asset = new VelopackAsset();
+        for (const [k, v] of Object.entries(node.asObject())) {
+            switch (k.toLowerCase()) {
                 case "id":
-                    id = obj[key];
+                    asset.packageId = v.asString();
                     break;
                 case "version":
-                    version = obj[key];
+                    asset.version = v.asString();
                     break;
                 case "type":
-                    type = obj[key];
+                    asset.type = v.asString().toLowerCase() == "full" ? VelopackAssetType.FULL : VelopackAssetType.DELTA;
                     break;
                 case "filename":
-                    filename = obj[key];
+                    asset.fileName = v.asString();
                     break;
                 case "sha1":
-                    sha1 = obj[key];
+                    asset.sha1 = v.asString();
                     break;
                 case "size":
-                    size = obj[key];
+                    asset.size = BigInt(Math.trunc(v.asNumber()));
                     break;
                 case "markdown":
-                    markdown = obj[key];
+                    asset.notesMarkdown = v.asString();
                     break;
                 case "html":
-                    html = obj[key];
+                    asset.notesHTML = v.asString();
                     break;
-                // Add more cases as needed
             }
-        });
-        let asset = new VelopackAsset();
-        asset.packageId = id;
-        asset.version = version;
-        asset.fileName = filename;
-        asset.sha1 = sha1;
-        asset.notesMarkdown = markdown;
-        asset.notesHTML = html;
-        let i;
-        if (!isNaN(i = parseInt(size, 10))) {
-            asset.size = BigInt(i);
-        }
-        if (type == "full" || type == "Full") {
-            asset.type = VelopackAssetType.FULL;
-        }
-        else if (type == "delta" || type == "Delta") {
-            asset.type = VelopackAssetType.DELTA;
         }
         return asset;
     }
@@ -699,23 +676,18 @@ export class UpdateInfo {
         this.isDowngrade = false;
     }
     static fromJson(json) {
-        let assetJson = "";
-        let isDowngrade = false;
-        const obj = JSON.parse(json);
-        Object.keys(obj).forEach(key => {
-            if (key.toLowerCase() === "targetfullrelease") {
-                assetJson = JSON.stringify(obj[key]);
-            }
-            else if (key.toLowerCase() === "isdowngrade") {
-                isDowngrade = obj[key];
-            }
-        });
-        if (assetJson.length == 0) {
-            return null;
-        }
+        let node = JsonNode.parse(json);
         let updateInfo = new UpdateInfo();
-        updateInfo.targetFullRelease = VelopackAsset.fromJson(assetJson);
-        updateInfo.isDowngrade = isDowngrade;
+        for (const [k, v] of Object.entries(node.asObject())) {
+            switch (k.toLowerCase()) {
+                case "targetfullrelease":
+                    updateInfo.targetFullRelease = VelopackAsset.fromNode(v);
+                    break;
+                case "isdowngrade":
+                    updateInfo.isDowngrade = v.asBool();
+                    break;
+            }
+        }
         return updateInfo;
     }
 }
@@ -727,30 +699,24 @@ export class ProgressEvent {
         this.error = "";
     }
     static fromJson(json) {
-        let file = "";
-        let complete = false;
-        let progress = 0;
-        let error = "";
-        const obj = JSON.parse(json);
-        Object.keys(obj).forEach(key => {
-            if (key.toLowerCase() === "file") {
-                file = obj[key];
-            }
-            else if (key.toLowerCase() === "complete") {
-                complete = obj[key];
-            }
-            else if (key.toLowerCase() === "progress") {
-                progress = obj[key];
-            }
-            else if (key.toLowerCase() === "error") {
-                error = obj[key];
-            }
-        });
+        let node = JsonNode.parse(json);
         let progressEvent = new ProgressEvent();
-        progressEvent.file = file;
-        progressEvent.complete = complete;
-        progressEvent.progress = progress;
-        progressEvent.error = error;
+        for (const [k, v] of Object.entries(node.asObject())) {
+            switch (k.toLowerCase()) {
+                case "file":
+                    progressEvent.file = v.asString();
+                    break;
+                case "complete":
+                    progressEvent.complete = v.asBool();
+                    break;
+                case "progress":
+                    progressEvent.progress = Math.trunc(v.asNumber());
+                    break;
+                case "error":
+                    progressEvent.error = v.asString();
+                    break;
+            }
+        }
         return progressEvent;
     }
 }
@@ -759,6 +725,9 @@ export class Platform {
      * Starts a new process and sychronously reads/returns its output.
      */
     startProcessBlocking(command_line) {
+        if (command_line.length == 0) {
+            throw new Error("Command line is empty");
+        }
         let ret = "";
         ret = spawnSync(command_line[0], command_line.slice(1), { encoding: "utf8" }).stdout;
         return Util.strTrim(ret);
@@ -767,6 +736,9 @@ export class Platform {
      * Starts a new process and sychronously reads/returns its output.
      */
     startProcessFireAndForget(command_line) {
+        if (command_line.length == 0) {
+            throw new Error("Command line is empty");
+        }
         spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
     }
     /**
@@ -776,6 +748,9 @@ export class Platform {
      * This method is non-blocking and returns immediately.
      */
     startProcessAsyncReadLine(command_line) {
+        if (command_line.length == 0) {
+            throw new Error("Command line is empty");
+        }
         const child = spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
         emitLines(child.stdout);
         child.stdout.resume();

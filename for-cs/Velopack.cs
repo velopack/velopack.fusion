@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Text.RegularExpressions;
 namespace Velopack
 {
 
@@ -513,6 +514,581 @@ namespace Velopack
 				return ParseArray();
 			default:
 				throw new JsonParseException("Invalid token");
+			}
+		}
+	}
+
+	public static class Util
+	{
+
+		/// <summary>Returns the path of the current process.</summary>
+		public static string GetCurrentProcessPath()
+		{
+			string ret = "";
+			 ret = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName; return ret;
+		}
+
+		public static bool FileExists(string path)
+		{
+			bool ret = false;
+			 ret = System.IO.File.Exists(path); return ret;
+		}
+
+		public static string GetUpdateExePath()
+		{
+			string exePath = GetCurrentProcessPath();
+			if (IsWindows()) {
+				exePath = PathJoin(PathParent(PathParent(exePath)), "Update.exe");
+			}
+			else if (IsLinux()) {
+				exePath = PathJoin(PathParent(exePath), "UpdateNix");
+			}
+			else if (IsOsx()) {
+				exePath = PathJoin(PathParent(exePath), "UpdateMac");
+			}
+			else {
+				throw new Exception("Unsupported platform");
+			}
+			if (!FileExists(exePath)) {
+				throw new Exception("Update executable not found: " + exePath);
+			}
+			return exePath;
+		}
+
+		public static string StrTrim(string str)
+		{
+			Match match;
+			if ((match = Regex.Match(str, "(\\S.*\\S|\\S)")).Success) {
+				return match.Groups[1].Value;
+			}
+			return str;
+		}
+
+		public static string PathParent(string str)
+		{
+			int ix_win = str.LastIndexOf('\\');
+			int ix_nix = str.LastIndexOf('/');
+			int ix = Math.Max(ix_win, ix_nix);
+			return str.Substring(0, ix);
+		}
+
+		public static string PathJoin(string s1, string s2)
+		{
+			while (s1.EndsWith("/") || s1.EndsWith("\\")) {
+				s1 = s1.Substring(0, s1.Length - 1);
+			}
+			while (s2.StartsWith("/") || s2.StartsWith("\\")) {
+				s2 = s2.Substring(1);
+			}
+			return s1 + PathSeparator() + s2;
+		}
+
+		public static string PathSeparator()
+		{
+			if (IsWindows()) {
+				return "\\";
+			}
+			else {
+				return "/";
+			}
+		}
+
+		public static bool IsWindows()
+		{
+			return GetOsName() == "win32";
+		}
+
+		public static bool IsLinux()
+		{
+			return GetOsName() == "linux";
+		}
+
+		public static bool IsOsx()
+		{
+			return GetOsName() == "darwin";
+		}
+
+		/// <summary>Returns the name of the operating system.</summary>
+		public static string GetOsName()
+		{
+			string ret = "";
+			 
+            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows)) {
+                ret = "win32";
+            } else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux)) {
+                ret = "linux";
+            } else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX)) {
+                ret = "darwin";
+            } else {
+                throw new System.NotSupportedException("Unsupported platform");
+            }
+        return ret;
+		}
+
+		public static void Exit(int code)
+		{
+			 Environment.Exit(code); }
+	}
+
+	public class VelopackApp
+	{
+
+		public static VelopackApp Build()
+		{
+			VelopackApp app = new VelopackApp();
+			return app;
+		}
+
+		public void Run()
+		{
+			List<string> args = new List<string>();
+			 args = Environment.GetCommandLineArgs().ToList(); HandleArgs(args);
+		}
+
+		void HandleArgs(List<string> args)
+		{
+			for (int i = 0; i < args.Count; i++) {
+				string val = Util.StrTrim(args[i]).ToLower();
+				if (val == "--veloapp-install") {
+					Util.Exit(0);
+				}
+				if (val == "--veloapp-updated") {
+					Util.Exit(0);
+				}
+				if (val == "--veloapp-obsolete") {
+					Util.Exit(0);
+				}
+				if (val == "--veloapp-uninstall") {
+					Util.Exit(0);
+				}
+			}
+		}
+	}
+
+	public enum VelopackAssetType
+	{
+		Unknown,
+		Full,
+		Delta
+	}
+
+	public class VelopackAsset
+	{
+
+		/// <summary>The name or Id of the package containing this release.</summary>
+		internal string PackageId = "";
+
+		/// <summary>The version of this release.</summary>
+		internal string Version = "";
+
+		/// <summary>The type of asset (eg. full or delta).</summary>
+		internal VelopackAssetType Type = VelopackAssetType.Unknown;
+
+		/// <summary>The filename of the update package containing this release.</summary>
+		internal string FileName = "";
+
+		/// <summary>The SHA1 checksum of the update package containing this release.</summary>
+		internal string Sha1 = "";
+
+		/// <summary>The size in bytes of the update package containing this release.</summary>
+		internal long Size = 0;
+
+		/// <summary>The release notes in markdown format, as passed to Velopack when packaging the release.</summary>
+		internal string NotesMarkdown = "";
+
+		/// <summary>The release notes in HTML format, transformed from Markdown when packaging the release.</summary>
+		internal string NotesHTML = "";
+
+		public static VelopackAsset FromJson(string json)
+		{
+			JsonNode node = JsonNode.Parse(json);
+			return FromNode(node);
+		}
+
+		public static VelopackAsset FromNode(JsonNode node)
+		{
+			VelopackAsset asset = new VelopackAsset();
+			foreach ((string k, JsonNode v) in node.AsObject()) {
+				switch (k.ToLower()) {
+				case "id":
+					asset.PackageId = v.AsString();
+					break;
+				case "version":
+					asset.Version = v.AsString();
+					break;
+				case "type":
+					asset.Type = v.AsString().ToLower() == "full" ? VelopackAssetType.Full : VelopackAssetType.Delta;
+					break;
+				case "filename":
+					asset.FileName = v.AsString();
+					break;
+				case "sha1":
+					asset.Sha1 = v.AsString();
+					break;
+				case "size":
+					asset.Size = (long) v.AsNumber();
+					break;
+				case "markdown":
+					asset.NotesMarkdown = v.AsString();
+					break;
+				case "html":
+					asset.NotesHTML = v.AsString();
+					break;
+				}
+			}
+			return asset;
+		}
+	}
+
+	public class UpdateInfo
+	{
+
+		internal VelopackAsset TargetFullRelease;
+
+		internal bool IsDowngrade = false;
+
+		public static UpdateInfo FromJson(string json)
+		{
+			JsonNode node = JsonNode.Parse(json);
+			UpdateInfo updateInfo = new UpdateInfo();
+			foreach ((string k, JsonNode v) in node.AsObject()) {
+				switch (k.ToLower()) {
+				case "targetfullrelease":
+					updateInfo.TargetFullRelease = VelopackAsset.FromNode(v);
+					break;
+				case "isdowngrade":
+					updateInfo.IsDowngrade = v.AsBool();
+					break;
+				}
+			}
+			return updateInfo;
+		}
+	}
+
+	public class ProgressEvent
+	{
+
+		internal string File = "";
+
+		internal bool Complete = false;
+
+		internal int Progress = 0;
+
+		internal string Error = "";
+
+		public static ProgressEvent FromJson(string json)
+		{
+			JsonNode node = JsonNode.Parse(json);
+			ProgressEvent progressEvent = new ProgressEvent();
+			foreach ((string k, JsonNode v) in node.AsObject()) {
+				switch (k.ToLower()) {
+				case "file":
+					progressEvent.File = v.AsString();
+					break;
+				case "complete":
+					progressEvent.Complete = v.AsBool();
+					break;
+				case "progress":
+					progressEvent.Progress = (int) v.AsNumber();
+					break;
+				case "error":
+					progressEvent.Error = v.AsString();
+					break;
+				}
+			}
+			return progressEvent;
+		}
+	}
+
+	public abstract class Platform
+	{
+
+		/// <summary>Starts a new process and sychronously reads/returns its output.</summary>
+		protected string StartProcessBlocking(List<string> command_line)
+		{
+			if (command_line.Count == 0) {
+				throw new Exception("Command line is empty");
+			}
+			string ret = "";
+			
+            var psi = new System.Diagnostics.ProcessStartInfo()
+            {
+                CreateNoWindow = true,
+                FileName = command_line[0],
+                RedirectStandardError = true, 
+                RedirectStandardInput = true, 
+                UseShellExecute = false,
+            };
+
+            foreach (var arg in command_line.Skip(1))
+            {
+                psi.ArgumentList.Add(arg);
+            }
+
+            System.Text.StringBuilder output = new System.Text.StringBuilder();
+
+            var process = new System.Diagnostics.Process();
+            process.StartInfo = psi;
+            process.ErrorDataReceived += (sender, e) => {
+                if (e.Data != null) output.AppendLine(e.Data);
+            };
+            process.OutputDataReceived += (sender, e) => {
+                if (e.Data != null) output.AppendLine(e.Data);
+            };
+
+            process.Start();
+            process.BeginErrorReadLine();
+            process.BeginOutputReadLine();
+            process.WaitForExit();
+            ret = output.ToString();
+        return Util.StrTrim(ret);
+		}
+
+		/// <summary>Starts a new process and sychronously reads/returns its output.</summary>
+		protected void StartProcessFireAndForget(List<string> command_line)
+		{
+			if (command_line.Count == 0) {
+				throw new Exception("Command line is empty");
+			}
+			
+            var psi = new System.Diagnostics.ProcessStartInfo()
+            {
+                CreateNoWindow = true,
+                FileName = command_line[0],
+            };
+            foreach (var arg in command_line.Skip(1)) psi.ArgumentList.Add(arg);
+            System.Diagnostics.Process.Start(psi);
+        }
+
+		/// <summary>In the current process, starts a new process and asychronously reads its output line by line.</summary>
+		/// <remarks>When a line is read, HandleProcessOutputLine is called with the line. 
+		/// If HandleProcessOutputLine returns true, the reading loop is terminated.
+		/// This method is non-blocking and returns immediately.</remarks>
+		protected void StartProcessAsyncReadLine(List<string> command_line)
+		{
+			if (command_line.Count == 0) {
+				throw new Exception("Command line is empty");
+			}
+			
+            var psi = new System.Diagnostics.ProcessStartInfo()
+            {
+                CreateNoWindow = true,
+                FileName = command_line[0],
+                RedirectStandardError = true, 
+                RedirectStandardInput = true, 
+                UseShellExecute = false,
+            };
+
+            foreach (var arg in command_line.Skip(1))
+            {
+                psi.ArgumentList.Add(arg);
+            }
+
+            var process = new System.Diagnostics.Process();
+            process.StartInfo = psi;
+            process.ErrorDataReceived += (sender, e) => {
+                if (e.Data != null) HandleProcessOutputLine(e.Data);
+            };
+            process.OutputDataReceived += (sender, e) => {
+                if (e.Data != null) HandleProcessOutputLine(e.Data);
+            };
+
+            process.Start();
+            process.BeginErrorReadLine();
+            process.BeginOutputReadLine();
+        }
+
+		/// <summary>Called when a line is read from the process started by StartProcessReadLineThread.</summary>
+		/// <remarks>If this method returns true, the reading loop is terminated.</remarks>
+		protected abstract bool HandleProcessOutputLine(string line);
+	}
+
+	public abstract class ProgressHandler
+	{
+
+		public abstract void OnProgress(int progress);
+
+		public abstract void OnComplete(string assetPath);
+
+		public abstract void OnError(string error);
+	}
+
+	public class UpdateOptions
+	{
+
+		bool _allowDowngrade = false;
+
+		string _explicitChannel = "";
+
+		string _urlOrPath = "";
+
+		ProgressHandler _progress;
+
+		public void SetUrlOrPath(string urlOrPath)
+		{
+			this._urlOrPath = urlOrPath;
+		}
+
+		public string GetUrlOrPath()
+		{
+			return this._urlOrPath;
+		}
+
+		public void SetAllowDowngrade(bool allowDowngrade)
+		{
+			this._allowDowngrade = allowDowngrade;
+		}
+
+		public bool GetAllowDowngrade()
+		{
+			return this._allowDowngrade;
+		}
+
+		public void SetExplicitChannel(string explicitChannel)
+		{
+			this._explicitChannel = explicitChannel;
+		}
+
+		public string GetExplicitChannel()
+		{
+			return this._explicitChannel;
+		}
+
+		public void SetProgressHandler(ProgressHandler progress)
+		{
+			this._progress = progress;
+		}
+
+		public ProgressHandler GetProgressHandler()
+		{
+			return this._progress;
+		}
+	}
+
+	public class UpdateManager : Platform
+	{
+
+		UpdateOptions _options;
+
+		public void SetOptions(UpdateOptions options)
+		{
+			this._options = options;
+		}
+
+		/// <summary>This function will return the current installed version of the application
+		/// or throw, if the application is not installed.</summary>
+		public string GetCurrentVersion()
+		{
+			List<string> command = new List<string>();
+			command.Add(Util.GetUpdateExePath());
+			command.Add("get-version");
+			return StartProcessBlocking(command);
+		}
+
+		/// <summary>This function will check for updates, and return information about the latest available release.</summary>
+		public UpdateInfo CheckForUpdates()
+		{
+			if (this._options == null) {
+				throw new Exception("Please call SetOptions before trying to check for updates.");
+			}
+			List<string> command = new List<string>();
+			command.Add(Util.GetUpdateExePath());
+			command.Add("check");
+			command.Add("--url");
+			command.Add(this._options.GetUrlOrPath());
+			command.Add("--format");
+			command.Add("json");
+			if (this._options.GetAllowDowngrade()) {
+				command.Add("--downgrade");
+			}
+			string explicitChannel = this._options.GetExplicitChannel();
+			if (explicitChannel.Length > 0) {
+				command.Add("--channel");
+				command.Add(explicitChannel);
+			}
+			string output = StartProcessBlocking(command);
+			if (output.Length == 0 || output == "null") {
+				return null;
+			}
+			return UpdateInfo.FromJson(output);
+		}
+
+		/// <summary>This function will request the update download, and then return immediately.</summary>
+		/// <remarks>To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.</remarks>
+		public void DownloadUpdateAsync(UpdateInfo updateInfo)
+		{
+			if (this._options == null) {
+				throw new Exception("Please call SetOptions before trying to download updates.");
+			}
+			List<string> command = new List<string>();
+			command.Add(Util.GetUpdateExePath());
+			command.Add("download");
+			command.Add("--url");
+			command.Add(this._options.GetUrlOrPath());
+			command.Add("--clean");
+			command.Add("--format");
+			command.Add("json");
+			command.Add("--name");
+			command.Add(updateInfo.TargetFullRelease.FileName);
+			StartProcessAsyncReadLine(command);
+		}
+
+		public void ApplyUpdatesAndExit(string assetPath)
+		{
+			List<string> args = new List<string>();
+			WaitExitThenApplyUpdates(assetPath, false, false, args);
+			Util.Exit(0);
+		}
+
+		public void ApplyUpdatesAndRestart(string assetPath, List<string> restartArgs)
+		{
+			WaitExitThenApplyUpdates(assetPath, false, true, restartArgs);
+			Util.Exit(0);
+		}
+
+		public void WaitExitThenApplyUpdates(string assetPath, bool silent, bool restart, List<string> restartArgs)
+		{
+			List<string> command = new List<string>();
+			command.Add(Util.GetUpdateExePath());
+			if (silent) {
+				command.Add("--silent");
+			}
+			command.Add("apply");
+			command.Add("--wait");
+			if (assetPath.Length > 0) {
+				command.Add("--package");
+				command.Add(assetPath);
+			}
+			if (restart) {
+				command.Add("--restart");
+			}
+			if (restart && restartArgs.Count > 0) {
+				command.Add("--");
+				command.AddRange(restartArgs);
+			}
+			StartProcessFireAndForget(command);
+		}
+
+		protected override bool HandleProcessOutputLine(string line)
+		{
+			ProgressEvent ev = ProgressEvent.FromJson(line);
+			if (ev == null) {
+				return true;
+			}
+			if (this._options.GetProgressHandler() == null) {
+				return true;
+			}
+			if (ev.Complete) {
+				this._options.GetProgressHandler().OnComplete(ev.File);
+				return true;
+			}
+			else if (ev.Error.Length > 0) {
+				this._options.GetProgressHandler().OnError(ev.Error);
+				return true;
+			}
+			else {
+				this._options.GetProgressHandler().OnProgress(ev.Progress);
+				return false;
 			}
 		}
 	}

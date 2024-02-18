@@ -719,62 +719,40 @@ export class VelopackAsset
 
 	public static fromJson(json: string): VelopackAsset | null
 	{
-		let id: string = "";
-		let version: string = "";
-		let type: string = "";
-		let filename: string = "";
-		let sha1: string = "";
-		let size: string = "";
-		let markdown: string = "";
-		let html: string = "";
-		
-            const obj = JSON.parse(json);
-            Object.keys(obj).forEach(key => {
-                // Convert both key and field names to lowercase for case-insensitive comparison
-                switch (key.toLowerCase()) {
-                    case "id":
-                        id = obj[key];
-                        break;
-                    case "version":
-                        version = obj[key];
-                        break;
-                    case "type":
-                        type = obj[key];
-                        break;
-                    case "filename":
-                        filename = obj[key];
-                        break;
-                    case "sha1":
-                        sha1 = obj[key];
-                        break;
-                    case "size":
-                        size = obj[key];
-                        break;
-                    case "markdown":
-                        markdown = obj[key];
-                        break;
-                    case "html":
-                        html = obj[key];
-                        break;
-                    // Add more cases as needed
-                }
-            });
-        let asset: VelopackAsset | null = new VelopackAsset();
-		asset.packageId = id;
-		asset.version = version;
-		asset.fileName = filename;
-		asset.sha1 = sha1;
-		asset.notesMarkdown = markdown;
-		asset.notesHTML = html;
-		let i: number;
-		if (!isNaN(i = parseInt(size, 10))) {
-			asset.size = BigInt(i);
-		}
-		if (type == "full" || type == "Full") {
-			asset.type = VelopackAssetType.FULL;
-		}
-		else if (type == "delta" || type == "Delta") {
-			asset.type = VelopackAssetType.DELTA;
+		let node: JsonNode = JsonNode.parse(json);
+		return VelopackAsset.fromNode(node);
+	}
+
+	public static fromNode(node: JsonNode): VelopackAsset | null
+	{
+		let asset: VelopackAsset | null = new VelopackAsset();
+		for (const [k, v] of Object.entries(node.asObject())) {
+			switch (k.toLowerCase()) {
+			case "id":
+				asset.packageId = v.asString();
+				break;
+			case "version":
+				asset.version = v.asString();
+				break;
+			case "type":
+				asset.type = v.asString().toLowerCase() == "full" ? VelopackAssetType.FULL : VelopackAssetType.DELTA;
+				break;
+			case "filename":
+				asset.fileName = v.asString();
+				break;
+			case "sha1":
+				asset.sha1 = v.asString();
+				break;
+			case "size":
+				asset.size = BigInt(Math.trunc(v.asNumber()));
+				break;
+			case "markdown":
+				asset.notesMarkdown = v.asString();
+				break;
+			case "html":
+				asset.notesHTML = v.asString();
+				break;
+			}
 		}
 		return asset;
 	}
@@ -787,23 +765,18 @@ export class UpdateInfo
 
 	public static fromJson(json: string): UpdateInfo | null
 	{
-		let assetJson: string = "";
-		let isDowngrade: boolean = false;
-		
-            const obj = JSON.parse(json);
-            Object.keys(obj).forEach(key => {
-                if (key.toLowerCase() === "targetfullrelease") {
-                    assetJson = JSON.stringify(obj[key]);
-                } else if (key.toLowerCase() === "isdowngrade") {
-                    isDowngrade = obj[key];
-                }
-            });
-        if (assetJson.length == 0) {
-			return null;
-		}
+		let node: JsonNode = JsonNode.parse(json);
 		let updateInfo: UpdateInfo | null = new UpdateInfo();
-		updateInfo.targetFullRelease = VelopackAsset.fromJson(assetJson);
-		updateInfo.isDowngrade = isDowngrade;
+		for (const [k, v] of Object.entries(node.asObject())) {
+			switch (k.toLowerCase()) {
+			case "targetfullrelease":
+				updateInfo.targetFullRelease = VelopackAsset.fromNode(v);
+				break;
+			case "isdowngrade":
+				updateInfo.isDowngrade = v.asBool();
+				break;
+			}
+		}
 		return updateInfo;
 	}
 }
@@ -817,28 +790,24 @@ export class ProgressEvent
 
 	public static fromJson(json: string): ProgressEvent | null
 	{
-		let file: string = "";
-		let complete: boolean = false;
-		let progress: number = 0;
-		let error: string = "";
-		
-            const obj = JSON.parse(json);
-            Object.keys(obj).forEach(key => {
-                if (key.toLowerCase() === "file") {
-                    file = obj[key];
-                } else if (key.toLowerCase() === "complete") {
-                    complete = obj[key];
-                } else if (key.toLowerCase() === "progress") {
-                    progress = obj[key];
-                } else if (key.toLowerCase() === "error") {
-                    error = obj[key];
-                }
-            });
-        let progressEvent: ProgressEvent | null = new ProgressEvent();
-		progressEvent.file = file;
-		progressEvent.complete = complete;
-		progressEvent.progress = progress;
-		progressEvent.error = error;
+		let node: JsonNode = JsonNode.parse(json);
+		let progressEvent: ProgressEvent | null = new ProgressEvent();
+		for (const [k, v] of Object.entries(node.asObject())) {
+			switch (k.toLowerCase()) {
+			case "file":
+				progressEvent.file = v.asString();
+				break;
+			case "complete":
+				progressEvent.complete = v.asBool();
+				break;
+			case "progress":
+				progressEvent.progress = Math.trunc(v.asNumber());
+				break;
+			case "error":
+				progressEvent.error = v.asString();
+				break;
+			}
+		}
 		return progressEvent;
 	}
 }
@@ -851,6 +820,9 @@ export abstract class Platform
 	 */
 	protected startProcessBlocking(command_line: readonly string[]): string
 	{
+		if (command_line.length == 0) {
+			throw new Error("Command line is empty");
+		}
 		let ret: string = "";
 		 ret = spawnSync(command_line[0], command_line.slice(1), { encoding: "utf8" }).stdout; return Util.strTrim(ret);
 	}
@@ -860,6 +832,9 @@ export abstract class Platform
 	 */
 	protected startProcessFireAndForget(command_line: readonly string[]): void
 	{
+		if (command_line.length == 0) {
+			throw new Error("Command line is empty");
+		}
 		 spawn(command_line[0], command_line.slice(1), { encoding: "utf8" }); }
 
 	/**
@@ -870,6 +845,9 @@ export abstract class Platform
 	 */
 	protected startProcessAsyncReadLine(command_line: readonly string[]): void
 	{
+		if (command_line.length == 0) {
+			throw new Error("Command line is empty");
+		}
 		
             const child = spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
             emitLines(child.stdout);

@@ -136,7 +136,7 @@ public class UpdateManager : Platform
         StartProcessFireAndForget(command);
     }
 
-    protected override bool HandleProcessOutputLine!(string() line)
+    protected override bool HandleProcessOutputLine!(string() line) throws Exception, JsonParseException
     {
         ProgressEvent#? ev = ProgressEvent.FromJson(line);
         if (ev == null)

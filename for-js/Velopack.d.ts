@@ -116,6 +116,7 @@ export declare class VelopackAsset {
      */
     notesHTML: string;
     static fromJson(json: string): VelopackAsset | null;
+    static fromNode(node: JsonNode): VelopackAsset | null;
 }
 export declare class UpdateInfo {
     targetFullRelease: VelopackAsset | null;

@@ -24,6 +24,7 @@ namespace CsTests
             var dir = Fixtures.GetFixturesDir();
             var json = File.ReadAllText(Path.Combine(dir, fileName));
             Assert.Throws<Velopack.JsonParseException>(() => Velopack.JsonNode.Parse(json));
+
         }
 
         [Theory]
