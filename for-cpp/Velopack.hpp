@@ -1202,6 +1202,7 @@ int subprocess_alive(struct subprocess_s *const process) {
 #define VELOPACK_H_INCLUDED
 
 #include <string>
+#include <vector>
 
 namespace Velopack {
 
@@ -1545,8 +1546,8 @@ public:
 	 */
 	void downloadUpdateAsync(std::shared_ptr<UpdateInfo> updateInfo);
 	void applyUpdatesAndExit(std::string assetPath) const;
-	void applyUpdatesAndRestart(std::string assetPath, const std::vector<std::string> * restartArgs) const;
-	void waitExitThenApplyUpdates(std::string assetPath, bool silent, bool restart, const std::vector<std::string> * restartArgs) const;
+	void applyUpdatesAndRestart(std::string assetPath, const std::vector<std::string> * restartArgs = nullptr) const;
+	void waitExitThenApplyUpdates(std::string assetPath, bool silent, bool restart, const std::vector<std::string> * restartArgs = nullptr) const;
 private:
 	bool _allowDowngrade = false;
 	std::string _explicitChannel{""};

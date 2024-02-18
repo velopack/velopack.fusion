@@ -143,6 +143,6 @@ export declare class UpdateManager {
      */
     downloadUpdateAsync(updateInfo: UpdateInfo): void;
     applyUpdatesAndExit(assetPath: string): void;
-    applyUpdatesAndRestart(assetPath: string, restartArgs: readonly string[]): void;
-    waitExitThenApplyUpdates(assetPath: string, silent: boolean, restart: boolean, restartArgs: readonly string[]): void;
+    applyUpdatesAndRestart(assetPath: string, restartArgs?: readonly string[] | null): void;
+    waitExitThenApplyUpdates(assetPath: string, silent: boolean, restart: boolean, restartArgs?: readonly string[] | null): void;
 }

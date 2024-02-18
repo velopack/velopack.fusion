@@ -1012,13 +1012,13 @@ export class UpdateManager
 		Util.exit(0);
 	}
 
-	public applyUpdatesAndRestart(assetPath: string, restartArgs: readonly string[]): void
+	public applyUpdatesAndRestart(assetPath: string, restartArgs: readonly string[] | null = null): void
 	{
 		this.waitExitThenApplyUpdates(assetPath, false, true, restartArgs);
 		Util.exit(0);
 	}
 
-	public waitExitThenApplyUpdates(assetPath: string, silent: boolean, restart: boolean, restartArgs: readonly string[]): void
+	public waitExitThenApplyUpdates(assetPath: string, silent: boolean, restart: boolean, restartArgs: readonly string[] | null = null): void
 	{
 		const command: string[] = [];
 		command.push(Util.getUpdateExePath());
@@ -1034,7 +1034,7 @@ export class UpdateManager
 		if (restart) {
 			command.push("--restart");
 		}
-		if (restart && restartArgs.length > 0) {
+		if (restart && restartArgs != null && restartArgs.length > 0) {
 			command.push("--");
 			command.push(...restartArgs);
 		}

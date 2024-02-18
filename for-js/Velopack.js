@@ -870,11 +870,11 @@ export class UpdateManager {
         this.waitExitThenApplyUpdates(assetPath, false, false, args);
         Util.exit(0);
     }
-    applyUpdatesAndRestart(assetPath, restartArgs) {
+    applyUpdatesAndRestart(assetPath, restartArgs = null) {
         this.waitExitThenApplyUpdates(assetPath, false, true, restartArgs);
         Util.exit(0);
     }
-    waitExitThenApplyUpdates(assetPath, silent, restart, restartArgs) {
+    waitExitThenApplyUpdates(assetPath, silent, restart, restartArgs = null) {
         const command = [];
         command.push(Util.getUpdateExePath());
         if (silent) {
@@ -889,7 +889,7 @@ export class UpdateManager {
         if (restart) {
             command.push("--restart");
         }
-        if (restart && restartArgs.length > 0) {
+        if (restart && restartArgs != null && restartArgs.length > 0) {
             command.push("--");
             command.push(...restartArgs);
         }

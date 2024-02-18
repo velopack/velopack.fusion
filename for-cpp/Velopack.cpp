@@ -806,7 +806,7 @@ void UpdateManager::waitExitThenApplyUpdates(std::string assetPath, bool silent,
 	if (restart) {
 		command.push_back("--restart");
 	}
-	if (restart && std::ssize(*restartArgs) > 0) {
+	if (restart && restartArgs != nullptr && std::ssize(*restartArgs) > 0) {
 		command.push_back("--");
 		command.insert(command.end(), restartArgs->begin(), restartArgs->end());
 	}

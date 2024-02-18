@@ -20,10 +20,31 @@
 HINSTANCE hInst;
 const WCHAR szTitle[] = L"Velopack C++ Sample App";
 const WCHAR szWindowClass[] = L"VeloCppWinSample";
-velo_update_info updInfo = velo_update_info();
+std::shared_ptr<Velopack::UpdateInfo> updInfo{};
 Velopack::UpdateManager manager{};
 std::string updPath = "";
 std::string currentVersion = "";
+
+class SampleProgressHandler : public Velopack::ProgressHandler
+{
+public:
+	SampleProgressHandler() = default;
+	void onProgress(int progress) override
+	{
+		
+	}
+	void onComplete(std::string assetPath) override 
+	{
+		updPath = assetPath;
+		std::wstring message = L"Downloaded successfully to: " + std::wstring(updPath.begin(), updPath.end());
+	}
+	void onError(std::string error) override 
+	{
+
+	}
+};
+
+std::shared_ptr<SampleProgressHandler> progressHandler = std::make_shared<SampleProgressHandler>();
 
 // Forward declarations of functions included in this code module:
 int					MessageBoxCentered(HWND hWnd, LPCTSTR lpText, LPCTSTR lpCaption, UINT uType);
@@ -43,6 +64,8 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	int pNumArgs = 0;
 	wchar_t** args = CommandLineToArgvW(lpCmdLine, &pNumArgs);
 	Velopack::startup(args, pNumArgs);
+	manager.setUrlOrPath(UPDATE_URL);
+	manager.setProgressHandler(progressHandler);
 	currentVersion = manager.getCurrentVersion();
 
 	MyRegisterClass(hInstance);
@@ -132,12 +155,12 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			if ((HWND)lParam == hCheckButton)
 			{
 				try {
-					velo_update_info info = velo_check_for_updates(UPDATE_URL);
-					if (info.is_update_available) {
+					updInfo = manager.checkForUpdates();
+					if (updInfo != nullptr) {
 						// this is a hack to convert ascii to wide string
-						std::wstring message = L"Update available: " + std::wstring(info.version.begin(), info.version.end());
+						auto version = updInfo->targetFullRelease->version;
+						std::wstring message = L"Update available: " + std::wstring(version.begin(), version.end());
 						MessageBoxCentered(hWnd, message.c_str(), szTitle, MB_OK);
-						updInfo = info;
 					}
 					else {
 						MessageBoxCentered(hWnd, L"No updates available.", szTitle, MB_OK);
@@ -151,14 +174,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			else if ((HWND)lParam == hDownloadButton)
 			{
-				if (updInfo.is_update_available) {
+				if (updInfo != nullptr) {
 					try {
-						velo_download_updates(UPDATE_URL, updInfo.file_name.c_str(), [](int x) {}, [&hWnd](std::string path)
-							{
-								updPath = path;
-								std::wstring message = L"Downloaded successfully to: " + std::wstring(path.begin(), path.end());
-								MessageBoxCentered(hWnd, message.c_str(), szTitle, MB_OK);
-							});
+						manager.downloadUpdateAsync(updInfo);
 					}
 					catch (std::exception& e) {
 						std::string what = e.what();
@@ -176,7 +194,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					MessageBoxCentered(hWnd, L"Download an update first.", szTitle, MB_OK);
 				}
 				else {
-					velo_apply_updates(true, updPath.c_str());
+					manager.applyUpdatesAndRestart(updPath);
 				}
 			}
 		}

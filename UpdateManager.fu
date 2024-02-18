@@ -121,13 +121,13 @@ public class UpdateManager
         Util.Exit(0);
     }
 
-    public void ApplyUpdatesAndRestart(string() assetPath, List<string()> restartArgs) throws Exception 
+    public void ApplyUpdatesAndRestart(string() assetPath, List<string()>? restartArgs = null) throws Exception 
     {
         WaitExitThenApplyUpdates(assetPath, false, true, restartArgs);
         Util.Exit(0);
     }
 
-    public void WaitExitThenApplyUpdates(string() assetPath, bool silent, bool restart, List<string()> restartArgs) throws Exception 
+    public void WaitExitThenApplyUpdates(string() assetPath, bool silent, bool restart, List<string()>? restartArgs = null) throws Exception 
     {
         List<string()>() command;
         command.Add(Util.GetUpdateExePath());
@@ -146,7 +146,7 @@ public class UpdateManager
             command.Add("--restart");
         }
 
-        if (restart && restartArgs.Count > 0) {
+        if (restart && restartArgs != null && restartArgs.Count > 0) {
             command.Add("--");
             command.AddRange(restartArgs);
         }

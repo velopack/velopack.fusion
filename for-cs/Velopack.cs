@@ -1045,13 +1045,13 @@ namespace Velopack
 			Util.Exit(0);
 		}
 
-		public void ApplyUpdatesAndRestart(string assetPath, List<string> restartArgs)
+		public void ApplyUpdatesAndRestart(string assetPath, List<string> restartArgs = null)
 		{
 			WaitExitThenApplyUpdates(assetPath, false, true, restartArgs);
 			Util.Exit(0);
 		}
 
-		public void WaitExitThenApplyUpdates(string assetPath, bool silent, bool restart, List<string> restartArgs)
+		public void WaitExitThenApplyUpdates(string assetPath, bool silent, bool restart, List<string> restartArgs = null)
 		{
 			List<string> command = new List<string>();
 			command.Add(Util.GetUpdateExePath());
@@ -1067,7 +1067,7 @@ namespace Velopack
 			if (restart) {
 				command.Add("--restart");
 			}
-			if (restart && restartArgs.Count > 0) {
+			if (restart && restartArgs != null && restartArgs.Count > 0) {
 				command.Add("--");
 				command.AddRange(restartArgs);
 			}

@@ -2,6 +2,7 @@
 #define VELOPACK_H_INCLUDED
 
 #include <string>
+#include <vector>
 
 namespace Velopack {
 
