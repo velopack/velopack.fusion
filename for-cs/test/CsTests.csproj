@@ -19,4 +19,8 @@
     </AssemblyAttribute>
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\Velopack.cs" Link="Velopack.cs" />
+  </ItemGroup>
+
 </Project>

@@ -201,19 +201,42 @@ export class JsonNode
 	}
 }
 
+class StringAppendable
+{
+	readonly #builder: StringWriter = new StringWriter();
+	#writer: TextWriter;
+	#initialised: boolean;
+
+	public clear(): void
+	{
+		this.#builder.clear();
+	}
+
+	public writeChar(c: number): void
+	{
+		if (!this.#initialised) {
+			this.#writer = this.#builder;
+			this.#initialised = true;
+		}
+		this.#writer.write(String.fromCharCode(c));
+	}
+
+	public toString(): string
+	{
+		return this.#builder.toString();
+	}
+}
+
 class JsonParser
 {
 	#text: string = "";
 	#position: number = 0;
-	readonly #builder: StringWriter = new StringWriter();
-	#writer: TextWriter;
+	readonly #builder: StringAppendable = new StringAppendable();
 
 	public load(text: string): void
 	{
 		this.#text = text;
 		this.#position = 0;
-		this.#builder.clear();
-		this.#writer = this.#builder;
 	}
 
 	public endReached(): boolean
@@ -304,7 +327,7 @@ class JsonParser
 	{
 		this.#builder.clear();
 		while (!this.endReached() && !this.peekWordbreak()) {
-			this.#writer.write(String.fromCharCode(this.read()));
+			this.#builder.writeChar(this.read());
 		}
 		if (this.endReached()) {
 			return "";
@@ -383,28 +406,32 @@ class JsonParser
 				case 34:
 				case 92:
 				case 47:
-					this.#writer.write(String.fromCharCode(c));
+					this.#builder.writeChar(c);
 					break;
 				case 98:
-					this.#writer.write(String.fromCharCode(8));
+					this.#builder.writeChar(8);
 					break;
 				case 102:
-					this.#writer.write(String.fromCharCode(12));
+					this.#builder.writeChar(12);
 					break;
 				case 110:
-					this.#writer.write(String.fromCharCode(10));
+					this.#builder.writeChar(10);
 					break;
 				case 114:
-					this.#writer.write(String.fromCharCode(13));
+					this.#builder.writeChar(13);
 					break;
 				case 116:
-					this.#writer.write(String.fromCharCode(9));
+					this.#builder.writeChar(9);
 					break;
 				case 117:
-					let hex: string = `${this.read()}${this.read()}${this.read()}${this.read()}`;
+					const hex: StringAppendable = new StringAppendable();
+					hex.writeChar(this.read());
+					hex.writeChar(this.read());
+					hex.writeChar(this.read());
+					hex.writeChar(this.read());
 					let i: number;
-					if (!isNaN(i = parseInt(hex, 16))) {
-						this.#writer.write(String.fromCharCode(i));
+					if (!isNaN(i = parseInt(hex.toString(), 16))) {
+						this.#builder.writeChar(i);
 					}
 					else {
 						throw new JsonParseException("Invalid unicode escape");
@@ -413,7 +440,7 @@ class JsonParser
 				}
 				break;
 			default:
-				this.#writer.write(String.fromCharCode(c));
+				this.#builder.writeChar(c);
 				break;
 			}
 		}
@@ -476,17 +503,26 @@ class JsonParser
 		this.read();
 		let node: JsonNode = new JsonNode();
 		node.initArray();
+		let expectComma: boolean = false;
 		while (true) {
 			switch (this.#peekToken()) {
 			case JsonToken.NONE:
 				throw new JsonParseException("Unterminated array");
 			case JsonToken.COMMA:
+				if (!expectComma) {
+					throw new JsonParseException("Unexpected comma in array");
+				}
+				expectComma = false;
 				this.read();
 				continue;
 			case JsonToken.SQUARE_CLOSE:
 				this.read();
 				return node;
 			default:
+				if (expectComma) {
+					throw new JsonParseException("Expected comma");
+				}
+				expectComma = true;
 				node.addArrayChild(this.parseValue());
 				break;
 			}

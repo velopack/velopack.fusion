@@ -26027,6 +26027,7 @@ enum class JsonToken
 };
 class JsonParseException;
 class JsonNode;
+class StringAppendable;
 class JsonParser;
 class Util;
 
@@ -26103,6 +26104,19 @@ private:
 	bool boolValue;
 };
 
+class StringAppendable
+{
+public:
+	StringAppendable() = default;
+	void clear();
+	void writeChar(int c);
+	std::string_view toString() const;
+private:
+	std::ostringstream builder;
+	std::ostream * writer;
+	bool initialised;
+};
+
 class JsonParser
 {
 public:
@@ -26125,8 +26139,7 @@ public:
 private:
 	std::string text{""};
 	int position = 0;
-	std::ostringstream builder;
-	std::ostream * writer;
+	StringAppendable builder;
 	JsonToken peekToken();
 };
 

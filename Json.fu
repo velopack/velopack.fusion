@@ -160,20 +160,44 @@ public class JsonNode
     }
 }
 
+class StringAppendable
+{
+    StringWriter() builder;
+    TextWriter! writer;
+    bool initialised;
+
+    public void Clear!()
+    {
+        builder.Clear();
+    }
+
+    public void WriteChar!(int c)
+    {
+        if (!initialised)
+        {
+            writer = builder;
+            initialised = true;
+        }
+        writer.WriteChar(c);
+    }
+
+    public string ToString()
+    {
+        return builder.ToString();
+    }
+}
+
 // https://github.com/gering/Tiny-JSON/blob/master/Tiny-JSON/Tiny-JSON/JsonParser.cs
 class JsonParser
 {
     string() text = "";
     int position = 0;
-    StringWriter() builder;
-    TextWriter! writer;
+    StringAppendable() builder;
 
     public void Load!(string text)
     {
         this.text = text;
         this.position = 0;
-        this.builder.Clear();
-        this.writer = builder;
     }
 
     public bool EndReached()
@@ -267,7 +291,7 @@ class JsonParser
         builder.Clear();
         while (!EndReached() && !PeekWordbreak())
         {
-            writer.WriteChar(Read());
+            builder.WriteChar(Read());
         }
         if (EndReached()) {
             return "";
@@ -349,28 +373,32 @@ class JsonParser
                         case '"':
                         case '\\':
                         case '/':
-                            writer.WriteChar(c);
+                            builder.WriteChar(c);
                             break;
                         case 'b':
-                            writer.WriteChar(0x0008); // backspace
+                            builder.WriteChar(0x0008); // backspace
                             break;
                         case 'f':
-                            writer.WriteChar(0x000C); // form feed
+                            builder.WriteChar(0x000C); // form feed
                             break;
                         case 'n':
-                            writer.WriteChar('\n');
+                            builder.WriteChar('\n');
                             break;
                         case 'r':
-                            writer.WriteChar('\r');
+                            builder.WriteChar('\r');
                             break;
                         case 't':
-                            writer.WriteChar('\t');
+                            builder.WriteChar('\t');
                             break;
                         case 'u':
-                            string() hex = $"{Read()}{Read()}{Read()}{Read()}";
+                            StringAppendable() hex;
+                            hex.WriteChar(Read());
+                            hex.WriteChar(Read());
+                            hex.WriteChar(Read());
+                            hex.WriteChar(Read());
                             int i;
-                            if (i.TryParse(hex, 16)) {
-                                writer.WriteChar(i);
+                            if (i.TryParse(hex.ToString(), 16)) {
+                                builder.WriteChar(i);
                             } else {
                                 throw JsonParseException("Invalid unicode escape");
                             }
@@ -378,7 +406,7 @@ class JsonParser
                     }
                     break;
                 default:
-                    writer.WriteChar(c);
+                    builder.WriteChar(c);
                     break;
             }
         }
@@ -446,17 +474,26 @@ class JsonParser
         JsonNode# node = new JsonNode();
         node.InitArray();
 
+        bool expectComma = false;
         while (true) {
             switch (PeekToken()) {
             case JsonToken.None:
                 throw JsonParseException("Unterminated array");		
-            case JsonToken.Comma:			
+            case JsonToken.Comma:
+                if (!expectComma) {
+                    throw JsonParseException("Unexpected comma in array");
+                }
+                expectComma = false;
                 Read(); // ditch comma
                 continue;						
             case JsonToken.SquareClose:	
                 Read(); // ditch closing brace
                 return node;
             default:
+                if (expectComma) {
+                    throw JsonParseException("Expected comma");
+                }
+                expectComma = true;
                 node.AddArrayChild(ParseValue());
                 break;
             }

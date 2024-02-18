@@ -10,7 +10,7 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
     if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
     return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
-var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_writer, _JsonParser_peekToken, _VelopackApp_instances, _VelopackApp_handleArgs, _UpdateOptions__allowDowngrade, _UpdateOptions__explicitChannel, _UpdateOptions__urlOrPath, _UpdateOptions__progress, _UpdateManager__options, _StringWriter_buf;
+var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _StringAppendable_builder, _StringAppendable_writer, _StringAppendable_initialised, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _VelopackApp_instances, _VelopackApp_handleArgs, _UpdateOptions__allowDowngrade, _UpdateOptions__explicitChannel, _UpdateOptions__urlOrPath, _UpdateOptions__progress, _UpdateManager__options, _StringWriter_buf;
 const app = require("electron").remote.app;
 const fs = require("fs");
 const { spawn, spawnSync } = require("child_process");
@@ -182,19 +182,37 @@ export class JsonNode {
     }
 }
 _JsonNode_type = new WeakMap(), _JsonNode_objectValue = new WeakMap(), _JsonNode_arrayValue = new WeakMap(), _JsonNode_stringValue = new WeakMap(), _JsonNode_numberValue = new WeakMap(), _JsonNode_boolValue = new WeakMap();
+class StringAppendable {
+    constructor() {
+        _StringAppendable_builder.set(this, new StringWriter());
+        _StringAppendable_writer.set(this, void 0);
+        _StringAppendable_initialised.set(this, void 0);
+    }
+    clear() {
+        __classPrivateFieldGet(this, _StringAppendable_builder, "f").clear();
+    }
+    writeChar(c) {
+        if (!__classPrivateFieldGet(this, _StringAppendable_initialised, "f")) {
+            __classPrivateFieldSet(this, _StringAppendable_writer, __classPrivateFieldGet(this, _StringAppendable_builder, "f"), "f");
+            __classPrivateFieldSet(this, _StringAppendable_initialised, true, "f");
+        }
+        __classPrivateFieldGet(this, _StringAppendable_writer, "f").write(String.fromCharCode(c));
+    }
+    toString() {
+        return __classPrivateFieldGet(this, _StringAppendable_builder, "f").toString();
+    }
+}
+_StringAppendable_builder = new WeakMap(), _StringAppendable_writer = new WeakMap(), _StringAppendable_initialised = new WeakMap();
 class JsonParser {
     constructor() {
         _JsonParser_instances.add(this);
         _JsonParser_text.set(this, "");
         _JsonParser_position.set(this, 0);
-        _JsonParser_builder.set(this, new StringWriter());
-        _JsonParser_writer.set(this, void 0);
+        _JsonParser_builder.set(this, new StringAppendable());
     }
     load(text) {
         __classPrivateFieldSet(this, _JsonParser_text, text, "f");
         __classPrivateFieldSet(this, _JsonParser_position, 0, "f");
-        __classPrivateFieldGet(this, _JsonParser_builder, "f").clear();
-        __classPrivateFieldSet(this, _JsonParser_writer, __classPrivateFieldGet(this, _JsonParser_builder, "f"), "f");
     }
     endReached() {
         return __classPrivateFieldGet(this, _JsonParser_position, "f") >= __classPrivateFieldGet(this, _JsonParser_text, "f").length;
@@ -230,7 +248,7 @@ class JsonParser {
     readWord() {
         __classPrivateFieldGet(this, _JsonParser_builder, "f").clear();
         while (!this.endReached() && !this.peekWordbreak()) {
-            __classPrivateFieldGet(this, _JsonParser_writer, "f").write(String.fromCharCode(this.read()));
+            __classPrivateFieldGet(this, _JsonParser_builder, "f").writeChar(this.read());
         }
         if (this.endReached()) {
             return "";
@@ -301,28 +319,32 @@ class JsonParser {
                         case 34:
                         case 92:
                         case 47:
-                            __classPrivateFieldGet(this, _JsonParser_writer, "f").write(String.fromCharCode(c));
+                            __classPrivateFieldGet(this, _JsonParser_builder, "f").writeChar(c);
                             break;
                         case 98:
-                            __classPrivateFieldGet(this, _JsonParser_writer, "f").write(String.fromCharCode(8));
+                            __classPrivateFieldGet(this, _JsonParser_builder, "f").writeChar(8);
                             break;
                         case 102:
-                            __classPrivateFieldGet(this, _JsonParser_writer, "f").write(String.fromCharCode(12));
+                            __classPrivateFieldGet(this, _JsonParser_builder, "f").writeChar(12);
                             break;
                         case 110:
-                            __classPrivateFieldGet(this, _JsonParser_writer, "f").write(String.fromCharCode(10));
+                            __classPrivateFieldGet(this, _JsonParser_builder, "f").writeChar(10);
                             break;
                         case 114:
-                            __classPrivateFieldGet(this, _JsonParser_writer, "f").write(String.fromCharCode(13));
+                            __classPrivateFieldGet(this, _JsonParser_builder, "f").writeChar(13);
                             break;
                         case 116:
-                            __classPrivateFieldGet(this, _JsonParser_writer, "f").write(String.fromCharCode(9));
+                            __classPrivateFieldGet(this, _JsonParser_builder, "f").writeChar(9);
                             break;
                         case 117:
-                            let hex = `${this.read()}${this.read()}${this.read()}${this.read()}`;
+                            const hex = new StringAppendable();
+                            hex.writeChar(this.read());
+                            hex.writeChar(this.read());
+                            hex.writeChar(this.read());
+                            hex.writeChar(this.read());
                             let i;
-                            if (!isNaN(i = parseInt(hex, 16))) {
-                                __classPrivateFieldGet(this, _JsonParser_writer, "f").write(String.fromCharCode(i));
+                            if (!isNaN(i = parseInt(hex.toString(), 16))) {
+                                __classPrivateFieldGet(this, _JsonParser_builder, "f").writeChar(i);
                             }
                             else {
                                 throw new JsonParseException("Invalid unicode escape");
@@ -331,7 +353,7 @@ class JsonParser {
                     }
                     break;
                 default:
-                    __classPrivateFieldGet(this, _JsonParser_writer, "f").write(String.fromCharCode(c));
+                    __classPrivateFieldGet(this, _JsonParser_builder, "f").writeChar(c);
                     break;
             }
         }
@@ -388,24 +410,33 @@ class JsonParser {
         this.read();
         let node = new JsonNode();
         node.initArray();
+        let expectComma = false;
         while (true) {
             switch (__classPrivateFieldGet(this, _JsonParser_instances, "m", _JsonParser_peekToken).call(this)) {
                 case JsonToken.NONE:
                     throw new JsonParseException("Unterminated array");
                 case JsonToken.COMMA:
+                    if (!expectComma) {
+                        throw new JsonParseException("Unexpected comma in array");
+                    }
+                    expectComma = false;
                     this.read();
                     continue;
                 case JsonToken.SQUARE_CLOSE:
                     this.read();
                     return node;
                 default:
+                    if (expectComma) {
+                        throw new JsonParseException("Expected comma");
+                    }
+                    expectComma = true;
                     node.addArrayChild(this.parseValue());
                     break;
             }
         }
     }
 }
-_JsonParser_text = new WeakMap(), _JsonParser_position = new WeakMap(), _JsonParser_builder = new WeakMap(), _JsonParser_writer = new WeakMap(), _JsonParser_instances = new WeakSet(), _JsonParser_peekToken = function _JsonParser_peekToken() {
+_JsonParser_text = new WeakMap(), _JsonParser_position = new WeakMap(), _JsonParser_builder = new WeakMap(), _JsonParser_instances = new WeakSet(), _JsonParser_peekToken = function _JsonParser_peekToken() {
     this.eatWhitespace();
     if (this.endReached())
         return JsonToken.NONE;

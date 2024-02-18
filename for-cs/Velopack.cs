@@ -180,6 +180,35 @@ namespace Velopack
 		}
 	}
 
+	class StringAppendable
+	{
+
+		readonly StringWriter builder = new StringWriter();
+
+		TextWriter writer;
+
+		bool initialised;
+
+		public void Clear()
+		{
+			this.builder.GetStringBuilder().Clear();
+		}
+
+		public void WriteChar(int c)
+		{
+			if (!this.initialised) {
+				this.writer = this.builder;
+				this.initialised = true;
+			}
+			this.writer.Write((char) c);
+		}
+
+		public override string ToString()
+		{
+			return this.builder.ToString();
+		}
+	}
+
 	class JsonParser
 	{
 
@@ -187,16 +216,12 @@ namespace Velopack
 
 		int position = 0;
 
-		readonly StringWriter builder = new StringWriter();
-
-		TextWriter writer;
+		readonly StringAppendable builder = new StringAppendable();
 
 		public void Load(string text)
 		{
 			this.text = text;
 			this.position = 0;
-			this.builder.GetStringBuilder().Clear();
-			this.writer = this.builder;
 		}
 
 		public bool EndReached()
@@ -285,9 +310,9 @@ namespace Velopack
 
 		public string ReadWord()
 		{
-			this.builder.GetStringBuilder().Clear();
+			this.builder.Clear();
 			while (!EndReached() && !PeekWordbreak()) {
-				this.writer.Write((char) Read());
+				this.builder.WriteChar(Read());
 			}
 			if (EndReached()) {
 				return "";
@@ -345,7 +370,7 @@ namespace Velopack
 			if (PeekToken() != JsonToken.String) {
 				throw new JsonParseException("Expected string");
 			}
-			this.builder.GetStringBuilder().Clear();
+			this.builder.Clear();
 			Read();
 			while (true) {
 				if (EndReached()) {
@@ -366,28 +391,32 @@ namespace Velopack
 					case '"':
 					case '\\':
 					case '/':
-						this.writer.Write((char) c);
+						this.builder.WriteChar(c);
 						break;
 					case 'b':
-						this.writer.Write((char) 8);
+						this.builder.WriteChar(8);
 						break;
 					case 'f':
-						this.writer.Write((char) 12);
+						this.builder.WriteChar(12);
 						break;
 					case 'n':
-						this.writer.Write('\n');
+						this.builder.WriteChar('\n');
 						break;
 					case 'r':
-						this.writer.Write('\r');
+						this.builder.WriteChar('\r');
 						break;
 					case 't':
-						this.writer.Write('\t');
+						this.builder.WriteChar('\t');
 						break;
 					case 'u':
-						string hex = $"{Read()}{Read()}{Read()}{Read()}";
+						StringAppendable hex = new StringAppendable();
+						hex.WriteChar(Read());
+						hex.WriteChar(Read());
+						hex.WriteChar(Read());
+						hex.WriteChar(Read());
 						int i;
-						if (int.TryParse(hex, NumberStyles.HexNumber, null, out i)) {
-							this.writer.Write((char) i);
+						if (int.TryParse(hex.ToString(), NumberStyles.HexNumber, null, out i)) {
+							this.builder.WriteChar(i);
 						}
 						else {
 							throw new JsonParseException("Invalid unicode escape");
@@ -396,7 +425,7 @@ namespace Velopack
 					}
 					break;
 				default:
-					this.writer.Write((char) c);
+					this.builder.WriteChar(c);
 					break;
 				}
 			}
@@ -459,17 +488,26 @@ namespace Velopack
 			Read();
 			JsonNode node = new JsonNode();
 			node.InitArray();
+			bool expectComma = false;
 			while (true) {
 				switch (PeekToken()) {
 				case JsonToken.None:
 					throw new JsonParseException("Unterminated array");
 				case JsonToken.Comma:
+					if (!expectComma) {
+						throw new JsonParseException("Unexpected comma in array");
+					}
+					expectComma = false;
 					Read();
 					continue;
 				case JsonToken.SquareClose:
 					Read();
 					return node;
 				default:
+					if (expectComma) {
+						throw new JsonParseException("Expected comma");
+					}
+					expectComma = true;
 					node.AddArrayChild(ParseValue());
 					break;
 				}

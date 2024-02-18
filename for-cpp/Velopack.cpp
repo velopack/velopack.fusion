@@ -7,7 +7,6 @@
     #include <thread>
 #include <algorithm>
 #include <cstdlib>
-#include <format>
 #include <regex>
 #include "Velopack.hpp"
 
@@ -130,12 +129,29 @@ void JsonNode::initString(std::string_view value)
 	this->stringValue = value;
 }
 
+void StringAppendable::clear()
+{
+	this->builder.str(std::string());
+}
+
+void StringAppendable::writeChar(int c)
+{
+	if (!this->initialised) {
+		this->writer = &this->builder;
+		this->initialised = true;
+	}
+	*this->writer << static_cast<char>(c);
+}
+
+std::string_view StringAppendable::toString() const
+{
+	return this->builder.str();
+}
+
 void JsonParser::load(std::string_view text)
 {
 	this->text = text;
 	this->position = 0;
-	this->builder.str(std::string());
-	this->writer = &this->builder;
 }
 
 bool JsonParser::endReached() const
@@ -224,14 +240,14 @@ void JsonParser::eatWhitespace()
 
 std::string JsonParser::readWord()
 {
-	this->builder.str(std::string());
+	this->builder.clear();
 	while (!endReached() && !peekWordbreak()) {
-		*this->writer << static_cast<char>(read());
+		this->builder.writeChar(read());
 	}
 	if (endReached()) {
 		return "";
 	}
-	return std::string(this->builder.str());
+	return std::string(this->builder.toString());
 }
 
 std::unique_ptr<JsonNode> JsonParser::parseNull()
@@ -284,7 +300,7 @@ std::unique_ptr<JsonNode> JsonParser::parseString()
 	if (peekToken() != JsonToken::string) {
 		throw JsonParseException("Expected string");
 	}
-	this->builder.str(std::string());
+	this->builder.clear();
 	read();
 	while (true) {
 		if (endReached()) {
@@ -295,7 +311,7 @@ std::unique_ptr<JsonNode> JsonParser::parseString()
 		case '"':
 			{
 				std::unique_ptr<JsonNode> node = std::make_unique<JsonNode>();
-				node->initString(this->builder.str());
+				node->initString(this->builder.toString());
 				return node;
 			}
 		case '\\':
@@ -307,29 +323,33 @@ std::unique_ptr<JsonNode> JsonParser::parseString()
 			case '"':
 			case '\\':
 			case '/':
-				*this->writer << static_cast<char>(c);
+				this->builder.writeChar(c);
 				break;
 			case 'b':
-				*this->writer << static_cast<char>(8);
+				this->builder.writeChar(8);
 				break;
 			case 'f':
-				*this->writer << static_cast<char>(12);
+				this->builder.writeChar(12);
 				break;
 			case 'n':
-				*this->writer << '\n';
+				this->builder.writeChar('\n');
 				break;
 			case 'r':
-				*this->writer << '\r';
+				this->builder.writeChar('\r');
 				break;
 			case 't':
-				*this->writer << '\t';
+				this->builder.writeChar('\t');
 				break;
 			case 'u':
 				{
-					std::string hex{std::format("{}{}{}{}", read(), read(), read(), read())};
+					StringAppendable hex;
+					hex.writeChar(read());
+					hex.writeChar(read());
+					hex.writeChar(read());
+					hex.writeChar(read());
 					int i;
-					if ([&] { char *ciend; i = std::strtol(hex.data(), &ciend, 16); return *ciend == '\0'; }()) {
-						*this->writer << static_cast<char>(i);
+					if ([&] { char *ciend; i = std::strtol(hex.toString().data(), &ciend, 16); return *ciend == '\0'; }()) {
+						this->builder.writeChar(i);
 					}
 					else {
 						throw JsonParseException("Invalid unicode escape");
@@ -339,7 +359,7 @@ std::unique_ptr<JsonNode> JsonParser::parseString()
 			}
 			break;
 		default:
-			*this->writer << static_cast<char>(c);
+			this->builder.writeChar(c);
 			break;
 		}
 	}
@@ -404,17 +424,26 @@ std::unique_ptr<JsonNode> JsonParser::parseArray()
 	read();
 	std::unique_ptr<JsonNode> node = std::make_unique<JsonNode>();
 	node->initArray();
+	bool expectComma = false;
 	while (true) {
 		switch (peekToken()) {
 		case JsonToken::none:
 			throw JsonParseException("Unterminated array");
 		case JsonToken::comma:
+			if (!expectComma) {
+				throw JsonParseException("Unexpected comma in array");
+			}
+			expectComma = false;
 			read();
 			continue;
 		case JsonToken::squareClose:
 			read();
 			return node;
 		default:
+			if (expectComma) {
+				throw JsonParseException("Expected comma");
+			}
+			expectComma = true;
 			node->addArrayChild(parseValue());
 			break;
 		}
