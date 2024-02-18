@@ -14,12 +14,12 @@ if "%~1"=="" (
 
 echo.
 echo Building Velopack Rust
-cd %~dp0..\..\src\Rust
+cd %~dp0..\..\..\..\velopack\src\Rust
 cargo build --features windows,extendedcli
 
 echo.
 echo Building Velopack Vpk
-cd %~dp0..\..\
+cd %~dp0..\..\..\..\velopack\
 dotnet build src/Velopack.Vpk/Velopack.Vpk.csproj
 
 cd %~dp0
@@ -50,4 +50,4 @@ echo #define UPDATE_URL "REPLACE_ME" > constants.h
 
 echo.
 echo Building Velopack Release v%~1
-%~dp0..\..\build\Debug\net8.0\vpk pack -u VeloCppWinSample -o releases -p x64\Release -f net8-x64-desktop -v %*
+%~dp0..\..\..\..\velopack\build\Debug\net8.0\vpk pack -u VeloCppWinSample -o releases -p x64\Release -f net8-x64-desktop -v %*

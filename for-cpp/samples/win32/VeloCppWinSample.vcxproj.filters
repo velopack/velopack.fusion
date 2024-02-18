@@ -14,7 +14,7 @@
     <ClCompile Include="VeloCppWinSample.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\bin\Velopack.cpp">
+    <ClCompile Include="..\..\Velopack.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -22,7 +22,7 @@
     <ClInclude Include="constants.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\bin\Velopack.hpp">
+    <ClInclude Include="..\..\Velopack.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

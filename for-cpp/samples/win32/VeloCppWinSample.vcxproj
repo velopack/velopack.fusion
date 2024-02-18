@@ -135,11 +135,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\bin\Velopack.cpp" />
+    <ClCompile Include="..\..\Velopack.cpp" />
     <ClCompile Include="VeloCppWinSample.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\bin\Velopack.hpp" />
+    <ClInclude Include="..\..\Velopack.hpp" />
     <ClInclude Include="constants.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
