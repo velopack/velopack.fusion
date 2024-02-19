@@ -50,6 +50,15 @@ public class JsonNode
         return Type == JsonNodeType.Null;
     }
 
+    /// Check if the JSON value is empty - eg. an empty string, array, or object.
+    public bool IsEmpty()
+    {
+        return Type == JsonNodeType.Null 
+            || (Type == JsonNodeType.String && StringValue.Length == 0)
+            || (Type == JsonNodeType.Array && ArrayValue.Count == 0)
+            || (Type == JsonNodeType.Object && ObjectValue.Count == 0);
+    }
+
     /// Reinterpret a JSON value as an object. Throws exception if the value type was not an object.
     public Dictionary<string(), JsonNode#> AsObject() throws Exception
     {
@@ -460,7 +469,7 @@ class JsonParser
         }
     }
 
-	public JsonNode# ParseArray!() throws Exception, JsonParseException
+    public JsonNode# ParseArray!() throws Exception, JsonParseException
     {
         Read(); // ditch opening brace
         JsonNode# node = new JsonNode();

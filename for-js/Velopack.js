@@ -11,8 +11,6 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
     return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
 var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _StringAppendable_builder, _StringAppendable_writer, _StringAppendable_initialised, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _VelopackApp_instances, _VelopackApp_handleArgs, _UpdateManager__allowDowngrade, _UpdateManager__explicitChannel, _UpdateManager__urlOrPath, _UpdateManager__progress, _StringWriter_buf;
-const app = require("electron").remote.app;
-const fs = require("fs");
 const { spawn, spawnSync } = require("child_process");
 function emitLines(stream) {
     var backlog = "";
@@ -84,6 +82,12 @@ export class JsonNode {
      */
     isNull() {
         return __classPrivateFieldGet(this, _JsonNode_type, "f") == JsonNodeType.NULL;
+    }
+    /**
+     * Check if the JSON value is empty - eg. an empty string, array, or object.
+     */
+    isEmpty() {
+        return __classPrivateFieldGet(this, _JsonNode_type, "f") == JsonNodeType.NULL || (__classPrivateFieldGet(this, _JsonNode_type, "f") == JsonNodeType.STRING && __classPrivateFieldGet(this, _JsonNode_stringValue, "f").length == 0) || (__classPrivateFieldGet(this, _JsonNode_type, "f") == JsonNodeType.ARRAY && __classPrivateFieldGet(this, _JsonNode_arrayValue, "f").length == 0) || (__classPrivateFieldGet(this, _JsonNode_type, "f") == JsonNodeType.OBJECT && Object.keys(__classPrivateFieldGet(this, _JsonNode_objectValue, "f")).length == 0);
     }
     /**
      * Reinterpret a JSON value as an object. Throws exception if the value type was not an object.
@@ -484,12 +488,12 @@ class Util {
      */
     static getCurrentProcessPath() {
         let ret = "";
-        ret = app.getAppPath();
+        ret = process.execPath;
         return ret;
     }
     static fileExists(path) {
         let ret = false;
-        ret = fs.existsSync(path);
+        ret = require("fs").existsSync(path);
         return ret;
     }
     static getUpdateExePath() {

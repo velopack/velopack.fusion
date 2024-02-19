@@ -23,6 +23,10 @@ export declare class JsonNode {
      */
     isNull(): boolean;
     /**
+     * Check if the JSON value is empty - eg. an empty string, array, or object.
+     */
+    isEmpty(): boolean;
+    /**
      * Reinterpret a JSON value as an object. Throws exception if the value type was not an object.
      */
     asObject(): Readonly<Record<string, JsonNode>>;

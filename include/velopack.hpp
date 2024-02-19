@@ -4,18 +4,18 @@
 #include <string>
 #include <vector>
 
-namespace Velopack {
-
+namespace Velopack
+{
 #if UNICODE
-void startup(wchar_t** args, size_t c_args);
+    void startup(wchar_t **args, size_t c_args);
 #endif // UNICODE
-void startup(char** args, size_t c_args);
-bool util_does_file_exist(std::string file_path);
-std::string util_current_os_name();
-std::string util_get_own_exe_path();
-std::string util_string_to_lower(std::string str);
-bool ci_equal(const std::string& a, const std::string& b);
-subprocess_s util_start_subprocess(const std::vector<std::string>* command_line, int options);
-
+    void startup(char **args, size_t c_args);
+    bool util_does_file_exist(std::string file_path);
+    std::string util_current_os_name();
+    std::string util_get_own_exe_path();
+    std::string util_string_to_lower(std::string str);
+    bool ci_equal(const std::string &a, const std::string &b);
+    subprocess_s util_start_subprocess(const std::vector<std::string> *command_line, int options);
+    std::string util_start_process_blocking_output(const std::vector<std::string> *command_line, bool create_no_window);
 }
 #endif // VELOPACK_H_INCLUDED

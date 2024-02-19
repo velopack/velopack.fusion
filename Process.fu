@@ -1,14 +1,4 @@
 
-#if CPP
-native {
-    #include <functional>
-    #include <iostream>
-    #include <fstream>
-    #include <sstream>
-    #include <thread>
-}
-#endif
-
 #if JS
 native {
     const { spawn, spawnSync } = require("child_process");
@@ -52,15 +42,7 @@ static class Process
         string() ret = "";
 #if CPP
         native { 
-	        subprocess_s subprocess = util_start_subprocess(command_line, subprocess_option_no_window);
-
-            // read all stdout from the process
-            FILE* p_stdout = subprocess_stdout(&subprocess);
-            std::filebuf buf = std::basic_filebuf<char>(p_stdout);
-            std::istream is(&buf);
-            std::stringstream buffer;
-            buffer << is.rdbuf();
-            ret = buffer.str();
+            ret = util_start_process_blocking_output(command_line, subprocess_option_no_window);
          }
 #elif CS
         native {
@@ -111,7 +93,7 @@ static class Process
             throw Exception("Command line is empty");
         }
 #if CPP
-        native { util_start_subprocess(command_line, subprocess_option_no_window); }
+        native { util_start_process(command_line, subprocess_option_no_window); }
 #elif CS
         native {
             var psi = new System.Diagnostics.ProcessStartInfo()
@@ -138,8 +120,9 @@ static class Process
         if (command_line.Count == 0) {
             throw Exception("Command line is empty");
         }
+
 #if CPP
-        native { 
+        native {
 	        subprocess_s subprocess = util_start_subprocess(command_line, subprocess_option_no_window | subprocess_option_enable_async);
 
             std::thread outputThread([subprocess, handler]() mutable {

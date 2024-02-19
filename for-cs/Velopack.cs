@@ -69,6 +69,12 @@ namespace Velopack
 			return this.Type == JsonNodeType.Null;
 		}
 
+		/// <summary>Check if the JSON value is empty - eg. an empty string, array, or object.</summary>
+		public bool IsEmpty()
+		{
+			return this.Type == JsonNodeType.Null || (this.Type == JsonNodeType.String && this.StringValue.Length == 0) || (this.Type == JsonNodeType.Array && this.ArrayValue.Count == 0) || (this.Type == JsonNodeType.Object && this.ObjectValue.Count == 0);
+		}
+
 		/// <summary>Reinterpret a JSON value as an object. Throws exception if the value type was not an object.</summary>
 		public Dictionary<string, JsonNode> AsObject()
 		{

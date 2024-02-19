@@ -1,8 +1,5 @@
 // Generated automatically with "fut". Do not edit.
 
-    const app = require("electron").remote.app;
-    const fs = require("fs");
-
     const { spawn, spawnSync } = require("child_process");
     function emitLines (stream) {
         var backlog = "";
@@ -77,6 +74,14 @@ export class JsonNode
 	public isNull(): boolean
 	{
 		return this.#type == JsonNodeType.NULL;
+	}
+
+	/**
+	 * Check if the JSON value is empty - eg. an empty string, array, or object.
+	 */
+	public isEmpty(): boolean
+	{
+		return this.#type == JsonNodeType.NULL || (this.#type == JsonNodeType.STRING && this.#stringValue.length == 0) || (this.#type == JsonNodeType.ARRAY && this.#arrayValue.length == 0) || (this.#type == JsonNodeType.OBJECT && Object.keys(this.#objectValue).length == 0);
 	}
 
 	/**
@@ -544,13 +549,13 @@ class Util
 	public static getCurrentProcessPath(): string
 	{
 		let ret: string = "";
-		 ret = app.getAppPath(); return ret;
+		 ret = process.execPath; return ret;
 	}
 
 	public static fileExists(path: string): boolean
 	{
 		let ret: boolean = false;
-		 ret = fs.existsSync(path); return ret;
+		 ret = require("fs").existsSync(path); return ret;
 	}
 
 	public static getUpdateExePath(): string
