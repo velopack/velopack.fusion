@@ -7,3 +7,4 @@ publish
 debug
 release
 node_modules
+.vscode
