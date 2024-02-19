@@ -1,11 +1,4 @@
 
-#if JS
-native {
-    const app = require("electron").remote.app;
-    const fs = require("fs");
-}
-#endif
-
 static class Util
 {
     /// Returns the path of the current process.
@@ -17,7 +10,7 @@ static class Util
 #elif CS
         native { ret = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName; }
 #elif JS
-        native { ret = app.getAppPath(); } 
+        native { ret = process.execPath; } 
 #else
         throw Exception("Unsupported platform");
 #endif
@@ -32,7 +25,7 @@ static class Util
 #elif CS
         native { ret = System.IO.File.Exists(path); }
 #elif JS
-        native { ret = fs.existsSync(path); } 
+        native { ret = require("fs").existsSync(path); } 
 #else
         throw Exception("Unsupported platform");
 #endif
