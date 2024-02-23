@@ -23,18 +23,18 @@ public class VelopackApp
     void HandleArgs(List<string()> args)
     {
         for (int i = 0; i < args.Count; i++) {
-            string() val = Util.StrTrim(args[i]).ToLower();
+            string() val = Platform.StrTrim(args[i]).ToLower();
             if (val == "--veloapp-install") {
-                Util.Exit(0);
+                Platform.Exit(0);
             }
             if (val == "--veloapp-updated") {
-                Util.Exit(0);
+                Platform.Exit(0);
             }
             if (val == "--veloapp-obsolete") {
-                Util.Exit(0);
+                Platform.Exit(0);
             }
             if (val == "--veloapp-uninstall") {
-                Util.Exit(0);
+                Platform.Exit(0);
             }
         }
     }

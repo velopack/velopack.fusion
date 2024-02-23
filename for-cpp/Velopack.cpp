@@ -1656,6 +1656,111 @@ std::shared_ptr<JsonNode> JsonParser::parseValue()
         throw JsonParseException("Invalid token");
     }
 }
+std::string Platform::startProcessBlocking(const std::vector<std::string> * command_line)
+{
+    if (std::ssize(*command_line) == 0) {
+        throw std::runtime_error("Command line is empty");
+    }
+    std::string ret{""};
+     ret = nativeStartProcessBlocking(command_line); return strTrim(ret);
+}
+void Platform::startProcessFireAndForget(const std::vector<std::string> * command_line)
+{
+    if (std::ssize(*command_line) == 0) {
+        throw std::runtime_error("Command line is empty");
+    }
+     nativeStartProcessFireAndForget(command_line); }
+std::thread Platform::startProcessAsyncReadLine(const std::vector<std::string> * command_line, ProcessReadLineHandler * handler)
+{
+    if (std::ssize(*command_line) == 0) {
+        throw std::runtime_error("Command line is empty");
+    }
+     return nativeStartProcessAsyncReadLine(command_line, handler); 
+}
+std::string Platform::getCurrentProcessPath()
+{
+    std::string ret{""};
+     ret = nativeGetCurrentProcessPath(); return ret;
+}
+bool Platform::fileExists(std::string path)
+{
+    bool ret = false;
+     ret = nativeDoesFileExist(path); return ret;
+}
+std::string Platform::getUpdateExePath()
+{
+    std::string exePath{getCurrentProcessPath()};
+    if (isWindows()) {
+        exePath = pathJoin(pathParent(pathParent(exePath)), "Update.exe");
+    }
+    else if (isLinux()) {
+        exePath = pathJoin(pathParent(exePath), "UpdateNix");
+    }
+    else if (isOsx()) {
+        exePath = pathJoin(pathParent(exePath), "UpdateMac");
+    }
+    else {
+        throw std::runtime_error("Unsupported platform");
+    }
+    if (!fileExists(exePath)) {
+        throw std::runtime_error("Update executable not found: " + exePath);
+    }
+    return exePath;
+}
+std::string Platform::strTrim(std::string str)
+{
+    std::cmatch match;
+    if (std::regex_search(str.c_str(), match, std::regex("(\\S.*\\S|\\S)"))) {
+        return match.str(1);
+    }
+    return str;
+}
+std::string Platform::pathParent(std::string str)
+{
+    int ix_win = static_cast<int>(str.rfind('\\'));
+    int ix_nix = static_cast<int>(str.rfind('/'));
+    int ix = (std::max)(ix_win, ix_nix);
+    return str.substr(0, ix);
+}
+std::string Platform::pathJoin(std::string s1, std::string s2)
+{
+    while (s1.ends_with('/') || s1.ends_with('\\')) {
+        s1.resize(std::ssize(s1) - 1);
+    }
+    while (s2.starts_with('/') || s2.starts_with('\\')) {
+        s2 = s2.substr(1);
+    }
+    return s1 + std::string(pathSeparator()) + s2;
+}
+std::string_view Platform::pathSeparator()
+{
+    if (isWindows()) {
+        return "\\";
+    }
+    else {
+        return "/";
+    }
+}
+bool Platform::isWindows()
+{
+    return getOsName() == "win32";
+}
+bool Platform::isLinux()
+{
+    return getOsName() == "linux";
+}
+bool Platform::isOsx()
+{
+    return getOsName() == "darwin";
+}
+std::string Platform::getOsName()
+{
+    std::string ret{""};
+     ret = nativeCurrentOsName(); return ret;
+}
+void Platform::exit(int code)
+{
+     nativeExitProcess(code); }
 void ProcessReadLineHandler::setProgressHandler(ProgressHandler * progress)
 {
     this->_progress = progress;
@@ -1756,9 +1861,9 @@ void UpdateManager::setExplicitChannel(std::string explicitChannel)
 std::string UpdateManager::getCurrentVersion() const
 {
     std::vector<std::string> command;
-    command.push_back(Util::getUpdateExePath());
+    command.push_back(Platform::getUpdateExePath());
     command.push_back("get-version");
-    return Util::startProcessBlocking(&command);
+    return Platform::startProcessBlocking(&command);
 }
 std::shared_ptr<UpdateInfo> UpdateManager::checkForUpdates() const
 {
@@ -1766,7 +1871,7 @@ std::shared_ptr<UpdateInfo> UpdateManager::checkForUpdates() const
         throw std::runtime_error("Please call SetUrlOrPath before trying to check for updates.");
     }
     std::vector<std::string> command;
-    command.push_back(Util::getUpdateExePath());
+    command.push_back(Platform::getUpdateExePath());
     command.push_back("check");
     command.push_back("--url");
     command.push_back(this->_urlOrPath);
@@ -1779,7 +1884,7 @@ std::shared_ptr<UpdateInfo> UpdateManager::checkForUpdates() const
         command.push_back("--channel");
         command.push_back(this->_explicitChannel);
     }
-    std::string output{Util::startProcessBlocking(&command)};
+    std::string output{Platform::startProcessBlocking(&command)};
     if (output.empty() || output == "null") {
         return nullptr;
     }
@@ -1791,7 +1896,7 @@ std::thread UpdateManager::downloadUpdateAsync(std::shared_ptr<UpdateInfo> updat
         throw std::runtime_error("Please call SetUrlOrPath before trying to download updates.");
     }
     std::vector<std::string> command;
-    command.push_back(Util::getUpdateExePath());
+    command.push_back(Platform::getUpdateExePath());
     command.push_back("download");
     command.push_back("--url");
     command.push_back(this->_urlOrPath);
@@ -1803,23 +1908,23 @@ std::thread UpdateManager::downloadUpdateAsync(std::shared_ptr<UpdateInfo> updat
     std::shared_ptr<DefaultProgressHandler> def = std::make_shared<DefaultProgressHandler>();
     std::shared_ptr<ProcessReadLineHandler> handler = std::make_shared<ProcessReadLineHandler>();
     handler->setProgressHandler(progressHandler == nullptr ? def.get() : progressHandler);
-    return Util::startProcessAsyncReadLine(&command, handler.get());
+    return Platform::startProcessAsyncReadLine(&command, handler.get());
 }
 void UpdateManager::applyUpdatesAndExit(std::string assetPath) const
 {
     std::vector<std::string> args;
     waitExitThenApplyUpdates(assetPath, false, false, &args);
-    Util::exit(0);
+    Platform::exit(0);
 }
 void UpdateManager::applyUpdatesAndRestart(std::string assetPath, const std::vector<std::string> * restartArgs) const
 {
     waitExitThenApplyUpdates(assetPath, false, true, restartArgs);
-    Util::exit(0);
+    Platform::exit(0);
 }
 void UpdateManager::waitExitThenApplyUpdates(std::string assetPath, bool silent, bool restart, const std::vector<std::string> * restartArgs) const
 {
     std::vector<std::string> command;
-    command.push_back(Util::getUpdateExePath());
+    command.push_back(Platform::getUpdateExePath());
     if (silent) {
         command.push_back("--silent");
     }
@@ -1836,111 +1941,6 @@ void UpdateManager::waitExitThenApplyUpdates(std::string assetPath, bool silent,
         command.push_back("--");
         command.insert(command.end(), restartArgs->begin(), restartArgs->end());
     }
-    Util::startProcessFireAndForget(&command);
+    Platform::startProcessFireAndForget(&command);
 }
-std::string Util::startProcessBlocking(const std::vector<std::string> * command_line)
-{
-    if (std::ssize(*command_line) == 0) {
-        throw std::runtime_error("Command line is empty");
-    }
-    std::string ret{""};
-     ret = nativeStartProcessBlocking(command_line); return Util::strTrim(ret);
-}
-void Util::startProcessFireAndForget(const std::vector<std::string> * command_line)
-{
-    if (std::ssize(*command_line) == 0) {
-        throw std::runtime_error("Command line is empty");
-    }
-     nativeStartProcessFireAndForget(command_line); }
-std::thread Util::startProcessAsyncReadLine(const std::vector<std::string> * command_line, ProcessReadLineHandler * handler)
-{
-    if (std::ssize(*command_line) == 0) {
-        throw std::runtime_error("Command line is empty");
-    }
-     return nativeStartProcessAsyncReadLine(command_line, handler); 
-}
-std::string Util::getCurrentProcessPath()
-{
-    std::string ret{""};
-     ret = nativeGetCurrentProcessPath(); return ret;
-}
-bool Util::fileExists(std::string path)
-{
-    bool ret = false;
-     ret = nativeDoesFileExist(path); return ret;
-}
-std::string Util::getUpdateExePath()
-{
-    std::string exePath{getCurrentProcessPath()};
-    if (isWindows()) {
-        exePath = pathJoin(pathParent(pathParent(exePath)), "Update.exe");
-    }
-    else if (isLinux()) {
-        exePath = pathJoin(pathParent(exePath), "UpdateNix");
-    }
-    else if (isOsx()) {
-        exePath = pathJoin(pathParent(exePath), "UpdateMac");
-    }
-    else {
-        throw std::runtime_error("Unsupported platform");
-    }
-    if (!fileExists(exePath)) {
-        throw std::runtime_error("Update executable not found: " + exePath);
-    }
-    return exePath;
-}
-std::string Util::strTrim(std::string str)
-{
-    std::cmatch match;
-    if (std::regex_search(str.c_str(), match, std::regex("(\\S.*\\S|\\S)"))) {
-        return match.str(1);
-    }
-    return str;
-}
-std::string Util::pathParent(std::string str)
-{
-    int ix_win = static_cast<int>(str.rfind('\\'));
-    int ix_nix = static_cast<int>(str.rfind('/'));
-    int ix = (std::max)(ix_win, ix_nix);
-    return str.substr(0, ix);
-}
-std::string Util::pathJoin(std::string s1, std::string s2)
-{
-    while (s1.ends_with('/') || s1.ends_with('\\')) {
-        s1.resize(std::ssize(s1) - 1);
-    }
-    while (s2.starts_with('/') || s2.starts_with('\\')) {
-        s2 = s2.substr(1);
-    }
-    return s1 + std::string(pathSeparator()) + s2;
-}
-std::string_view Util::pathSeparator()
-{
-    if (isWindows()) {
-        return "\\";
-    }
-    else {
-        return "/";
-    }
-}
-bool Util::isWindows()
-{
-    return getOsName() == "win32";
-}
-bool Util::isLinux()
-{
-    return getOsName() == "linux";
-}
-bool Util::isOsx()
-{
-    return getOsName() == "darwin";
-}
-std::string Util::getOsName()
-{
-    std::string ret{""};
-     ret = nativeCurrentOsName(); return ret;
-}
-void Util::exit(int code)
-{
-     nativeExitProcess(code); }
 }

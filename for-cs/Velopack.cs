@@ -547,6 +547,133 @@ namespace Velopack
             }
         }
     }
+    static class Platform
+    {
+        /// <summary>Starts a new process and sychronously reads/returns its output.</summary>
+        public static string StartProcessBlocking(List<string> command_line)
+        {
+            if (command_line.Count == 0)
+            {
+                throw new Exception("Command line is empty");
+            }
+            string ret = "";
+            ret = NativeMethods.NativeStartProcessBlocking(command_line); return StrTrim(ret);
+        }
+        /// <summary>Starts a new process and returns immediately.</summary>
+        public static void StartProcessFireAndForget(List<string> command_line)
+        {
+            if (command_line.Count == 0)
+            {
+                throw new Exception("Command line is empty");
+            }
+            NativeMethods.NativeStartProcessFireAndForget(command_line);
+        }
+        public static Task StartProcessAsyncReadLine(List<string> command_line, ProcessReadLineHandler handler)
+        {
+            if (command_line.Count == 0)
+            {
+                throw new Exception("Command line is empty");
+            }
+            return NativeMethods.NativeStartProcessAsyncReadline(command_line, handler);
+        }
+        /// <summary>Returns the path of the current process.</summary>
+        public static string GetCurrentProcessPath()
+        {
+            string ret = "";
+            ret = NativeMethods.NativeGetCurrentProcessPath(); return ret;
+        }
+        public static bool FileExists(string path)
+        {
+            bool ret = false;
+            ret = NativeMethods.NativeDoesFileExist(path); return ret;
+        }
+        public static string GetUpdateExePath()
+        {
+            string exePath = GetCurrentProcessPath();
+            if (IsWindows())
+            {
+                exePath = PathJoin(PathParent(PathParent(exePath)), "Update.exe");
+            }
+            else if (IsLinux())
+            {
+                exePath = PathJoin(PathParent(exePath), "UpdateNix");
+            }
+            else if (IsOsx())
+            {
+                exePath = PathJoin(PathParent(exePath), "UpdateMac");
+            }
+            else
+            {
+                throw new Exception("Unsupported platform");
+            }
+            if (!FileExists(exePath))
+            {
+                throw new Exception("Update executable not found: " + exePath);
+            }
+            return exePath;
+        }
+        public static string StrTrim(string str)
+        {
+            Match match;
+            if ((match = Regex.Match(str, "(\\S.*\\S|\\S)")).Success)
+            {
+                return match.Groups[1].Value;
+            }
+            return str;
+        }
+        public static string PathParent(string str)
+        {
+            int ix_win = str.LastIndexOf('\\');
+            int ix_nix = str.LastIndexOf('/');
+            int ix = Math.Max(ix_win, ix_nix);
+            return str.Substring(0, ix);
+        }
+        public static string PathJoin(string s1, string s2)
+        {
+            while (s1.EndsWith("/") || s1.EndsWith("\\"))
+            {
+                s1 = s1.Substring(0, s1.Length - 1);
+            }
+            while (s2.StartsWith("/") || s2.StartsWith("\\"))
+            {
+                s2 = s2.Substring(1);
+            }
+            return s1 + PathSeparator() + s2;
+        }
+        public static string PathSeparator()
+        {
+            if (IsWindows())
+            {
+                return "\\";
+            }
+            else
+            {
+                return "/";
+            }
+        }
+        public static bool IsWindows()
+        {
+            return GetOsName() == "win32";
+        }
+        public static bool IsLinux()
+        {
+            return GetOsName() == "linux";
+        }
+        public static bool IsOsx()
+        {
+            return GetOsName() == "darwin";
+        }
+        /// <summary>Returns the name of the operating system.</summary>
+        public static string GetOsName()
+        {
+            string ret = "";
+            ret = NativeMethods.NativeCurrentOsName(); return ret;
+        }
+        public static void Exit(int code)
+        {
+            NativeMethods.NativeExitProcess(code);
+        }
+    }
     public abstract class ProgressHandler
     {
         public abstract void OnProgress(int progress);
@@ -733,9 +860,9 @@ namespace Velopack
         public string GetCurrentVersion()
         {
             List<string> command = new List<string>();
-            command.Add(Util.GetUpdateExePath());
+            command.Add(Platform.GetUpdateExePath());
             command.Add("get-version");
-            return Util.StartProcessBlocking(command);
+            return Platform.StartProcessBlocking(command);
         }
         /// <summary>This function will check for updates, and return information about the latest available release.</summary>
         public UpdateInfo CheckForUpdates()
@@ -745,7 +872,7 @@ namespace Velopack
                 throw new Exception("Please call SetUrlOrPath before trying to check for updates.");
             }
             List<string> command = new List<string>();
-            command.Add(Util.GetUpdateExePath());
+            command.Add(Platform.GetUpdateExePath());
             command.Add("check");
             command.Add("--url");
             command.Add(this._urlOrPath);
@@ -760,7 +887,7 @@ namespace Velopack
                 command.Add("--channel");
                 command.Add(this._explicitChannel);
             }
-            string output = Util.StartProcessBlocking(command);
+            string output = Platform.StartProcessBlocking(command);
             if (output.Length == 0 || output == "null")
             {
                 return null;
@@ -776,7 +903,7 @@ namespace Velopack
                 throw new Exception("Please call SetUrlOrPath before trying to download updates.");
             }
             List<string> command = new List<string>();
-            command.Add(Util.GetUpdateExePath());
+            command.Add(Platform.GetUpdateExePath());
             command.Add("download");
             command.Add("--url");
             command.Add(this._urlOrPath);
@@ -788,23 +915,23 @@ namespace Velopack
             DefaultProgressHandler def = new DefaultProgressHandler();
             ProcessReadLineHandler handler = new ProcessReadLineHandler();
             handler.SetProgressHandler(progressHandler == null ? def : progressHandler);
-            return Util.StartProcessAsyncReadLine(command, handler);
+            return Platform.StartProcessAsyncReadLine(command, handler);
         }
         public void ApplyUpdatesAndExit(string assetPath)
         {
             List<string> args = new List<string>();
             WaitExitThenApplyUpdates(assetPath, false, false, args);
-            Util.Exit(0);
+            Platform.Exit(0);
         }
         public void ApplyUpdatesAndRestart(string assetPath, List<string> restartArgs = null)
         {
             WaitExitThenApplyUpdates(assetPath, false, true, restartArgs);
-            Util.Exit(0);
+            Platform.Exit(0);
         }
         public void WaitExitThenApplyUpdates(string assetPath, bool silent, bool restart, List<string> restartArgs = null)
         {
             List<string> command = new List<string>();
-            command.Add(Util.GetUpdateExePath());
+            command.Add(Platform.GetUpdateExePath());
             if (silent)
             {
                 command.Add("--silent");
@@ -825,134 +952,7 @@ namespace Velopack
                 command.Add("--");
                 command.AddRange(restartArgs);
             }
-            Util.StartProcessFireAndForget(command);
-        }
-    }
-    static class Util
-    {
-        /// <summary>Starts a new process and sychronously reads/returns its output.</summary>
-        public static string StartProcessBlocking(List<string> command_line)
-        {
-            if (command_line.Count == 0)
-            {
-                throw new Exception("Command line is empty");
-            }
-            string ret = "";
-            ret = NativeMethods.NativeStartProcessBlocking(command_line); return Util.StrTrim(ret);
-        }
-        /// <summary>Starts a new process and returns immediately.</summary>
-        public static void StartProcessFireAndForget(List<string> command_line)
-        {
-            if (command_line.Count == 0)
-            {
-                throw new Exception("Command line is empty");
-            }
-            NativeMethods.NativeStartProcessFireAndForget(command_line);
-        }
-        public static Task StartProcessAsyncReadLine(List<string> command_line, ProcessReadLineHandler handler)
-        {
-            if (command_line.Count == 0)
-            {
-                throw new Exception("Command line is empty");
-            }
-            return NativeMethods.NativeStartProcessAsyncReadline(command_line, handler);
-        }
-        /// <summary>Returns the path of the current process.</summary>
-        public static string GetCurrentProcessPath()
-        {
-            string ret = "";
-            ret = NativeMethods.NativeGetCurrentProcessPath(); return ret;
-        }
-        public static bool FileExists(string path)
-        {
-            bool ret = false;
-            ret = NativeMethods.NativeDoesFileExist(path); return ret;
-        }
-        public static string GetUpdateExePath()
-        {
-            string exePath = GetCurrentProcessPath();
-            if (IsWindows())
-            {
-                exePath = PathJoin(PathParent(PathParent(exePath)), "Update.exe");
-            }
-            else if (IsLinux())
-            {
-                exePath = PathJoin(PathParent(exePath), "UpdateNix");
-            }
-            else if (IsOsx())
-            {
-                exePath = PathJoin(PathParent(exePath), "UpdateMac");
-            }
-            else
-            {
-                throw new Exception("Unsupported platform");
-            }
-            if (!FileExists(exePath))
-            {
-                throw new Exception("Update executable not found: " + exePath);
-            }
-            return exePath;
-        }
-        public static string StrTrim(string str)
-        {
-            Match match;
-            if ((match = Regex.Match(str, "(\\S.*\\S|\\S)")).Success)
-            {
-                return match.Groups[1].Value;
-            }
-            return str;
-        }
-        public static string PathParent(string str)
-        {
-            int ix_win = str.LastIndexOf('\\');
-            int ix_nix = str.LastIndexOf('/');
-            int ix = Math.Max(ix_win, ix_nix);
-            return str.Substring(0, ix);
-        }
-        public static string PathJoin(string s1, string s2)
-        {
-            while (s1.EndsWith("/") || s1.EndsWith("\\"))
-            {
-                s1 = s1.Substring(0, s1.Length - 1);
-            }
-            while (s2.StartsWith("/") || s2.StartsWith("\\"))
-            {
-                s2 = s2.Substring(1);
-            }
-            return s1 + PathSeparator() + s2;
-        }
-        public static string PathSeparator()
-        {
-            if (IsWindows())
-            {
-                return "\\";
-            }
-            else
-            {
-                return "/";
-            }
-        }
-        public static bool IsWindows()
-        {
-            return GetOsName() == "win32";
-        }
-        public static bool IsLinux()
-        {
-            return GetOsName() == "linux";
-        }
-        public static bool IsOsx()
-        {
-            return GetOsName() == "darwin";
-        }
-        /// <summary>Returns the name of the operating system.</summary>
-        public static string GetOsName()
-        {
-            string ret = "";
-            ret = NativeMethods.NativeCurrentOsName(); return ret;
-        }
-        public static void Exit(int code)
-        {
-            NativeMethods.NativeExitProcess(code);
+            Platform.StartProcessFireAndForget(command);
         }
     }
     public class VelopackApp
@@ -971,22 +971,22 @@ namespace Velopack
         {
             for (int i = 0; i < args.Count; i++)
             {
-                string val = Util.StrTrim(args[i]).ToLower();
+                string val = Platform.StrTrim(args[i]).ToLower();
                 if (val == "--veloapp-install")
                 {
-                    Util.Exit(0);
+                    Platform.Exit(0);
                 }
                 if (val == "--veloapp-updated")
                 {
-                    Util.Exit(0);
+                    Platform.Exit(0);
                 }
                 if (val == "--veloapp-obsolete")
                 {
-                    Util.Exit(0);
+                    Platform.Exit(0);
                 }
                 if (val == "--veloapp-uninstall")
                 {
-                    Util.Exit(0);
+                    Platform.Exit(0);
                 }
             }
         }

@@ -575,6 +575,117 @@ _JsonParser_text = new WeakMap(), _JsonParser_position = new WeakMap(), _JsonPar
             return JsonToken.NONE;
     }
 };
+class Platform {
+    constructor() { }
+    /**
+     * Starts a new process and sychronously reads/returns its output.
+     */
+    static startProcessBlocking(command_line) {
+        if (command_line.length == 0) {
+            throw new Error("Command line is empty");
+        }
+        let ret = "";
+        ret = nativeStartProcessBlocking(command_line);
+        return Platform.strTrim(ret);
+    }
+    /**
+     * Starts a new process and returns immediately.
+     */
+    static startProcessFireAndForget(command_line) {
+        if (command_line.length == 0) {
+            throw new Error("Command line is empty");
+        }
+        nativeStartProcessFireAndForget(command_line);
+    }
+    static startProcessAsyncReadLine(command_line, handler) {
+        if (command_line.length == 0) {
+            throw new Error("Command line is empty");
+        }
+        return nativeStartProcessAsyncReadLine(command_line, handler);
+    }
+    /**
+     * Returns the path of the current process.
+     */
+    static getCurrentProcessPath() {
+        let ret = "";
+        ret = nativeGetCurrentProcessPath();
+        return ret;
+    }
+    static fileExists(path) {
+        let ret = false;
+        ret = nativeDoesFileExist(path);
+        return ret;
+    }
+    static getUpdateExePath() {
+        let exePath = Platform.getCurrentProcessPath();
+        if (Platform.isWindows()) {
+            exePath = Platform.pathJoin(Platform.pathParent(Platform.pathParent(exePath)), "Update.exe");
+        }
+        else if (Platform.isLinux()) {
+            exePath = Platform.pathJoin(Platform.pathParent(exePath), "UpdateNix");
+        }
+        else if (Platform.isOsx()) {
+            exePath = Platform.pathJoin(Platform.pathParent(exePath), "UpdateMac");
+        }
+        else {
+            throw new Error("Unsupported platform");
+        }
+        if (!Platform.fileExists(exePath)) {
+            throw new Error("Update executable not found: " + exePath);
+        }
+        return exePath;
+    }
+    static strTrim(str) {
+        let match;
+        if ((match = /(\S.*\S|\S)/.exec(str)) != null) {
+            return match[1];
+        }
+        return str;
+    }
+    static pathParent(str) {
+        let ix_win = str.lastIndexOf("\\");
+        let ix_nix = str.lastIndexOf("/");
+        let ix = Math.max(ix_win, ix_nix);
+        return str.substring(0, ix);
+    }
+    static pathJoin(s1, s2) {
+        while (s1.endsWith("/") || s1.endsWith("\\")) {
+            s1 = s1.substring(0, s1.length - 1);
+        }
+        while (s2.startsWith("/") || s2.startsWith("\\")) {
+            s2 = s2.substring(1);
+        }
+        return s1 + Platform.pathSeparator() + s2;
+    }
+    static pathSeparator() {
+        if (Platform.isWindows()) {
+            return "\\";
+        }
+        else {
+            return "/";
+        }
+    }
+    static isWindows() {
+        return Platform.getOsName() == "win32";
+    }
+    static isLinux() {
+        return Platform.getOsName() == "linux";
+    }
+    static isOsx() {
+        return Platform.getOsName() == "darwin";
+    }
+    /**
+     * Returns the name of the operating system.
+     */
+    static getOsName() {
+        let ret = "";
+        ret = nativeCurrentOsName();
+        return ret;
+    }
+    static exit(code) {
+        nativeExitProcess(code);
+    }
+}
 export class ProgressHandler {
 }
 class ProcessReadLineHandler {
@@ -757,9 +868,9 @@ export class UpdateManager {
      */
     getCurrentVersion() {
         const command = [];
-        command.push(Util.getUpdateExePath());
+        command.push(Platform.getUpdateExePath());
         command.push("get-version");
-        return Util.startProcessBlocking(command);
+        return Platform.startProcessBlocking(command);
     }
     /**
      * This function will check for updates, and return information about the latest available release.
@@ -769,7 +880,7 @@ export class UpdateManager {
             throw new Error("Please call SetUrlOrPath before trying to check for updates.");
         }
         const command = [];
-        command.push(Util.getUpdateExePath());
+        command.push(Platform.getUpdateExePath());
         command.push("check");
         command.push("--url");
         command.push(__classPrivateFieldGet(this, _UpdateManager__urlOrPath, "f"));
@@ -782,7 +893,7 @@ export class UpdateManager {
             command.push("--channel");
             command.push(__classPrivateFieldGet(this, _UpdateManager__explicitChannel, "f"));
         }
-        let output = Util.startProcessBlocking(command);
+        let output = Platform.startProcessBlocking(command);
         if (output.length == 0 || output == "null") {
             return null;
         }
@@ -797,7 +908,7 @@ export class UpdateManager {
             throw new Error("Please call SetUrlOrPath before trying to download updates.");
         }
         const command = [];
-        command.push(Util.getUpdateExePath());
+        command.push(Platform.getUpdateExePath());
         command.push("download");
         command.push("--url");
         command.push(__classPrivateFieldGet(this, _UpdateManager__urlOrPath, "f"));
@@ -809,20 +920,20 @@ export class UpdateManager {
         let def = new DefaultProgressHandler();
         let handler = new ProcessReadLineHandler();
         handler.setProgressHandler(progressHandler == null ? def : progressHandler);
-        return Util.startProcessAsyncReadLine(command, handler);
+        return Platform.startProcessAsyncReadLine(command, handler);
     }
     applyUpdatesAndExit(assetPath) {
         const args = [];
         this.waitExitThenApplyUpdates(assetPath, false, false, args);
-        Util.exit(0);
+        Platform.exit(0);
     }
     applyUpdatesAndRestart(assetPath, restartArgs = null) {
         this.waitExitThenApplyUpdates(assetPath, false, true, restartArgs);
-        Util.exit(0);
+        Platform.exit(0);
     }
     waitExitThenApplyUpdates(assetPath, silent, restart, restartArgs = null) {
         const command = [];
-        command.push(Util.getUpdateExePath());
+        command.push(Platform.getUpdateExePath());
         if (silent) {
             command.push("--silent");
         }
@@ -839,121 +950,10 @@ export class UpdateManager {
             command.push("--");
             command.push(...restartArgs);
         }
-        Util.startProcessFireAndForget(command);
+        Platform.startProcessFireAndForget(command);
     }
 }
 _UpdateManager__allowDowngrade = new WeakMap(), _UpdateManager__explicitChannel = new WeakMap(), _UpdateManager__urlOrPath = new WeakMap();
-class Util {
-    constructor() { }
-    /**
-     * Starts a new process and sychronously reads/returns its output.
-     */
-    static startProcessBlocking(command_line) {
-        if (command_line.length == 0) {
-            throw new Error("Command line is empty");
-        }
-        let ret = "";
-        ret = nativeStartProcessBlocking(command_line);
-        return Util.strTrim(ret);
-    }
-    /**
-     * Starts a new process and returns immediately.
-     */
-    static startProcessFireAndForget(command_line) {
-        if (command_line.length == 0) {
-            throw new Error("Command line is empty");
-        }
-        nativeStartProcessFireAndForget(command_line);
-    }
-    static startProcessAsyncReadLine(command_line, handler) {
-        if (command_line.length == 0) {
-            throw new Error("Command line is empty");
-        }
-        return nativeStartProcessAsyncReadLine(command_line, handler);
-    }
-    /**
-     * Returns the path of the current process.
-     */
-    static getCurrentProcessPath() {
-        let ret = "";
-        ret = nativeGetCurrentProcessPath();
-        return ret;
-    }
-    static fileExists(path) {
-        let ret = false;
-        ret = nativeDoesFileExist(path);
-        return ret;
-    }
-    static getUpdateExePath() {
-        let exePath = Util.getCurrentProcessPath();
-        if (Util.isWindows()) {
-            exePath = Util.pathJoin(Util.pathParent(Util.pathParent(exePath)), "Update.exe");
-        }
-        else if (Util.isLinux()) {
-            exePath = Util.pathJoin(Util.pathParent(exePath), "UpdateNix");
-        }
-        else if (Util.isOsx()) {
-            exePath = Util.pathJoin(Util.pathParent(exePath), "UpdateMac");
-        }
-        else {
-            throw new Error("Unsupported platform");
-        }
-        if (!Util.fileExists(exePath)) {
-            throw new Error("Update executable not found: " + exePath);
-        }
-        return exePath;
-    }
-    static strTrim(str) {
-        let match;
-        if ((match = /(\S.*\S|\S)/.exec(str)) != null) {
-            return match[1];
-        }
-        return str;
-    }
-    static pathParent(str) {
-        let ix_win = str.lastIndexOf("\\");
-        let ix_nix = str.lastIndexOf("/");
-        let ix = Math.max(ix_win, ix_nix);
-        return str.substring(0, ix);
-    }
-    static pathJoin(s1, s2) {
-        while (s1.endsWith("/") || s1.endsWith("\\")) {
-            s1 = s1.substring(0, s1.length - 1);
-        }
-        while (s2.startsWith("/") || s2.startsWith("\\")) {
-            s2 = s2.substring(1);
-        }
-        return s1 + Util.pathSeparator() + s2;
-    }
-    static pathSeparator() {
-        if (Util.isWindows()) {
-            return "\\";
-        }
-        else {
-            return "/";
-        }
-    }
-    static isWindows() {
-        return Util.getOsName() == "win32";
-    }
-    static isLinux() {
-        return Util.getOsName() == "linux";
-    }
-    static isOsx() {
-        return Util.getOsName() == "darwin";
-    }
-    /**
-     * Returns the name of the operating system.
-     */
-    static getOsName() {
-        let ret = "";
-        ret = nativeCurrentOsName();
-        return ret;
-    }
-    static exit(code) {
-        nativeExitProcess(code);
-    }
-}
 export class VelopackApp {
     constructor() {
         _VelopackApp_instances.add(this);
@@ -970,18 +970,18 @@ export class VelopackApp {
 }
 _VelopackApp_instances = new WeakSet(), _VelopackApp_handleArgs = function _VelopackApp_handleArgs(args) {
     for (let i = 0; i < args.length; i++) {
-        let val = Util.strTrim(args[i]).toLowerCase();
+        let val = Platform.strTrim(args[i]).toLowerCase();
         if (val == "--veloapp-install") {
-            Util.exit(0);
+            Platform.exit(0);
         }
         if (val == "--veloapp-updated") {
-            Util.exit(0);
+            Platform.exit(0);
         }
         if (val == "--veloapp-obsolete") {
-            Util.exit(0);
+            Platform.exit(0);
         }
         if (val == "--veloapp-uninstall") {
-            Util.exit(0);
+            Platform.exit(0);
         }
     }
 };

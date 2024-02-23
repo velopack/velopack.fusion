@@ -574,6 +574,121 @@ class JsonParser {
     }
   }
 }
+class Platform {
+  private constructor() {}
+  /**
+   * Starts a new process and sychronously reads/returns its output.
+   */
+  public static startProcessBlocking(command_line: readonly string[]): string {
+    if (command_line.length == 0) {
+      throw new Error("Command line is empty");
+    }
+    let ret: string = "";
+    ret = nativeStartProcessBlocking(command_line);
+    return Platform.strTrim(ret);
+  }
+  /**
+   * Starts a new process and returns immediately.
+   */
+  public static startProcessFireAndForget(
+    command_line: readonly string[],
+  ): void {
+    if (command_line.length == 0) {
+      throw new Error("Command line is empty");
+    }
+    nativeStartProcessFireAndForget(command_line);
+  }
+  public static startProcessAsyncReadLine(
+    command_line: readonly string[],
+    handler: ProcessReadLineHandler,
+  ): Promise<void> {
+    if (command_line.length == 0) {
+      throw new Error("Command line is empty");
+    }
+    return nativeStartProcessAsyncReadLine(command_line, handler);
+  }
+  /**
+   * Returns the path of the current process.
+   */
+  public static getCurrentProcessPath(): string {
+    let ret: string = "";
+    ret = nativeGetCurrentProcessPath();
+    return ret;
+  }
+  public static fileExists(path: string): boolean {
+    let ret: boolean = false;
+    ret = nativeDoesFileExist(path);
+    return ret;
+  }
+  public static getUpdateExePath(): string {
+    let exePath: string = Platform.getCurrentProcessPath();
+    if (Platform.isWindows()) {
+      exePath = Platform.pathJoin(
+        Platform.pathParent(Platform.pathParent(exePath)),
+        "Update.exe",
+      );
+    } else if (Platform.isLinux()) {
+      exePath = Platform.pathJoin(Platform.pathParent(exePath), "UpdateNix");
+    } else if (Platform.isOsx()) {
+      exePath = Platform.pathJoin(Platform.pathParent(exePath), "UpdateMac");
+    } else {
+      throw new Error("Unsupported platform");
+    }
+    if (!Platform.fileExists(exePath)) {
+      throw new Error("Update executable not found: " + exePath);
+    }
+    return exePath;
+  }
+  public static strTrim(str: string): string {
+    let match: RegExpMatchArray | null;
+    if ((match = /(\S.*\S|\S)/.exec(str)) != null) {
+      return match[1];
+    }
+    return str;
+  }
+  public static pathParent(str: string): string {
+    let ix_win: number = str.lastIndexOf("\\");
+    let ix_nix: number = str.lastIndexOf("/");
+    let ix: number = Math.max(ix_win, ix_nix);
+    return str.substring(0, ix);
+  }
+  public static pathJoin(s1: string, s2: string): string {
+    while (s1.endsWith("/") || s1.endsWith("\\")) {
+      s1 = s1.substring(0, s1.length - 1);
+    }
+    while (s2.startsWith("/") || s2.startsWith("\\")) {
+      s2 = s2.substring(1);
+    }
+    return s1 + Platform.pathSeparator() + s2;
+  }
+  public static pathSeparator(): string {
+    if (Platform.isWindows()) {
+      return "\\";
+    } else {
+      return "/";
+    }
+  }
+  public static isWindows(): boolean {
+    return Platform.getOsName() == "win32";
+  }
+  public static isLinux(): boolean {
+    return Platform.getOsName() == "linux";
+  }
+  public static isOsx(): boolean {
+    return Platform.getOsName() == "darwin";
+  }
+  /**
+   * Returns the name of the operating system.
+   */
+  public static getOsName(): string {
+    let ret: string = "";
+    ret = nativeCurrentOsName();
+    return ret;
+  }
+  public static exit(code: number): void {
+    nativeExitProcess(code);
+  }
+}
 export abstract class ProgressHandler {
   public abstract onProgress(progress: number): void;
   public abstract onComplete(assetPath: string): void;
@@ -746,9 +861,9 @@ export class UpdateManager {
    */
   public getCurrentVersion(): string {
     const command: string[] = [];
-    command.push(Util.getUpdateExePath());
+    command.push(Platform.getUpdateExePath());
     command.push("get-version");
-    return Util.startProcessBlocking(command);
+    return Platform.startProcessBlocking(command);
   }
   /**
    * This function will check for updates, and return information about the latest available release.
@@ -760,7 +875,7 @@ export class UpdateManager {
       );
     }
     const command: string[] = [];
-    command.push(Util.getUpdateExePath());
+    command.push(Platform.getUpdateExePath());
     command.push("check");
     command.push("--url");
     command.push(this.#_urlOrPath);
@@ -773,7 +888,7 @@ export class UpdateManager {
       command.push("--channel");
       command.push(this.#_explicitChannel);
     }
-    let output: string = Util.startProcessBlocking(command);
+    let output: string = Platform.startProcessBlocking(command);
     if (output.length == 0 || output == "null") {
       return null;
     }
@@ -793,7 +908,7 @@ export class UpdateManager {
       );
     }
     const command: string[] = [];
-    command.push(Util.getUpdateExePath());
+    command.push(Platform.getUpdateExePath());
     command.push("download");
     command.push("--url");
     command.push(this.#_urlOrPath);
@@ -805,19 +920,19 @@ export class UpdateManager {
     let def: DefaultProgressHandler = new DefaultProgressHandler();
     let handler: ProcessReadLineHandler = new ProcessReadLineHandler();
     handler.setProgressHandler(progressHandler == null ? def : progressHandler);
-    return Util.startProcessAsyncReadLine(command, handler);
+    return Platform.startProcessAsyncReadLine(command, handler);
   }
   public applyUpdatesAndExit(assetPath: string): void {
     const args: string[] = [];
     this.waitExitThenApplyUpdates(assetPath, false, false, args);
-    Util.exit(0);
+    Platform.exit(0);
   }
   public applyUpdatesAndRestart(
     assetPath: string,
     restartArgs: readonly string[] | null = null,
   ): void {
     this.waitExitThenApplyUpdates(assetPath, false, true, restartArgs);
-    Util.exit(0);
+    Platform.exit(0);
   }
   public waitExitThenApplyUpdates(
     assetPath: string,
@@ -826,7 +941,7 @@ export class UpdateManager {
     restartArgs: readonly string[] | null = null,
   ): void {
     const command: string[] = [];
-    command.push(Util.getUpdateExePath());
+    command.push(Platform.getUpdateExePath());
     if (silent) {
       command.push("--silent");
     }
@@ -843,122 +958,7 @@ export class UpdateManager {
       command.push("--");
       command.push(...restartArgs);
     }
-    Util.startProcessFireAndForget(command);
-  }
-}
-class Util {
-  private constructor() {}
-  /**
-   * Starts a new process and sychronously reads/returns its output.
-   */
-  public static startProcessBlocking(command_line: readonly string[]): string {
-    if (command_line.length == 0) {
-      throw new Error("Command line is empty");
-    }
-    let ret: string = "";
-    ret = nativeStartProcessBlocking(command_line);
-    return Util.strTrim(ret);
-  }
-  /**
-   * Starts a new process and returns immediately.
-   */
-  public static startProcessFireAndForget(
-    command_line: readonly string[],
-  ): void {
-    if (command_line.length == 0) {
-      throw new Error("Command line is empty");
-    }
-    nativeStartProcessFireAndForget(command_line);
-  }
-  public static startProcessAsyncReadLine(
-    command_line: readonly string[],
-    handler: ProcessReadLineHandler,
-  ): Promise<void> {
-    if (command_line.length == 0) {
-      throw new Error("Command line is empty");
-    }
-    return nativeStartProcessAsyncReadLine(command_line, handler);
-  }
-  /**
-   * Returns the path of the current process.
-   */
-  public static getCurrentProcessPath(): string {
-    let ret: string = "";
-    ret = nativeGetCurrentProcessPath();
-    return ret;
-  }
-  public static fileExists(path: string): boolean {
-    let ret: boolean = false;
-    ret = nativeDoesFileExist(path);
-    return ret;
-  }
-  public static getUpdateExePath(): string {
-    let exePath: string = Util.getCurrentProcessPath();
-    if (Util.isWindows()) {
-      exePath = Util.pathJoin(
-        Util.pathParent(Util.pathParent(exePath)),
-        "Update.exe",
-      );
-    } else if (Util.isLinux()) {
-      exePath = Util.pathJoin(Util.pathParent(exePath), "UpdateNix");
-    } else if (Util.isOsx()) {
-      exePath = Util.pathJoin(Util.pathParent(exePath), "UpdateMac");
-    } else {
-      throw new Error("Unsupported platform");
-    }
-    if (!Util.fileExists(exePath)) {
-      throw new Error("Update executable not found: " + exePath);
-    }
-    return exePath;
-  }
-  public static strTrim(str: string): string {
-    let match: RegExpMatchArray | null;
-    if ((match = /(\S.*\S|\S)/.exec(str)) != null) {
-      return match[1];
-    }
-    return str;
-  }
-  public static pathParent(str: string): string {
-    let ix_win: number = str.lastIndexOf("\\");
-    let ix_nix: number = str.lastIndexOf("/");
-    let ix: number = Math.max(ix_win, ix_nix);
-    return str.substring(0, ix);
-  }
-  public static pathJoin(s1: string, s2: string): string {
-    while (s1.endsWith("/") || s1.endsWith("\\")) {
-      s1 = s1.substring(0, s1.length - 1);
-    }
-    while (s2.startsWith("/") || s2.startsWith("\\")) {
-      s2 = s2.substring(1);
-    }
-    return s1 + Util.pathSeparator() + s2;
-  }
-  public static pathSeparator(): string {
-    if (Util.isWindows()) {
-      return "\\";
-    } else {
-      return "/";
-    }
-  }
-  public static isWindows(): boolean {
-    return Util.getOsName() == "win32";
-  }
-  public static isLinux(): boolean {
-    return Util.getOsName() == "linux";
-  }
-  public static isOsx(): boolean {
-    return Util.getOsName() == "darwin";
-  }
-  /**
-   * Returns the name of the operating system.
-   */
-  public static getOsName(): string {
-    let ret: string = "";
-    ret = nativeCurrentOsName();
-    return ret;
-  }
-  public static exit(code: number): void {
-    nativeExitProcess(code);
+    Platform.startProcessFireAndForget(command);
   }
 }
 export class VelopackApp {
@@ -973,18 +973,18 @@ export class VelopackApp {
   }
   #handleArgs(args: readonly string[]): void {
     for (let i: number = 0; i < args.length; i++) {
-      let val: string = Util.strTrim(args[i]).toLowerCase();
+      let val: string = Platform.strTrim(args[i]).toLowerCase();
       if (val == "--veloapp-install") {
-        Util.exit(0);
+        Platform.exit(0);
       }
       if (val == "--veloapp-updated") {
-        Util.exit(0);
+        Platform.exit(0);
       }
       if (val == "--veloapp-obsolete") {
-        Util.exit(0);
+        Platform.exit(0);
       }
       if (val == "--veloapp-uninstall") {
-        Util.exit(0);
+        Platform.exit(0);
       }
     }
   }

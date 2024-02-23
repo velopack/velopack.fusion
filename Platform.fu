@@ -1,5 +1,5 @@
 
-static class Util
+static class Platform
 {
     /// Starts a new process and sychronously reads/returns its output.
     public static string() StartProcessBlocking(List<string()> command_line) throws Exception
@@ -10,7 +10,7 @@ static class Util
 
         string() ret = "";
         native { ret = VMACRO_NativeStartProcessBlocking(command_line); }
-        return Util.StrTrim(ret);
+        return StrTrim(ret);
     }
 
     /// Starts a new process and returns immediately.

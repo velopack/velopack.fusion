@@ -15,9 +15,9 @@ public class UpdateManager
     public string() GetCurrentVersion() throws Exception
     {
         List<string()>() command;
-        command.Add(Util.GetUpdateExePath());
+        command.Add(Platform.GetUpdateExePath());
         command.Add("get-version");
-        return Util.StartProcessBlocking(command);
+        return Platform.StartProcessBlocking(command);
     }
 
     /// This function will check for updates, and return information about the latest available release.
@@ -29,7 +29,7 @@ public class UpdateManager
         }
 
         List<string()>() command;
-        command.Add(Util.GetUpdateExePath());
+        command.Add(Platform.GetUpdateExePath());
         command.Add("check");
         command.Add("--url");
         command.Add(_urlOrPath);
@@ -47,7 +47,7 @@ public class UpdateManager
             command.Add(_explicitChannel);
         }
     
-        string() output = Util.StartProcessBlocking(command);
+        string() output = Platform.StartProcessBlocking(command);
 
         if (output.Length == 0 || output == "null")
         {
@@ -67,7 +67,7 @@ public class UpdateManager
         }
 
         List<string()>() command;
-        command.Add(Util.GetUpdateExePath());
+        command.Add(Platform.GetUpdateExePath());
         command.Add("download");
         command.Add("--url");
         command.Add(_urlOrPath);
@@ -80,26 +80,26 @@ public class UpdateManager
         DefaultProgressHandler# def = new DefaultProgressHandler();
         ProcessReadLineHandler# handler = new ProcessReadLineHandler();
         handler.SetProgressHandler(progressHandler == null ? def : progressHandler);
-        return Util.StartProcessAsyncReadLine(command, handler);
+        return Platform.StartProcessAsyncReadLine(command, handler);
     }
 
     public void ApplyUpdatesAndExit(string() assetPath) throws Exception
     {
         List<string()>() args;
         WaitExitThenApplyUpdates(assetPath, false, false, args);
-        Util.Exit(0);
+        Platform.Exit(0);
     }
 
     public void ApplyUpdatesAndRestart(string() assetPath, List<string()>? restartArgs = null) throws Exception 
     {
         WaitExitThenApplyUpdates(assetPath, false, true, restartArgs);
-        Util.Exit(0);
+        Platform.Exit(0);
     }
 
     public void WaitExitThenApplyUpdates(string() assetPath, bool silent, bool restart, List<string()>? restartArgs = null) throws Exception 
     {
         List<string()>() command;
-        command.Add(Util.GetUpdateExePath());
+        command.Add(Platform.GetUpdateExePath());
         if (silent) {
             command.Add("--silent");
         }
@@ -120,6 +120,6 @@ public class UpdateManager
             command.AddRange(restartArgs);
         }
 
-        Util.StartProcessFireAndForget(command);
+        Platform.StartProcessFireAndForget(command);
     }  
 }

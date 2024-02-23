@@ -84,6 +84,7 @@ class JsonParseException;
 class JsonNode;
 class StringAppendable;
 class JsonParser;
+class Platform;
 class ProgressHandler;
 class ProcessReadLineHandler;
 class DefaultProgressHandler;
@@ -97,7 +98,6 @@ class VelopackAsset;
 class UpdateInfo;
 class ProgressEvent;
 class UpdateManager;
-class Util;
 class FutureResult
 {
 public:
@@ -202,6 +202,39 @@ private:
     int position = 0;
     StringAppendable builder;
     JsonToken peekToken();
+};
+class Platform
+{
+public:
+    /**
+     * Starts a new process and sychronously reads/returns its output.
+     */
+    static std::string startProcessBlocking(const std::vector<std::string> * command_line);
+    /**
+     * Starts a new process and returns immediately.
+     */
+    static void startProcessFireAndForget(const std::vector<std::string> * command_line);
+    static std::thread startProcessAsyncReadLine(const std::vector<std::string> * command_line, ProcessReadLineHandler * handler);
+    /**
+     * Returns the path of the current process.
+     */
+    static std::string getCurrentProcessPath();
+    static bool fileExists(std::string path);
+    static std::string getUpdateExePath();
+    static std::string strTrim(std::string str);
+    static std::string pathParent(std::string str);
+    static std::string pathJoin(std::string s1, std::string s2);
+    static std::string_view pathSeparator();
+    static bool isWindows();
+    static bool isLinux();
+    static bool isOsx();
+    /**
+     * Returns the name of the operating system.
+     */
+    static std::string getOsName();
+    static void exit(int code);
+private:
+    Platform() = delete;
 };
 class ProgressHandler
 {
@@ -318,38 +351,5 @@ private:
     bool _allowDowngrade = false;
     std::string _explicitChannel{""};
     std::string _urlOrPath{""};
-};
-class Util
-{
-public:
-    /**
-     * Starts a new process and sychronously reads/returns its output.
-     */
-    static std::string startProcessBlocking(const std::vector<std::string> * command_line);
-    /**
-     * Starts a new process and returns immediately.
-     */
-    static void startProcessFireAndForget(const std::vector<std::string> * command_line);
-    static std::thread startProcessAsyncReadLine(const std::vector<std::string> * command_line, ProcessReadLineHandler * handler);
-    /**
-     * Returns the path of the current process.
-     */
-    static std::string getCurrentProcessPath();
-    static bool fileExists(std::string path);
-    static std::string getUpdateExePath();
-    static std::string strTrim(std::string str);
-    static std::string pathParent(std::string str);
-    static std::string pathJoin(std::string s1, std::string s2);
-    static std::string_view pathSeparator();
-    static bool isWindows();
-    static bool isLinux();
-    static bool isOsx();
-    /**
-     * Returns the name of the operating system.
-     */
-    static std::string getOsName();
-    static void exit(int code);
-private:
-    Util() = delete;
 };
 }
