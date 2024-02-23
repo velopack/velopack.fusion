@@ -23,11 +23,12 @@ native {
 }
 #endif
 
-public abstract class ProcessReadLineHandler
+public abstract class ProcessProgressHandler
 {
-    /// Called when a line of output is read from the process.
-    /// If this method returns true, the reading loop is terminated.
-    public abstract bool HandleProcessOutputLine!(string() line);
+}
+
+public abstract class ProcessCompleteHandler
+{
 }
 
 static class Process
@@ -41,43 +42,10 @@ static class Process
 
         string() ret = "";
 #if CPP
-        native { 
-            ret = util_start_process_blocking_output(command_line, subprocess_option_no_window);
-         }
+        native { ret = util_start_process_blocking_output(command_line, subprocess_option_no_window); }
 #elif CS
-        native {
-            var psi = new System.Diagnostics.ProcessStartInfo()
-            {
-                CreateNoWindow = true,
-                FileName = command_line[0],
-                RedirectStandardError = true, 
-                RedirectStandardInput = true, 
-                UseShellExecute = false,
-            };
-
-            foreach (var arg in command_line.Skip(1))
-            {
-                psi.ArgumentList.Add(arg);
-            }
-
-            System.Text.StringBuilder output = new System.Text.StringBuilder();
-
-            var process = new System.Diagnostics.Process();
-            process.StartInfo = psi;
-            process.ErrorDataReceived += (sender, e) => {
-                if (e.Data != null) output.AppendLine(e.Data);
-            };
-            process.OutputDataReceived += (sender, e) => {
-                if (e.Data != null) output.AppendLine(e.Data);
-            };
-
-            process.Start();
-            process.BeginErrorReadLine();
-            process.BeginOutputReadLine();
-            process.WaitForExit();
-            ret = output.ToString();
-        }
-#elif JS || TS
+        native { ret = ProcessNative.StartProcessBlocking(command_line); }
+#elif JS
         native { ret = spawnSync(command_line[0], command_line.slice(1), { encoding: "utf8" }).stdout; } 
 #else
         throw Exception("Unsupported platform");
@@ -95,15 +63,7 @@ static class Process
 #if CPP
         native { util_start_process(command_line, subprocess_option_no_window); }
 #elif CS
-        native {
-            var psi = new System.Diagnostics.ProcessStartInfo()
-            {
-                CreateNoWindow = true,
-                FileName = command_line[0],
-            };
-            foreach (var arg in command_line.Skip(1)) psi.ArgumentList.Add(arg);
-            System.Diagnostics.Process.Start(psi);
-        }
+        native { ProcessNative.StartProcessFireAndForget(command_line); }
 #elif JS || TS
         native { spawn(command_line[0], command_line.slice(1), { encoding: "utf8" }); } 
 #else
@@ -115,89 +75,89 @@ static class Process
     /// When a line is read, HandleProcessOutputLine is called with the line. 
     /// If HandleProcessOutputLine returns true, the reading loop is terminated.
     /// This method is non-blocking and returns immediately.
-    public static void StartProcessAsyncReadLine(List<string()> command_line, ProcessReadLineHandler! handler) throws Exception
+    public static void StartProcessAsyncReadLine(List<string()> command_line, ProcessProgressHandler progress, ProcessCompleteHandler complete) throws Exception
     {
         if (command_line.Count == 0) {
             throw Exception("Command line is empty");
         }
 
-#if CPP
-        native {
-	        subprocess_s subprocess = util_start_subprocess(command_line, subprocess_option_no_window | subprocess_option_enable_async);
+// #if CPP
+//         native {
+// 	        subprocess_s subprocess = util_start_subprocess(command_line, subprocess_option_no_window | subprocess_option_enable_async);
 
-            std::thread outputThread([subprocess, handler]() mutable {
-                const unsigned BUFFER_SIZE = 1024;
-                char readBuffer[BUFFER_SIZE];
-                std::string accumulatedData;
+//             std::thread outputThread([subprocess, handler]() mutable {
+//                 const unsigned BUFFER_SIZE = 1024;
+//                 char readBuffer[BUFFER_SIZE];
+//                 std::string accumulatedData;
 
-                // read all stdout from the process one line at a time
-                while (true) {
-                    unsigned bytesRead = subprocess_read_stdout(&subprocess, readBuffer, BUFFER_SIZE - 1);
+//                 // read all stdout from the process one line at a time
+//                 while (true) {
+//                     unsigned bytesRead = subprocess_read_stdout(&subprocess, readBuffer, BUFFER_SIZE - 1);
 
-                    if (bytesRead == 0) {
-                        // bytesRead is 0, indicating the process has completed
-                        // Process any remaining data in accumulatedData as the last line if needed
-                        if (!accumulatedData.empty()) {
-                            handler->handleProcessOutputLine(accumulatedData);
-                        }
-                        return;
-                    }
+//                     if (bytesRead == 0) {
+//                         // bytesRead is 0, indicating the process has completed
+//                         // Process any remaining data in accumulatedData as the last line if needed
+//                         if (!accumulatedData.empty()) {
+//                             handler->handleProcessOutputLine(accumulatedData);
+//                         }
+//                         return;
+//                     }
 
-                    accumulatedData += std::string(readBuffer, bytesRead);
+//                     accumulatedData += std::string(readBuffer, bytesRead);
 
-                    // Process accumulated data for lines
-                    size_t pos;
-                    while ((pos = accumulatedData.find('\n')) != std::string::npos) {
-                        std::string line = accumulatedData.substr(0, pos);
-                        if (handler->handleProcessOutputLine(line)) {
-                            return; // complete or err
-                        }
-                        accumulatedData.erase(0, pos + 1);
-                    }
-                }
-            });
-        }
-#elif CS
-        native {
-            var psi = new System.Diagnostics.ProcessStartInfo()
-            {
-                CreateNoWindow = true,
-                FileName = command_line[0],
-                RedirectStandardError = true, 
-                RedirectStandardInput = true, 
-                UseShellExecute = false,
-            };
+//                     // Process accumulated data for lines
+//                     size_t pos;
+//                     while ((pos = accumulatedData.find('\n')) != std::string::npos) {
+//                         std::string line = accumulatedData.substr(0, pos);
+//                         if (handler->handleProcessOutputLine(line)) {
+//                             return; // complete or err
+//                         }
+//                         accumulatedData.erase(0, pos + 1);
+//                     }
+//                 }
+//             });
+//         }
+// #elif CS
+//         native {
+//             var psi = new System.Diagnostics.ProcessStartInfo()
+//             {
+//                 CreateNoWindow = true,
+//                 FileName = command_line[0],
+//                 RedirectStandardError = true, 
+//                 RedirectStandardInput = true, 
+//                 UseShellExecute = false,
+//             };
 
-            foreach (var arg in command_line.Skip(1))
-            {
-                psi.ArgumentList.Add(arg);
-            }
+//             foreach (var arg in command_line.Skip(1))
+//             {
+//                 psi.ArgumentList.Add(arg);
+//             }
 
-            var process = new System.Diagnostics.Process();
-            process.StartInfo = psi;
-            process.ErrorDataReceived += (sender, e) => {
-                if (e.Data != null) handler.HandleProcessOutputLine(e.Data);
-            };
-            process.OutputDataReceived += (sender, e) => {
-                if (e.Data != null) handler.HandleProcessOutputLine(e.Data);
-            };
+//             var process = new System.Diagnostics.Process();
+//             process.StartInfo = psi;
+//             process.ErrorDataReceived += (sender, e) => {
+//                 if (e.Data != null) handler.HandleProcessOutputLine(e.Data);
+//             };
+//             process.OutputDataReceived += (sender, e) => {
+//                 if (e.Data != null) handler.HandleProcessOutputLine(e.Data);
+//             };
 
-            process.Start();
-            process.BeginErrorReadLine();
-            process.BeginOutputReadLine();
-        }
-#elif JS || TS
-        native {
-            const child = spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
-            emitLines(child.stdout);
-            child.stdout.resume()
-            child.stdout.setEncoding("utf8")
-            child.stdout.on("line", (data) => {
-                handler.handleProcessOutputLine(data)
-            });
-        } 
-#else
-        throw Exception("Unsupported platform");
-#endif
+//             process.Start();
+//             process.BeginErrorReadLine();
+//             process.BeginOutputReadLine();
+//         }
+// #elif JS || TS
+//         native {
+//             const child = spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
+//             emitLines(child.stdout);
+//             child.stdout.resume()
+//             child.stdout.setEncoding("utf8")
+//             child.stdout.on("line", (data) => {
+//                 handler.handleProcessOutputLine(data)
+//             });
+//         } 
+// #else
+//         throw Exception("Unsupported platform");
+// #endif
     }
 }

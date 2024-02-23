@@ -58,15 +58,28 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_ LPWSTR    lpCmdLine,
 	_In_ int       nCmdShow)
 {
+
+
+
 	UNREFERENCED_PARAMETER(hPrevInstance);
 
-	// the first thing we need to do in our app is initialise the velopack sdk
-	int pNumArgs = 0;
-	wchar_t** args = CommandLineToArgvW(lpCmdLine, &pNumArgs);
-	Velopack::startup(args, pNumArgs);
-	manager.setUrlOrPath(UPDATE_URL);
-	manager.setProgressHandler(progressHandler);
-	currentVersion = manager.getCurrentVersion();
+	try
+	{
+		// the first thing we need to do in our app is initialise the velopack sdk
+		int pNumArgs = 0;
+		wchar_t** args = CommandLineToArgvW(lpCmdLine, &pNumArgs);
+		Velopack::startup(args, pNumArgs);
+		manager.setUrlOrPath(UPDATE_URL);
+		//manager.setProgressHandler(progressHandler);
+		currentVersion = manager.getCurrentVersion();
+	}
+	catch (std::exception& e)
+	{
+		std::string what = e.what();
+		std::wstring wideWhat(what.begin(), what.end());
+		MessageBoxCentered(nullptr, wideWhat.c_str(), szTitle, MB_OK | MB_ICONERROR);
+		return 1;
+	}
 
 	MyRegisterClass(hInstance);
 	if (!InitInstance(hInstance, nCmdShow))
@@ -176,7 +189,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				if (updInfo != nullptr) {
 					try {
-						manager.downloadUpdateAsync(updInfo);
+						//manager.downloadUpdateAsync(updInfo);
 					}
 					catch (std::exception& e) {
 						std::string what = e.what();

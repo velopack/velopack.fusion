@@ -1,4 +1,3 @@
-// Generated automatically with "fut". Do not edit.
 var __classPrivateFieldGet = (this && this.__classPrivateFieldGet) || function (receiver, state, kind, f) {
     if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
     if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
@@ -10,7 +9,39 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
     if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
     return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
-var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _StringAppendable_builder, _StringAppendable_writer, _StringAppendable_initialised, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _VelopackApp_instances, _VelopackApp_handleArgs, _UpdateManager__allowDowngrade, _UpdateManager__explicitChannel, _UpdateManager__urlOrPath, _UpdateManager__progress, _StringWriter_buf;
+var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _StringAppendable_builder, _StringAppendable_writer, _StringAppendable_initialised, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _UpdateManager__allowDowngrade, _UpdateManager__explicitChannel, _UpdateManager__urlOrPath, _VelopackApp_instances, _VelopackApp_handleArgs, _StringWriter_buf;
+//
+//  INTRODUCTION
+//
+//  This is a library to help developers integrate https://velopack.io into their 
+//  applications. Velopack is an update/installer framework for cross-platform 
+//  desktop applications. 
+//  
+//  This library is auto-generated using https://github.com/fusionlanguage/fut
+//  and this source file should not be directly modified.
+//
+//  MIT LICENSE
+//
+//  Copyright (c) 2024 Caelan Sayler
+//
+//  Permission is hereby granted, free of charge, to any person obtaining a copy
+//  of this software and associated documentation files (the "Software"), to deal
+//  in the Software without restriction, including without limitation the rights
+//  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+//  copies of the Software, and to permit persons to whom the Software is
+//  furnished to do so, subject to the following conditions:
+//
+//  The above copyright notice and this permission notice shall be included in all
+//  copies or substantial portions of the Software.
+//
+//  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+//  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+//  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+//  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+//  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+//  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+//  SOFTWARE.
+//
 const { spawn, spawnSync } = require("child_process");
 function emitLines(stream) {
     var backlog = "";
@@ -480,123 +511,45 @@ _JsonParser_text = new WeakMap(), _JsonParser_position = new WeakMap(), _JsonPar
             return JsonToken.NONE;
     }
 };
-class Util {
+export class ProcessProgressHandler {
+}
+export class ProcessCompleteHandler {
+}
+class Process {
     constructor() {
     }
     /**
-     * Returns the path of the current process.
+     * Starts a new process and sychronously reads/returns its output.
      */
-    static getCurrentProcessPath() {
+    static startProcessBlocking(command_line) {
+        if (command_line.length == 0) {
+            throw new Error("Command line is empty");
+        }
         let ret = "";
-        ret = process.execPath;
-        return ret;
-    }
-    static fileExists(path) {
-        let ret = false;
-        ret = require("fs").existsSync(path);
-        return ret;
-    }
-    static getUpdateExePath() {
-        let exePath = Util.getCurrentProcessPath();
-        if (Util.isWindows()) {
-            exePath = Util.pathJoin(Util.pathParent(Util.pathParent(exePath)), "Update.exe");
-        }
-        else if (Util.isLinux()) {
-            exePath = Util.pathJoin(Util.pathParent(exePath), "UpdateNix");
-        }
-        else if (Util.isOsx()) {
-            exePath = Util.pathJoin(Util.pathParent(exePath), "UpdateMac");
-        }
-        else {
-            throw new Error("Unsupported platform");
-        }
-        if (!Util.fileExists(exePath)) {
-            throw new Error("Update executable not found: " + exePath);
-        }
-        return exePath;
-    }
-    static strTrim(str) {
-        let match;
-        if ((match = /(\S.*\S|\S)/.exec(str)) != null) {
-            return match[1];
-        }
-        return str;
-    }
-    static pathParent(str) {
-        let ix_win = str.lastIndexOf("\\");
-        let ix_nix = str.lastIndexOf("/");
-        let ix = Math.max(ix_win, ix_nix);
-        return str.substring(0, ix);
-    }
-    static pathJoin(s1, s2) {
-        while (s1.endsWith("/") || s1.endsWith("\\")) {
-            s1 = s1.substring(0, s1.length - 1);
-        }
-        while (s2.startsWith("/") || s2.startsWith("\\")) {
-            s2 = s2.substring(1);
-        }
-        return s1 + Util.pathSeparator() + s2;
-    }
-    static pathSeparator() {
-        if (Util.isWindows()) {
-            return "\\";
-        }
-        else {
-            return "/";
-        }
-    }
-    static isWindows() {
-        return Util.getOsName() == "win32";
-    }
-    static isLinux() {
-        return Util.getOsName() == "linux";
-    }
-    static isOsx() {
-        return Util.getOsName() == "darwin";
+        ret = spawnSync(command_line[0], command_line.slice(1), { encoding: "utf8" }).stdout;
+        return Util.strTrim(ret);
     }
     /**
-     * Returns the name of the operating system.
+     * Starts a new process and returns immediately.
      */
-    static getOsName() {
-        let ret = "";
-        ret = process.platform;
-        return ret;
+    static startProcessFireAndForget(command_line) {
+        if (command_line.length == 0) {
+            throw new Error("Command line is empty");
+        }
+        spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
     }
-    static exit(code) {
-        process.exit(code);
+    /**
+     * In the current process, starts a new process and asychronously reads its output line by line.
+     * When a line is read, HandleProcessOutputLine is called with the line.
+     * If HandleProcessOutputLine returns true, the reading loop is terminated.
+     * This method is non-blocking and returns immediately.
+     */
+    static startProcessAsyncReadLine(command_line, progress, complete) {
+        if (command_line.length == 0) {
+            throw new Error("Command line is empty");
+        }
     }
 }
-export class VelopackApp {
-    constructor() {
-        _VelopackApp_instances.add(this);
-    }
-    static build() {
-        const app = new VelopackApp();
-        return app;
-    }
-    run() {
-        const args = [];
-        Array.prototype.push.apply(args, process.argv);
-        __classPrivateFieldGet(this, _VelopackApp_instances, "m", _VelopackApp_handleArgs).call(this, args);
-    }
-}
-_VelopackApp_instances = new WeakSet(), _VelopackApp_handleArgs = function _VelopackApp_handleArgs(args) {
-    for (let i = 0; i < args.length; i++) {
-        let val = Util.strTrim(args[i]).toLowerCase();
-        if (val == "--veloapp-install") {
-            Util.exit(0);
-        }
-        if (val == "--veloapp-updated") {
-            Util.exit(0);
-        }
-        if (val == "--veloapp-obsolete") {
-            Util.exit(0);
-        }
-        if (val == "--veloapp-uninstall") {
-            Util.exit(0);
-        }
-    }
-};
 export var VelopackAssetType;
 (function (VelopackAssetType) {
     VelopackAssetType[VelopackAssetType["UNKNOWN"] = 0] = "UNKNOWN";
@@ -724,66 +677,7 @@ export class ProgressEvent {
         return progressEvent;
     }
 }
-export class ProcessReadLineHandler {
-}
-class Process {
-    constructor() {
-    }
-    /**
-     * Starts a new process and sychronously reads/returns its output.
-     */
-    static startProcessBlocking(command_line) {
-        if (command_line.length == 0) {
-            throw new Error("Command line is empty");
-        }
-        let ret = "";
-        ret = spawnSync(command_line[0], command_line.slice(1), { encoding: "utf8" }).stdout;
-        return Util.strTrim(ret);
-    }
-    /**
-     * Starts a new process and returns immediately.
-     */
-    static startProcessFireAndForget(command_line) {
-        if (command_line.length == 0) {
-            throw new Error("Command line is empty");
-        }
-        spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
-    }
-    /**
-     * In the current process, starts a new process and asychronously reads its output line by line.
-     * When a line is read, HandleProcessOutputLine is called with the line.
-     * If HandleProcessOutputLine returns true, the reading loop is terminated.
-     * This method is non-blocking and returns immediately.
-     */
-    static startProcessAsyncReadLine(command_line, handler) {
-        if (command_line.length == 0) {
-            throw new Error("Command line is empty");
-        }
-        const child = spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
-        emitLines(child.stdout);
-        child.stdout.resume();
-        child.stdout.setEncoding("utf8");
-        child.stdout.on("line", (data) => {
-            handler.handleProcessOutputLine(data);
-        });
-    }
-}
-export class ProgressHandler extends ProcessReadLineHandler {
-    handleProcessOutputLine(line) {
-        let ev = ProgressEvent.fromJson(line);
-        if (ev.complete) {
-            this.onComplete(ev.file);
-            return true;
-        }
-        else if (ev.error.length > 0) {
-            this.onError(ev.error);
-            return true;
-        }
-        else {
-            this.onProgress(ev.progress);
-            return false;
-        }
-    }
+export class ProgressHandler {
 }
 class DefaultProgressHandler extends ProgressHandler {
     onProgress(progress) {
@@ -798,7 +692,6 @@ export class UpdateManager {
         _UpdateManager__allowDowngrade.set(this, false);
         _UpdateManager__explicitChannel.set(this, "");
         _UpdateManager__urlOrPath.set(this, "");
-        _UpdateManager__progress.set(this, new DefaultProgressHandler());
     }
     setUrlOrPath(urlOrPath) {
         __classPrivateFieldSet(this, _UpdateManager__urlOrPath, urlOrPath, "f");
@@ -808,9 +701,6 @@ export class UpdateManager {
     }
     setExplicitChannel(explicitChannel) {
         __classPrivateFieldSet(this, _UpdateManager__explicitChannel, explicitChannel, "f");
-    }
-    setProgressHandler(progress) {
-        __classPrivateFieldSet(this, _UpdateManager__progress, progress, "f");
     }
     /**
      * This function will return the current installed version of the application
@@ -853,7 +743,7 @@ export class UpdateManager {
      * This function will request the update download, and then return immediately.
      * To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
      */
-    downloadUpdateAsync(updateInfo) {
+    downloadUpdateAsync(updateInfo, progress, complete) {
         if (__classPrivateFieldGet(this, _UpdateManager__urlOrPath, "f").length == 0) {
             throw new Error("Please call SetUrlOrPath before trying to download updates.");
         }
@@ -867,7 +757,6 @@ export class UpdateManager {
         command.push("json");
         command.push("--name");
         command.push(updateInfo.targetFullRelease.fileName);
-        Process.startProcessAsyncReadLine(command, __classPrivateFieldGet(this, _UpdateManager__progress, "f"));
     }
     applyUpdatesAndExit(assetPath) {
         const args = [];
@@ -900,7 +789,124 @@ export class UpdateManager {
         Process.startProcessFireAndForget(command);
     }
 }
-_UpdateManager__allowDowngrade = new WeakMap(), _UpdateManager__explicitChannel = new WeakMap(), _UpdateManager__urlOrPath = new WeakMap(), _UpdateManager__progress = new WeakMap();
+_UpdateManager__allowDowngrade = new WeakMap(), _UpdateManager__explicitChannel = new WeakMap(), _UpdateManager__urlOrPath = new WeakMap();
+class Util {
+    constructor() {
+    }
+    /**
+     * Returns the path of the current process.
+     */
+    static getCurrentProcessPath() {
+        let ret = "";
+        ret = process.execPath;
+        return ret;
+    }
+    static fileExists(path) {
+        let ret = false;
+        ret = require("fs").existsSync(path);
+        return ret;
+    }
+    static getUpdateExePath() {
+        let exePath = Util.getCurrentProcessPath();
+        if (Util.isWindows()) {
+            exePath = Util.pathJoin(Util.pathParent(Util.pathParent(exePath)), "Update.exe");
+        }
+        else if (Util.isLinux()) {
+            exePath = Util.pathJoin(Util.pathParent(exePath), "UpdateNix");
+        }
+        else if (Util.isOsx()) {
+            exePath = Util.pathJoin(Util.pathParent(exePath), "UpdateMac");
+        }
+        else {
+            throw new Error("Unsupported platform");
+        }
+        if (!Util.fileExists(exePath)) {
+            throw new Error("Update executable not found: " + exePath);
+        }
+        return exePath;
+    }
+    static strTrim(str) {
+        let match;
+        if ((match = /(\S.*\S|\S)/.exec(str)) != null) {
+            return match[1];
+        }
+        return str;
+    }
+    static pathParent(str) {
+        let ix_win = str.lastIndexOf("\\");
+        let ix_nix = str.lastIndexOf("/");
+        let ix = Math.max(ix_win, ix_nix);
+        return str.substring(0, ix);
+    }
+    static pathJoin(s1, s2) {
+        while (s1.endsWith("/") || s1.endsWith("\\")) {
+            s1 = s1.substring(0, s1.length - 1);
+        }
+        while (s2.startsWith("/") || s2.startsWith("\\")) {
+            s2 = s2.substring(1);
+        }
+        return s1 + Util.pathSeparator() + s2;
+    }
+    static pathSeparator() {
+        if (Util.isWindows()) {
+            return "\\";
+        }
+        else {
+            return "/";
+        }
+    }
+    static isWindows() {
+        return Util.getOsName() == "win32";
+    }
+    static isLinux() {
+        return Util.getOsName() == "linux";
+    }
+    static isOsx() {
+        return Util.getOsName() == "darwin";
+    }
+    /**
+     * Returns the name of the operating system.
+     */
+    static getOsName() {
+        let ret = "";
+        ret = process.platform;
+        return ret;
+    }
+    static exit(code) {
+        process.exit(code);
+    }
+}
+export class VelopackApp {
+    constructor() {
+        _VelopackApp_instances.add(this);
+    }
+    static build() {
+        const app = new VelopackApp();
+        return app;
+    }
+    run() {
+        const args = [];
+        Array.prototype.push.apply(args, process.argv);
+        __classPrivateFieldGet(this, _VelopackApp_instances, "m", _VelopackApp_handleArgs).call(this, args);
+    }
+}
+_VelopackApp_instances = new WeakSet(), _VelopackApp_handleArgs = function _VelopackApp_handleArgs(args) {
+    for (let i = 0; i < args.length; i++) {
+        let val = Util.strTrim(args[i]).toLowerCase();
+        if (val == "--veloapp-install") {
+            Util.exit(0);
+        }
+        if (val == "--veloapp-updated") {
+            Util.exit(0);
+        }
+        if (val == "--veloapp-obsolete") {
+            Util.exit(0);
+        }
+        if (val == "--veloapp-uninstall") {
+            Util.exit(0);
+        }
+    }
+};
 class StringWriter {
     constructor() {
         _StringWriter_buf.set(this, "");

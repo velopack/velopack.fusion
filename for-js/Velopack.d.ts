@@ -55,10 +55,9 @@ export declare class JsonNode {
     initNumber(value: number): void;
     initString(value: string): void;
 }
-export declare class VelopackApp {
-    #private;
-    static build(): VelopackApp;
-    run(): void;
+export declare abstract class ProcessProgressHandler {
+}
+export declare abstract class ProcessCompleteHandler {
 }
 export declare enum VelopackAssetType {
     UNKNOWN = 0,
@@ -113,25 +112,16 @@ export declare class ProgressEvent {
     error: string;
     static fromJson(json: string): ProgressEvent;
 }
-export declare abstract class ProcessReadLineHandler {
-    /**
-     * Called when a line of output is read from the process.
-     * If this method returns true, the reading loop is terminated.
-     */
-    abstract handleProcessOutputLine(line: string): boolean;
-}
-export declare abstract class ProgressHandler extends ProcessReadLineHandler {
+export declare abstract class ProgressHandler {
     abstract onProgress(progress: number): void;
     abstract onComplete(assetPath: string): void;
     abstract onError(error: string): void;
-    handleProcessOutputLine(line: string): boolean;
 }
 export declare class UpdateManager {
     #private;
     setUrlOrPath(urlOrPath: string): void;
     setAllowDowngrade(allowDowngrade: boolean): void;
     setExplicitChannel(explicitChannel: string): void;
-    setProgressHandler(progress: ProgressHandler): void;
     /**
      * This function will return the current installed version of the application
      * or throw, if the application is not installed.
@@ -145,8 +135,13 @@ export declare class UpdateManager {
      * This function will request the update download, and then return immediately.
      * To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
      */
-    downloadUpdateAsync(updateInfo: UpdateInfo): void;
+    downloadUpdateAsync(updateInfo: UpdateInfo, progress: ProcessProgressHandler, complete: ProcessCompleteHandler): void;
     applyUpdatesAndExit(assetPath: string): void;
     applyUpdatesAndRestart(assetPath: string, restartArgs?: readonly string[] | null): void;
     waitExitThenApplyUpdates(assetPath: string, silent: boolean, restart: boolean, restartArgs?: readonly string[] | null): void;
+}
+export declare class VelopackApp {
+    #private;
+    static build(): VelopackApp;
+    run(): void;
 }

@@ -1,24 +1,24 @@
-public abstract class ProgressHandler : ProcessReadLineHandler
+public abstract class ProgressHandler 
 {
     public abstract void OnProgress!(int progress);
     public abstract void OnComplete!(string() assetPath);
     public abstract void OnError!(string() error);
 
-    public override bool HandleProcessOutputLine!(string() line) throws Exception, JsonParseException
-    {
-        ProgressEvent# ev = ProgressEvent.FromJson(line);
+    // public override bool HandleProcessOutputLine!(string() line) throws Exception, JsonParseException
+    // {
+    //     ProgressEvent# ev = ProgressEvent.FromJson(line);
 
-        if (ev.Complete) {
-            OnComplete(ev.File);
-            return true;
-        } else if (ev.Error.Length > 0) {
-            OnError(ev.Error);
-            return true;
-        } else {
-            OnProgress(ev.Progress);
-            return false;
-        }
-    }
+    //     if (ev.Complete) {
+    //         OnComplete(ev.File);
+    //         return true;
+    //     } else if (ev.Error.Length > 0) {
+    //         OnError(ev.Error);
+    //         return true;
+    //     } else {
+    //         OnProgress(ev.Progress);
+    //         return false;
+    //     }
+    // }
 }
 
 class DefaultProgressHandler : ProgressHandler
@@ -38,12 +38,12 @@ public class UpdateManager
     bool _allowDowngrade = false;
     string() _explicitChannel = "";
     string() _urlOrPath = "";
-    ProgressHandler# _progress = new DefaultProgressHandler();
+    // ProgressHandler# _progress = new DefaultProgressHandler();
 
     public void SetUrlOrPath!(string() urlOrPath) { _urlOrPath = urlOrPath; }
     public void SetAllowDowngrade!(bool allowDowngrade) { _allowDowngrade = allowDowngrade; }
     public void SetExplicitChannel!(string() explicitChannel) { _explicitChannel = explicitChannel; }
-    public void SetProgressHandler!(ProgressHandler# progress) { _progress = progress; }
+    // public void SetProgressHandler!(ProgressHandler# progress) { _progress = progress; }
 
     /// This function will return the current installed version of the application
     /// or throw, if the application is not installed.
@@ -94,7 +94,7 @@ public class UpdateManager
 
     /// This function will request the update download, and then return immediately.
     /// To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
-    public void DownloadUpdateAsync!(UpdateInfo# updateInfo) throws Exception
+    public void DownloadUpdateAsync!(UpdateInfo# updateInfo, ProcessProgressHandler progress, ProcessCompleteHandler complete) throws Exception
     {
         if (_urlOrPath.Length == 0)
         {
@@ -111,7 +111,7 @@ public class UpdateManager
         command.Add("json");
         command.Add("--name");
         command.Add(updateInfo.TargetFullRelease.FileName);
-        Process.StartProcessAsyncReadLine(command, _progress);
+        // Process.StartProcessAsyncReadLine(command, _progress);
     }
 
     public void ApplyUpdatesAndExit(string() assetPath) throws Exception 
