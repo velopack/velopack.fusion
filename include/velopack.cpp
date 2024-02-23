@@ -8,12 +8,137 @@
 #include <fstream>
 #include <sstream>
 #include <thread>
+#include "Velopack.hpp"
 
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #define PATH_MAX MAX_PATH
-#include <windows.h>
+#include <Windows.h>
 #endif // VELO_MSVC
+
+static std::string nativeCurrentOsName()
+{
+#if defined(__APPLE__)
+    return "darwin";
+#elif defined(_WIN32)
+    return "win32";
+#else
+    return "linux";
+#endif
+}
+
+static bool nativeDoesFileExist(std::string file_path)
+{
+    return std::filesystem::exists(file_path);
+}
+
+static void nativeExitProcess(int exit_code)
+{
+    ::exit(exit_code);
+}
+
+static std::string nativeGetCurrentProcessPath()
+{
+    const size_t buf_size = PATH_MAX;
+    char path_buf[buf_size];
+    size_t bytes_read = buf_size;
+
+#if defined(__APPLE__)
+    if (_NSGetExecutablePath(path_buf, &bytes_read) != 0)
+    {
+        throw std::runtime_error("Buffer size is too small for executable path.");
+    }
+#elif defined(_WIN32)
+    HMODULE hMod = GetModuleHandleA(NULL);
+    bytes_read = GetModuleFileNameA(hMod, path_buf, buf_size);
+#else
+    bytes_read = readlink("/proc/self/exe", path_buf, bufSize);
+    if ((int)bytes_read == -1)
+    {
+        throw std::runtime_error("Permission denied to /proc/self/exe.");
+    }
+#endif
+
+    return std::string(path_buf, bytes_read);
+}
+
+static subprocess_s nativeStartProcess(const std::vector<std::string> *command_line, int options)
+{
+    auto size = command_line->size();
+    const char **command_line_array = new const char *[size + 1];
+    for (size_t i = 0; i < size; ++i)
+    {
+        command_line_array[i] = command_line->at(i).c_str();
+    }
+    command_line_array[size] = NULL; // last element must be NULL
+
+    struct subprocess_s subprocess;
+    int result = subprocess_create(command_line_array, options, &subprocess);
+    delete[] command_line_array; // clean up the array
+
+    if (result != 0)
+    {
+        throw std::runtime_error("Unable to start Update process.");
+    }
+
+    return subprocess;
+}
+
+static void nativeStartProcessFireAndForget(const std::vector<std::string> *command_line)
+{
+    nativeStartProcess(command_line, subprocess_option_no_window);
+}
+
+static std::thread nativeStartProcessAsyncReadLine(const std::vector<std::string> *command_line, Velopack::ProcessReadLineHandler *handler)
+{
+    subprocess_s subprocess = nativeStartProcess(command_line, subprocess_option_no_window | subprocess_option_enable_async);
+
+    std::thread outputThread([subprocess, handler]() mutable
+    {
+        const unsigned BUFFER_SIZE = 1024;
+        char readBuffer[BUFFER_SIZE];
+        std::string accumulatedData;
+
+        // read all stdout from the process one line at a time
+        while (true) {
+            unsigned bytesRead = subprocess_read_stdout(&subprocess, readBuffer, BUFFER_SIZE - 1);
+
+            if (bytesRead == 0) {
+                // bytesRead is 0, indicating the process has completed
+                // Process any remaining data in accumulatedData as the last line if needed
+                if (!accumulatedData.empty()) {
+                    handler->handleProcessOutputLine(accumulatedData);
+                }
+                return;
+            }
+
+            accumulatedData += std::string(readBuffer, bytesRead);
+
+            // Process accumulated data for lines
+            size_t pos;
+            while ((pos = accumulatedData.find('\n')) != std::string::npos) {
+                std::string line = accumulatedData.substr(0, pos);
+                if (handler->handleProcessOutputLine(line)) {
+                    return; // complete or err
+                }
+                accumulatedData.erase(0, pos + 1);
+            }
+        } 
+    });
+
+    return outputThread;
+}
+
+static std::string nativeStartProcessBlocking(const std::vector<std::string> *command_line)
+{
+    subprocess_s subprocess = nativeStartProcess(command_line, subprocess_option_no_window);
+    FILE *p_stdout = subprocess_stdout(&subprocess);
+    std::filebuf buf = std::basic_filebuf<char>(p_stdout);
+    std::istream is(&buf);
+    std::stringstream buffer;
+    buffer << is.rdbuf();
+    return buffer.str();
+}
 
 namespace Velopack
 {
@@ -64,99 +189,4 @@ namespace Velopack
             }
         }
     }
-
-    namespace Util
-    {
-        std::string util_current_os_name()
-        {
-    #if defined(__APPLE__)
-            return "darwin";
-    #elif defined(_WIN32)
-            return "win32";
-    #else
-            return "linux";
-    #endif
-        }
-
-        std::string util_string_to_lower(std::string str)
-        {
-            std::string data = str;
-            std::transform(data.begin(), data.end(), data.begin(),
-                        [](unsigned char c)
-                        { return std::tolower(c); });
-            return data;
-        }
-
-        bool util_does_file_exist(std::string file_path)
-        {
-            return std::filesystem::exists(file_path);
-        }
-
-        std::string util_get_own_exe_path()
-        {
-            const size_t buf_size = PATH_MAX;
-            char path_buf[buf_size];
-            size_t bytes_read = buf_size;
-
-    #if defined(__APPLE__)
-            if (_NSGetExecutablePath(path_buf, &bytes_read) != 0)
-            {
-                throw std::runtime_error("Buffer size is too small for executable path.");
-            }
-    #elif defined(_WIN32)
-            HMODULE hMod = GetModuleHandleA(NULL);
-            bytes_read = GetModuleFileNameA(hMod, path_buf, buf_size);
-    #else
-            bytes_read = readlink("/proc/self/exe", path_buf, bufSize);
-            if ((int)bytes_read == -1)
-            {
-                throw std::runtime_error("Permission denied to /proc/self/exe.");
-            }
-    #endif
-
-            return std::string(path_buf, bytes_read);
-        }
-
-        bool ci_equal(const std::string &a, const std::string &b)
-        {
-            return std::equal(a.begin(), a.end(), b.begin(), b.end(),
-                            [](char a, char b)
-                            {
-                                return tolower(a) == tolower(b);
-                            });
-        }
-
-        subprocess_s util_start_process(const std::vector<std::string> *command_line, int options)
-        {
-            auto size = command_line->size();
-            const char **command_line_array = new const char *[size + 1];
-            for (size_t i = 0; i < size; ++i)
-            {
-                command_line_array[i] = command_line->at(i).c_str();
-            }
-            command_line_array[size] = NULL; // last element must be NULL
-
-            struct subprocess_s subprocess;
-            int result = subprocess_create(command_line_array, options, &subprocess);
-            delete[] command_line_array; // clean up the array
-
-            if (result != 0)
-            {
-                throw std::runtime_error("Unable to start Update process.");
-            }
-
-            return subprocess;
-        }
-
-        std::string util_start_process_blocking_output(const std::vector<std::string> *command_line, int options)
-        {
-            subprocess_s subprocess = util_start_process(command_line, options);
-            FILE *p_stdout = subprocess_stdout(&subprocess);
-            std::filebuf buf = std::basic_filebuf<char>(p_stdout);
-            std::istream is(&buf);
-            std::stringstream buffer;
-            buffer << is.rdbuf();
-            return buffer.str();
-        }
-    } // namespace Util
 } // namespace Velopack

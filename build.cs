@@ -5,14 +5,30 @@ using System.Text.RegularExpressions;
 using Spectre.Console;
 
 string projectDir = GetMsbuildParameter("RootProjectDir");
+var macros = LoadNativeMacros();
 RunAll(BuildJs, BuildCpp, BuildCs);
 
 void BuildJs()
 {
     CleanOutputDir("for-js", "*.js", "*.ts");
     var outJs = FusionBuild("for-js/Velopack.ts", "JS");
+
+    // patches
     ReplaceAll(outJs, "TextWriter", "StringWriter");
-    PrependFiles(outJs, "disclaimer.txt");
+    ReplaceAll(outJs, "RegExpMatchArray", "RegExpMatchArray | null");
+    ReplaceAll(outJs, "export class FutureResult[\\S\\s]*?}\\s*?}", "", patternRegex: true);
+    ReplaceAll(outJs, "return FutureResult.create();", "");
+    ReplaceAll(outJs, "FutureResult", "Promise<void>");
+
+    // includes
+    PrependFiles(outJs, "disclaimer.txt", "velopack.ts");
+
+    // final touches
+    if (!Directory.Exists(Path.Combine(projectDir, "for-js", "node_modules")))
+    {
+        RunProcess("npm", "install", Path.Combine(projectDir, "for-js"));
+    }
+    RunProcess("npm", "run format", Path.Combine(projectDir, "for-js"));
     FixLineEndingAndTabs(outJs);
     RunProcess("npm", "run build", Path.Combine(projectDir, "for-js"));
 }
@@ -21,22 +37,115 @@ void BuildCpp()
 {
     CleanOutputDir("for-cpp", "*.cpp", "*.hpp");
     var outCpp = FusionBuild("for-cpp/Velopack.cpp", "CPP", includeVeloApp: false);
+    var outHpp = Path.ChangeExtension(outCpp, ".hpp");
+
+    // patches
+    ReplaceAll(outCpp, "const FutureResult *", "std::thread");
+    ReplaceAll(outHpp, "const FutureResult *", "std::thread");
+    ReplaceAll(outCpp, "return FutureResult::create().get();", "");
+
+    // includes
     PrependFiles(outCpp, "disclaimer.txt", "subprocess.h", "velopack.cpp");
-    PrependFiles(Path.ChangeExtension(outCpp, ".hpp"), "disclaimer.txt", "velopack.hpp");
+    PrependFiles(outHpp, "disclaimer.txt", "velopack.hpp");
+
+    // final touches
     FixLineEndingAndTabs(outCpp);
+    FixLineEndingAndTabs(outHpp);
 }
 
 void BuildCs()
 {
     CleanOutputDir("for-cs", "*.cs");
     var outCs = FusionBuild("for-cs/Velopack.cs", "CS");
+
+    // usings
+    PrependTextIfNot(outCs, "using System;", x => x.Contains("using System;"));
     PrependTextIfNot(outCs, "using System.Linq;", x => x.Contains("using System.Linq;"));
-    PrependFiles(outCs, "disclaimer.txt");
-    AppendFiles(outCs, "process.cs");
+    PrependTextIfNot(outCs, "using System.IO;", x => x.Contains("using System.IO;"));
+    PrependTextIfNot(outCs, "using System.Runtime.InteropServices;", x => x.Contains("using System.Runtime.InteropServices;"));
+    PrependTextIfNot(outCs, "using System.Text;", x => x.Contains("using System.Text;"));
+    PrependTextIfNot(outCs, "using System.Diagnostics;", x => x.Contains("using System.Diagnostics;"));
+    PrependTextIfNot(outCs, "using System.Threading.Tasks;", x => x.Contains("using System.Threading.Tasks;"));
+
+    // patches
     ReplaceAll(outCs, "internal", "public");
+    ReplaceAll(outCs, "public class FutureResult[\\S\\s]*?}\\s*?}", "", patternRegex: true);
+    ReplaceAll(outCs, "return FutureResult.Create();", "");
+    ReplaceAll(outCs, "FutureResult", "Task");
+
+    // includes
+    PrependFiles(outCs, "disclaimer.txt");
+    AppendFiles(outCs, "velopack.cs");
+
+    // final touches
     RunProcess("dotnet", "format CsTests.csproj", Path.Combine(projectDir, "for-cs", "test"));
     FixLineEndingAndTabs(outCs);
     RunProcess("dotnet", "test", Path.Combine(projectDir, "for-cs", "test"));
+}
+
+void ReplaceNativeMacros(string outputFile, string defineLang)
+{
+    var txt = File.ReadAllText(outputFile);
+    var langMacros = macros[defineLang];
+
+    foreach (Match m in Regex.Matches(txt, @"VMACRO_(\w+)"))
+    {
+        var name = m.Groups[1].Value;
+        bool found = false;
+        foreach (var macro in langMacros)
+        {
+            if (Regex.IsMatch(macro, $"(\\W|^)({name})$", RegexOptions.IgnoreCase))
+            {
+                found = true;
+                txt = txt.Replace(m.Value, macro);
+                break;
+            }
+        }
+        if (!found)
+        {
+            throw new Exception("Could not find native macro: " + name + Environment.NewLine + "The available macros are:" + Environment.NewLine + string.Join(Environment.NewLine, langMacros));
+        }
+    }
+
+    File.WriteAllText(outputFile, txt);
+}
+
+Dictionary<string, List<string>> LoadNativeMacros()
+{
+    Dictionary<string, List<string>> macros = new Dictionary<string, List<string>>();
+    macros["CPP"] = new List<string>();
+    macros["CS"] = new List<string>();
+    macros["JS"] = new List<string>();
+
+    var includeDir = Path.Combine(projectDir, "include");
+
+    foreach (var f in Directory.EnumerateFiles(includeDir, "*.cs"))
+    {
+        var txt = File.ReadAllText(f);
+        foreach (Match m in Regex.Matches(txt, @"^\s+public static [\w<>]+ (\w+)\(", RegexOptions.Multiline))
+        {
+            var classIdx = txt.LastIndexOf("class", m.Index) + 5;
+            var classEndIdx = txt.IndexOf("{", classIdx);
+            var classTxt = txt.Substring(classIdx, classEndIdx - classIdx).Trim();
+            macros["CS"].Add(classTxt + "." + m.Groups[1].Value);
+        }
+    }
+
+    foreach (var f in Directory.EnumerateFiles(includeDir, "*.ts"))
+    {
+        foreach (Match m in Regex.Matches(File.ReadAllText(f), @"^function (\w*)\s*?\(", RegexOptions.Multiline))
+        {
+            macros["JS"].Add(m.Groups[1].Value);
+        }
+    }
+
+    var cppTxt = File.ReadAllText(Path.Combine(includeDir, "velopack.cpp"));
+    foreach (Match m in Regex.Matches(cppTxt, @"static [\w<>:]+\s(\w+)\(", RegexOptions.Multiline))
+    {
+        macros["CPP"].Add(m.Groups[1].Value);
+    }
+
+    return macros;
 }
 
 void RunAll(params Action[] actions)
@@ -67,7 +176,7 @@ void RunAll(params Action[] actions)
     }
     else
     {
-        AnsiConsole.MarkupLine($"[green]Build completed successfully.[/]");
+        AnsiConsole.MarkupLine($"[green]Build completed successfully with no errors.[/]");
     }
 }
 
@@ -93,6 +202,7 @@ string FusionBuild(string outputFile, string defineLang, bool includeVeloApp = t
     }
 
     ReplaceAll(finalOutput, "// Generated automatically with \"fut\". Do not edit.", "");
+    ReplaceNativeMacros(finalOutput, defineLang);
 
     return finalOutput;
 }
@@ -258,6 +368,33 @@ string FindExecutableInPath(string executable)
 
     throw new Exception("Unable to find binary: " + executable);
 }
+
+//IEnumerable<string> SplitByCharacterType(string input)
+//{
+//    if (String.IsNullOrEmpty(input))
+//        throw new ArgumentNullException(nameof(input));
+
+//    StringBuilder segment = new StringBuilder();
+//    segment.Append(input[0]);
+//    var current = Char.GetUnicodeCategory(input[0]);
+
+//    for (int i = 1; i < input.Length; i++)
+//    {
+//        var next = Char.GetUnicodeCategory(input[i]);
+//        if (next == current)
+//        {
+//            segment.Append(input[i]);
+//        }
+//        else
+//        {
+//            yield return segment.ToString();
+//            segment.Clear();
+//            segment.Append(input[i]);
+//            current = next;
+//        }
+//    }
+//    yield return segment.ToString();
+//}
 
 //T Retry<T>(Func<T> block, int retries = 6, int retryDelay = 250)
 //{

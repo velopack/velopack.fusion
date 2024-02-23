@@ -1051,11 +1051,117 @@ int subprocess_alive(struct subprocess_s *const process) {
 #include <fstream>
 #include <sstream>
 #include <thread>
+#include "Velopack.hpp"
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #define PATH_MAX MAX_PATH
-#include <windows.h>
+#include <Windows.h>
 #endif // VELO_MSVC
+static std::string nativeCurrentOsName()
+{
+#if defined(__APPLE__)
+    return "darwin";
+#elif defined(_WIN32)
+    return "win32";
+#else
+    return "linux";
+#endif
+}
+static bool nativeDoesFileExist(std::string file_path)
+{
+    return std::filesystem::exists(file_path);
+}
+static void nativeExitProcess(int exit_code)
+{
+    ::exit(exit_code);
+}
+static std::string nativeGetCurrentProcessPath()
+{
+    const size_t buf_size = PATH_MAX;
+    char path_buf[buf_size];
+    size_t bytes_read = buf_size;
+#if defined(__APPLE__)
+    if (_NSGetExecutablePath(path_buf, &bytes_read) != 0)
+    {
+        throw std::runtime_error("Buffer size is too small for executable path.");
+    }
+#elif defined(_WIN32)
+    HMODULE hMod = GetModuleHandleA(NULL);
+    bytes_read = GetModuleFileNameA(hMod, path_buf, buf_size);
+#else
+    bytes_read = readlink("/proc/self/exe", path_buf, bufSize);
+    if ((int)bytes_read == -1)
+    {
+        throw std::runtime_error("Permission denied to /proc/self/exe.");
+    }
+#endif
+    return std::string(path_buf, bytes_read);
+}
+static subprocess_s nativeStartProcess(const std::vector<std::string> *command_line, int options)
+{
+    auto size = command_line->size();
+    const char **command_line_array = new const char *[size + 1];
+    for (size_t i = 0; i < size; ++i)
+    {
+        command_line_array[i] = command_line->at(i).c_str();
+    }
+    command_line_array[size] = NULL; // last element must be NULL
+    struct subprocess_s subprocess;
+    int result = subprocess_create(command_line_array, options, &subprocess);
+    delete[] command_line_array; // clean up the array
+    if (result != 0)
+    {
+        throw std::runtime_error("Unable to start Update process.");
+    }
+    return subprocess;
+}
+static void nativeStartProcessFireAndForget(const std::vector<std::string> *command_line)
+{
+    nativeStartProcess(command_line, subprocess_option_no_window);
+}
+static std::thread nativeStartProcessAsyncReadLine(const std::vector<std::string> *command_line, Velopack::ProcessReadLineHandler *handler)
+{
+    subprocess_s subprocess = nativeStartProcess(command_line, subprocess_option_no_window | subprocess_option_enable_async);
+    std::thread outputThread([subprocess, handler]() mutable
+    {
+        const unsigned BUFFER_SIZE = 1024;
+        char readBuffer[BUFFER_SIZE];
+        std::string accumulatedData;
+        // read all stdout from the process one line at a time
+        while (true) {
+            unsigned bytesRead = subprocess_read_stdout(&subprocess, readBuffer, BUFFER_SIZE - 1);
+            if (bytesRead == 0) {
+                // bytesRead is 0, indicating the process has completed
+                // Process any remaining data in accumulatedData as the last line if needed
+                if (!accumulatedData.empty()) {
+                    handler->handleProcessOutputLine(accumulatedData);
+                }
+                return;
+            }
+            accumulatedData += std::string(readBuffer, bytesRead);
+            // Process accumulated data for lines
+            size_t pos;
+            while ((pos = accumulatedData.find('\n')) != std::string::npos) {
+                std::string line = accumulatedData.substr(0, pos);
+                if (handler->handleProcessOutputLine(line)) {
+                    return; // complete or err
+                }
+                accumulatedData.erase(0, pos + 1);
+            }
+        } 
+    });
+    return outputThread;
+}
+static std::string nativeStartProcessBlocking(const std::vector<std::string> *command_line)
+{
+    subprocess_s subprocess = nativeStartProcess(command_line, subprocess_option_no_window);
+    FILE *p_stdout = subprocess_stdout(&subprocess);
+    std::filebuf buf = std::basic_filebuf<char>(p_stdout);
+    std::istream is(&buf);
+    std::stringstream buffer;
+    buffer << is.rdbuf();
+    return buffer.str();
+}
 namespace Velopack
 {
 #if UNICODE
@@ -1104,89 +1210,6 @@ namespace Velopack
             }
         }
     }
-    namespace Util
-    {
-        std::string util_current_os_name()
-        {
-    #if defined(__APPLE__)
-            return "darwin";
-    #elif defined(_WIN32)
-            return "win32";
-    #else
-            return "linux";
-    #endif
-        }
-        std::string util_string_to_lower(std::string str)
-        {
-            std::string data = str;
-            std::transform(data.begin(), data.end(), data.begin(),
-                        [](unsigned char c)
-                        { return std::tolower(c); });
-            return data;
-        }
-        bool util_does_file_exist(std::string file_path)
-        {
-            return std::filesystem::exists(file_path);
-        }
-        std::string util_get_own_exe_path()
-        {
-            const size_t buf_size = PATH_MAX;
-            char path_buf[buf_size];
-            size_t bytes_read = buf_size;
-    #if defined(__APPLE__)
-            if (_NSGetExecutablePath(path_buf, &bytes_read) != 0)
-            {
-                throw std::runtime_error("Buffer size is too small for executable path.");
-            }
-    #elif defined(_WIN32)
-            HMODULE hMod = GetModuleHandleA(NULL);
-            bytes_read = GetModuleFileNameA(hMod, path_buf, buf_size);
-    #else
-            bytes_read = readlink("/proc/self/exe", path_buf, bufSize);
-            if ((int)bytes_read == -1)
-            {
-                throw std::runtime_error("Permission denied to /proc/self/exe.");
-            }
-    #endif
-            return std::string(path_buf, bytes_read);
-        }
-        bool ci_equal(const std::string &a, const std::string &b)
-        {
-            return std::equal(a.begin(), a.end(), b.begin(), b.end(),
-                            [](char a, char b)
-                            {
-                                return tolower(a) == tolower(b);
-                            });
-        }
-        subprocess_s util_start_process(const std::vector<std::string> *command_line, int options)
-        {
-            auto size = command_line->size();
-            const char **command_line_array = new const char *[size + 1];
-            for (size_t i = 0; i < size; ++i)
-            {
-                command_line_array[i] = command_line->at(i).c_str();
-            }
-            command_line_array[size] = NULL; // last element must be NULL
-            struct subprocess_s subprocess;
-            int result = subprocess_create(command_line_array, options, &subprocess);
-            delete[] command_line_array; // clean up the array
-            if (result != 0)
-            {
-                throw std::runtime_error("Unable to start Update process.");
-            }
-            return subprocess;
-        }
-        std::string util_start_process_blocking_output(const std::vector<std::string> *command_line, int options)
-        {
-            subprocess_s subprocess = util_start_process(command_line, options);
-            FILE *p_stdout = subprocess_stdout(&subprocess);
-            std::filebuf buf = std::basic_filebuf<char>(p_stdout);
-            std::istream is(&buf);
-            std::stringstream buffer;
-            buffer << is.rdbuf();
-            return buffer.str();
-        }
-    } // namespace Util
 } // namespace Velopack
 #include <algorithm>
 #include <cstdlib>
@@ -1221,6 +1244,10 @@ static std::string FuString_ToLower(std::string_view s)
 #endif
 namespace Velopack
 {
+std::shared_ptr<FutureResult> FutureResult::create()
+{
+    throw std::runtime_error("Not implemented");
+}
 JsonNodeType JsonNode::getType() const
 {
     return this->type;
@@ -1629,25 +1656,34 @@ std::shared_ptr<JsonNode> JsonParser::parseValue()
         throw JsonParseException("Invalid token");
     }
 }
-std::string Process::startProcessBlocking(const std::vector<std::string> * command_line)
+void ProcessReadLineHandler::setProgressHandler(ProgressHandler * progress)
 {
-    if (std::ssize(*command_line) == 0) {
-        throw std::runtime_error("Command line is empty");
-    }
-    std::string ret{""};
-     ret = util_start_process_blocking_output(command_line, subprocess_option_no_window); return Util::strTrim(ret);
+    this->_progress = progress;
 }
-void Process::startProcessFireAndForget(const std::vector<std::string> * command_line)
+bool ProcessReadLineHandler::handleProcessOutputLine(std::string line)
 {
-    if (std::ssize(*command_line) == 0) {
-        throw std::runtime_error("Command line is empty");
+    std::shared_ptr<ProgressEvent> ev = ProgressEvent::fromJson(line);
+    if (ev->complete) {
+        this->_progress->onComplete(ev->file);
+        return true;
     }
-     util_start_process(command_line, subprocess_option_no_window); }
-void Process::startProcessAsyncReadLine(const std::vector<std::string> * command_line, const ProcessProgressHandler * progress, const ProcessCompleteHandler * complete)
+    else if (!ev->error.empty()) {
+        this->_progress->onError(ev->error);
+        return true;
+    }
+    else {
+        this->_progress->onProgress(ev->progress);
+        return false;
+    }
+}
+void DefaultProgressHandler::onProgress(int progress)
 {
-    if (std::ssize(*command_line) == 0) {
-        throw std::runtime_error("Command line is empty");
-    }
+}
+void DefaultProgressHandler::onComplete(std::string assetPath)
+{
+}
+void DefaultProgressHandler::onError(std::string error)
+{
 }
 std::shared_ptr<VelopackAsset> VelopackAsset::fromJson(std::string_view json)
 {
@@ -1705,15 +1741,6 @@ std::shared_ptr<ProgressEvent> ProgressEvent::fromJson(std::string_view json)
     }
     return progressEvent;
 }
-void DefaultProgressHandler::onProgress(int progress)
-{
-}
-void DefaultProgressHandler::onComplete(std::string assetPath)
-{
-}
-void DefaultProgressHandler::onError(std::string error)
-{
-}
 void UpdateManager::setUrlOrPath(std::string urlOrPath)
 {
     this->_urlOrPath = urlOrPath;
@@ -1731,7 +1758,7 @@ std::string UpdateManager::getCurrentVersion() const
     std::vector<std::string> command;
     command.push_back(Util::getUpdateExePath());
     command.push_back("get-version");
-    return Process::startProcessBlocking(&command);
+    return Util::startProcessBlocking(&command);
 }
 std::shared_ptr<UpdateInfo> UpdateManager::checkForUpdates() const
 {
@@ -1752,13 +1779,13 @@ std::shared_ptr<UpdateInfo> UpdateManager::checkForUpdates() const
         command.push_back("--channel");
         command.push_back(this->_explicitChannel);
     }
-    std::string output{Process::startProcessBlocking(&command)};
+    std::string output{Util::startProcessBlocking(&command)};
     if (output.empty() || output == "null") {
         return nullptr;
     }
     return UpdateInfo::fromJson(output);
 }
-void UpdateManager::downloadUpdateAsync(std::shared_ptr<UpdateInfo> updateInfo, const ProcessProgressHandler * progress, const ProcessCompleteHandler * complete)
+std::thread UpdateManager::downloadUpdateAsync(std::shared_ptr<UpdateInfo> updateInfo, ProgressHandler * progressHandler)
 {
     if (this->_urlOrPath.empty()) {
         throw std::runtime_error("Please call SetUrlOrPath before trying to download updates.");
@@ -1773,6 +1800,10 @@ void UpdateManager::downloadUpdateAsync(std::shared_ptr<UpdateInfo> updateInfo, 
     command.push_back("json");
     command.push_back("--name");
     command.push_back(updateInfo->targetFullRelease->fileName);
+    std::shared_ptr<DefaultProgressHandler> def = std::make_shared<DefaultProgressHandler>();
+    std::shared_ptr<ProcessReadLineHandler> handler = std::make_shared<ProcessReadLineHandler>();
+    handler->setProgressHandler(progressHandler == nullptr ? def.get() : progressHandler);
+    return Util::startProcessAsyncReadLine(&command, handler.get());
 }
 void UpdateManager::applyUpdatesAndExit(std::string assetPath) const
 {
@@ -1805,17 +1836,38 @@ void UpdateManager::waitExitThenApplyUpdates(std::string assetPath, bool silent,
         command.push_back("--");
         command.insert(command.end(), restartArgs->begin(), restartArgs->end());
     }
-    Process::startProcessFireAndForget(&command);
+    Util::startProcessFireAndForget(&command);
+}
+std::string Util::startProcessBlocking(const std::vector<std::string> * command_line)
+{
+    if (std::ssize(*command_line) == 0) {
+        throw std::runtime_error("Command line is empty");
+    }
+    std::string ret{""};
+     ret = nativeStartProcessBlocking(command_line); return Util::strTrim(ret);
+}
+void Util::startProcessFireAndForget(const std::vector<std::string> * command_line)
+{
+    if (std::ssize(*command_line) == 0) {
+        throw std::runtime_error("Command line is empty");
+    }
+     nativeStartProcessFireAndForget(command_line); }
+std::thread Util::startProcessAsyncReadLine(const std::vector<std::string> * command_line, ProcessReadLineHandler * handler)
+{
+    if (std::ssize(*command_line) == 0) {
+        throw std::runtime_error("Command line is empty");
+    }
+     return nativeStartProcessAsyncReadLine(command_line, handler); 
 }
 std::string Util::getCurrentProcessPath()
 {
     std::string ret{""};
-     ret = util_get_own_exe_path(); return ret;
+     ret = nativeGetCurrentProcessPath(); return ret;
 }
 bool Util::fileExists(std::string path)
 {
     bool ret = false;
-     ret = util_does_file_exist(path); return ret;
+     ret = nativeDoesFileExist(path); return ret;
 }
 std::string Util::getUpdateExePath()
 {
@@ -1886,9 +1938,9 @@ bool Util::isOsx()
 std::string Util::getOsName()
 {
     std::string ret{""};
-     ret = util_current_os_name(); return ret;
+     ret = nativeCurrentOsName(); return ret;
 }
 void Util::exit(int code)
 {
-     ::exit(code); }
+     nativeExitProcess(code); }
 }

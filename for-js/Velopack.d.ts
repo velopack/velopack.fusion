@@ -55,9 +55,10 @@ export declare class JsonNode {
     initNumber(value: number): void;
     initString(value: string): void;
 }
-export declare abstract class ProcessProgressHandler {
-}
-export declare abstract class ProcessCompleteHandler {
+export declare abstract class ProgressHandler {
+    abstract onProgress(progress: number): void;
+    abstract onComplete(assetPath: string): void;
+    abstract onError(error: string): void;
 }
 export declare enum VelopackAssetType {
     UNKNOWN = 0,
@@ -112,11 +113,6 @@ export declare class ProgressEvent {
     error: string;
     static fromJson(json: string): ProgressEvent;
 }
-export declare abstract class ProgressHandler {
-    abstract onProgress(progress: number): void;
-    abstract onComplete(assetPath: string): void;
-    abstract onError(error: string): void;
-}
 export declare class UpdateManager {
     #private;
     setUrlOrPath(urlOrPath: string): void;
@@ -135,7 +131,7 @@ export declare class UpdateManager {
      * This function will request the update download, and then return immediately.
      * To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
      */
-    downloadUpdateAsync(updateInfo: UpdateInfo, progress: ProcessProgressHandler, complete: ProcessCompleteHandler): void;
+    downloadUpdateAsync(updateInfo: UpdateInfo, progressHandler?: ProgressHandler | null): Promise<void>;
     applyUpdatesAndExit(assetPath: string): void;
     applyUpdatesAndRestart(assetPath: string, restartArgs?: readonly string[] | null): void;
     waitExitThenApplyUpdates(assetPath: string, silent: boolean, restart: boolean, restartArgs?: readonly string[] | null): void;

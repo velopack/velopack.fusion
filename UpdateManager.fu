@@ -1,38 +1,3 @@
-public abstract class ProgressHandler 
-{
-    public abstract void OnProgress!(int progress);
-    public abstract void OnComplete!(string() assetPath);
-    public abstract void OnError!(string() error);
-
-    // public override bool HandleProcessOutputLine!(string() line) throws Exception, JsonParseException
-    // {
-    //     ProgressEvent# ev = ProgressEvent.FromJson(line);
-
-    //     if (ev.Complete) {
-    //         OnComplete(ev.File);
-    //         return true;
-    //     } else if (ev.Error.Length > 0) {
-    //         OnError(ev.Error);
-    //         return true;
-    //     } else {
-    //         OnProgress(ev.Progress);
-    //         return false;
-    //     }
-    // }
-}
-
-class DefaultProgressHandler : ProgressHandler
-{
-    public override void OnProgress!(int progress) {
-    }
-
-    public override void OnComplete!(string() assetPath) {
-    }
-
-    public override void OnError!(string() error) {
-    }
-}
-
 public class UpdateManager
 {
     bool _allowDowngrade = false;
@@ -52,7 +17,7 @@ public class UpdateManager
         List<string()>() command;
         command.Add(Util.GetUpdateExePath());
         command.Add("get-version");
-        return Process.StartProcessBlocking(command);
+        return Util.StartProcessBlocking(command);
     }
 
     /// This function will check for updates, and return information about the latest available release.
@@ -82,7 +47,7 @@ public class UpdateManager
             command.Add(_explicitChannel);
         }
     
-        string() output = Process.StartProcessBlocking(command);
+        string() output = Util.StartProcessBlocking(command);
 
         if (output.Length == 0 || output == "null")
         {
@@ -94,7 +59,7 @@ public class UpdateManager
 
     /// This function will request the update download, and then return immediately.
     /// To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
-    public void DownloadUpdateAsync!(UpdateInfo# updateInfo, ProcessProgressHandler progress, ProcessCompleteHandler complete) throws Exception
+    public FutureResult DownloadUpdateAsync!(UpdateInfo# updateInfo, ProgressHandler!? progressHandler = null) throws Exception
     {
         if (_urlOrPath.Length == 0)
         {
@@ -111,10 +76,14 @@ public class UpdateManager
         command.Add("json");
         command.Add("--name");
         command.Add(updateInfo.TargetFullRelease.FileName);
-        // Process.StartProcessAsyncReadLine(command, _progress);
+
+        DefaultProgressHandler# def = new DefaultProgressHandler();
+        ProcessReadLineHandler# handler = new ProcessReadLineHandler();
+        handler.SetProgressHandler(progressHandler == null ? def : progressHandler);
+        return Util.StartProcessAsyncReadLine(command, handler);
     }
 
-    public void ApplyUpdatesAndExit(string() assetPath) throws Exception 
+    public void ApplyUpdatesAndExit(string() assetPath) throws Exception
     {
         List<string()>() args;
         WaitExitThenApplyUpdates(assetPath, false, false, args);
@@ -151,8 +120,6 @@ public class UpdateManager
             command.AddRange(restartArgs);
         }
 
-        Process.StartProcessFireAndForget(command);
-    }
-
-   
+        Util.StartProcessFireAndForget(command);
+    }  
 }

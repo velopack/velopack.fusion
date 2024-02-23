@@ -30,6 +30,10 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 //
+using System.Threading.Tasks;
+using System.Diagnostics;
+using System.Text;
+using System.Runtime.InteropServices;
 using System.Linq;
 using System;
 using System.Collections.Generic;
@@ -543,43 +547,49 @@ namespace Velopack
             }
         }
     }
-    public abstract class ProcessProgressHandler
+    public abstract class ProgressHandler
     {
+        public abstract void OnProgress(int progress);
+        public abstract void OnComplete(string assetPath);
+        public abstract void OnError(string error);
     }
-    public abstract class ProcessCompleteHandler
+    class ProcessReadLineHandler
     {
+        ProgressHandler _progress;
+        public void SetProgressHandler(ProgressHandler progress)
+        {
+            this._progress = progress;
+        }
+        public bool HandleProcessOutputLine(string line)
+        {
+            ProgressEvent ev = ProgressEvent.FromJson(line);
+            if (ev.Complete)
+            {
+                this._progress.OnComplete(ev.File);
+                return true;
+            }
+            else if (ev.Error.Length > 0)
+            {
+                this._progress.OnError(ev.Error);
+                return true;
+            }
+            else
+            {
+                this._progress.OnProgress(ev.Progress);
+                return false;
+            }
+        }
     }
-    static class Process
+    class DefaultProgressHandler : ProgressHandler
     {
-        /// <summary>Starts a new process and sychronously reads/returns its output.</summary>
-        public static string StartProcessBlocking(List<string> command_line)
+        public override void OnProgress(int progress)
         {
-            if (command_line.Count == 0)
-            {
-                throw new Exception("Command line is empty");
-            }
-            string ret = "";
-            ret = ProcessNative.StartProcessBlocking(command_line); return Util.StrTrim(ret);
         }
-        /// <summary>Starts a new process and returns immediately.</summary>
-        public static void StartProcessFireAndForget(List<string> command_line)
+        public override void OnComplete(string assetPath)
         {
-            if (command_line.Count == 0)
-            {
-                throw new Exception("Command line is empty");
-            }
-            ProcessNative.StartProcessFireAndForget(command_line);
         }
-        /// <summary>In the current process, starts a new process and asychronously reads its output line by line.</summary>
-        /// <remarks>When a line is read, HandleProcessOutputLine is called with the line. 
-        /// If HandleProcessOutputLine returns true, the reading loop is terminated.
-        /// This method is non-blocking and returns immediately.</remarks>
-        public static void StartProcessAsyncReadLine(List<string> command_line, ProcessProgressHandler progress, ProcessCompleteHandler complete)
+        public override void OnError(string error)
         {
-            if (command_line.Count == 0)
-            {
-                throw new Exception("Command line is empty");
-            }
         }
     }
     public enum VelopackAssetType
@@ -701,24 +711,6 @@ namespace Velopack
             return progressEvent;
         }
     }
-    public abstract class ProgressHandler
-    {
-        public abstract void OnProgress(int progress);
-        public abstract void OnComplete(string assetPath);
-        public abstract void OnError(string error);
-    }
-    class DefaultProgressHandler : ProgressHandler
-    {
-        public override void OnProgress(int progress)
-        {
-        }
-        public override void OnComplete(string assetPath)
-        {
-        }
-        public override void OnError(string error)
-        {
-        }
-    }
     public class UpdateManager
     {
         bool _allowDowngrade = false;
@@ -743,7 +735,7 @@ namespace Velopack
             List<string> command = new List<string>();
             command.Add(Util.GetUpdateExePath());
             command.Add("get-version");
-            return Process.StartProcessBlocking(command);
+            return Util.StartProcessBlocking(command);
         }
         /// <summary>This function will check for updates, and return information about the latest available release.</summary>
         public UpdateInfo CheckForUpdates()
@@ -768,7 +760,7 @@ namespace Velopack
                 command.Add("--channel");
                 command.Add(this._explicitChannel);
             }
-            string output = Process.StartProcessBlocking(command);
+            string output = Util.StartProcessBlocking(command);
             if (output.Length == 0 || output == "null")
             {
                 return null;
@@ -777,7 +769,7 @@ namespace Velopack
         }
         /// <summary>This function will request the update download, and then return immediately.</summary>
         /// <remarks>To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.</remarks>
-        public void DownloadUpdateAsync(UpdateInfo updateInfo, ProcessProgressHandler progress, ProcessCompleteHandler complete)
+        public Task DownloadUpdateAsync(UpdateInfo updateInfo, ProgressHandler progressHandler = null)
         {
             if (this._urlOrPath.Length == 0)
             {
@@ -793,6 +785,10 @@ namespace Velopack
             command.Add("json");
             command.Add("--name");
             command.Add(updateInfo.TargetFullRelease.FileName);
+            DefaultProgressHandler def = new DefaultProgressHandler();
+            ProcessReadLineHandler handler = new ProcessReadLineHandler();
+            handler.SetProgressHandler(progressHandler == null ? def : progressHandler);
+            return Util.StartProcessAsyncReadLine(command, handler);
         }
         public void ApplyUpdatesAndExit(string assetPath)
         {
@@ -829,21 +825,48 @@ namespace Velopack
                 command.Add("--");
                 command.AddRange(restartArgs);
             }
-            Process.StartProcessFireAndForget(command);
+            Util.StartProcessFireAndForget(command);
         }
     }
     static class Util
     {
+        /// <summary>Starts a new process and sychronously reads/returns its output.</summary>
+        public static string StartProcessBlocking(List<string> command_line)
+        {
+            if (command_line.Count == 0)
+            {
+                throw new Exception("Command line is empty");
+            }
+            string ret = "";
+            ret = NativeMethods.NativeStartProcessBlocking(command_line); return Util.StrTrim(ret);
+        }
+        /// <summary>Starts a new process and returns immediately.</summary>
+        public static void StartProcessFireAndForget(List<string> command_line)
+        {
+            if (command_line.Count == 0)
+            {
+                throw new Exception("Command line is empty");
+            }
+            NativeMethods.NativeStartProcessFireAndForget(command_line);
+        }
+        public static Task StartProcessAsyncReadLine(List<string> command_line, ProcessReadLineHandler handler)
+        {
+            if (command_line.Count == 0)
+            {
+                throw new Exception("Command line is empty");
+            }
+            return NativeMethods.NativeStartProcessAsyncReadline(command_line, handler);
+        }
         /// <summary>Returns the path of the current process.</summary>
         public static string GetCurrentProcessPath()
         {
             string ret = "";
-            ret = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName; return ret;
+            ret = NativeMethods.NativeGetCurrentProcessPath(); return ret;
         }
         public static bool FileExists(string path)
         {
             bool ret = false;
-            ret = System.IO.File.Exists(path); return ret;
+            ret = NativeMethods.NativeDoesFileExist(path); return ret;
         }
         public static string GetUpdateExePath()
         {
@@ -925,27 +948,11 @@ namespace Velopack
         public static string GetOsName()
         {
             string ret = "";
-            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows))
-            {
-                ret = "win32";
-            }
-            else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux))
-            {
-                ret = "linux";
-            }
-            else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX))
-            {
-                ret = "darwin";
-            }
-            else
-            {
-                throw new System.NotSupportedException("Unsupported platform");
-            }
-            return ret;
+            ret = NativeMethods.NativeCurrentOsName(); return ret;
         }
         public static void Exit(int code)
         {
-            Environment.Exit(code);
+            NativeMethods.NativeExitProcess(code);
         }
     }
     public class VelopackApp
@@ -987,11 +994,42 @@ namespace Velopack
 }
 namespace Velopack
 {
-    static class ProcessNative
+    static class NativeMethods
     {
-        public static string StartProcessBlocking(List<string> command_line)
+        public static void NativeExitProcess(int code)
         {
-            var psi = new System.Diagnostics.ProcessStartInfo()
+            Environment.Exit(code);
+        }
+        public static string NativeCurrentOsName()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                return "win32";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+            {
+                return "linux";
+            }
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+            {
+                return "darwin";
+            }
+            else
+            {
+                throw new NotSupportedException("Unsupported platform");
+            }
+        }
+        public static bool NativeDoesFileExist(string file)
+        {
+            return File.Exists(file);
+        }
+        public static string NativeGetCurrentProcessPath()
+        {
+            return Process.GetCurrentProcess().MainModule.FileName;
+        }
+        public static string NativeStartProcessBlocking(List<string> command_line)
+        {
+            var psi = new ProcessStartInfo()
             {
                 CreateNoWindow = true,
                 FileName = command_line[0],
@@ -999,9 +1037,9 @@ namespace Velopack
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
             };
-            foreach (var arg in command_line.Skip(1)) psi.ArgumentList.Add(arg);
-            System.Text.StringBuilder output = new System.Text.StringBuilder();
-            var process = new System.Diagnostics.Process();
+            psi.AppendArgumentListSafe(command_line.Skip(1));
+            var output = new StringBuilder();
+            var process = new Process();
             process.StartInfo = psi;
             process.ErrorDataReceived += (sender, e) =>
             {
@@ -1017,59 +1055,60 @@ namespace Velopack
             process.WaitForExit();
             if (process.ExitCode != 0)
             {
-                throw new System.Exception($"Process exited with code {process.ExitCode}");
+                throw new Exception($"Process exited with code {process.ExitCode}");
             }
             return output.ToString();
         }
-        public static void StartProcessFireAndForget(List<string> command_line)
+        public static void NativeStartProcessFireAndForget(List<string> command_line)
         {
-            var psi = new System.Diagnostics.ProcessStartInfo()
+            var psi = new ProcessStartInfo()
             {
                 CreateNoWindow = true,
                 FileName = command_line[0],
             };
-            foreach (var arg in command_line.Skip(1)) psi.ArgumentList.Add(arg);
-            System.Diagnostics.Process.Start(psi);
+            psi.AppendArgumentListSafe(command_line.Skip(1));
+            Process.Start(psi);
         }
-        public static System.Threading.Tasks.Task<string> StartUpdateDownloadAsync(List<string> command_line, System.Action<int> progress = null)
+        public static Task NativeStartProcessAsyncReadline(List<string> command_line, ProcessReadLineHandler handler)
         {
-            var source = new System.Threading.Tasks.TaskCompletionSource<string>();
-            var psi = new System.Diagnostics.ProcessStartInfo()
+            var source = new TaskCompletionSource<bool>();
+            var psi = new ProcessStartInfo()
             {
                 CreateNoWindow = true,
                 FileName = command_line[0],
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
             };
-            foreach (var arg in command_line.Skip(1))
-            {
-                psi.ArgumentList.Add(arg);
-            }
-            var process = new System.Diagnostics.Process();
+            psi.AppendArgumentListSafe(command_line.Skip(1));
+            var process = new Process();
             process.StartInfo = psi;
             process.OutputDataReceived += (sender, e) =>
             {
                 if (e.Data == null) return;
                 try
                 {
-                    var evt = ProgressEvent.FromJson(e.Data);
-                    if (evt.Error != null) source.TrySetException(new System.Exception(evt.Error));
-                    else if (evt.Complete && !string.IsNullOrEmpty(evt.File)) source.TrySetResult(evt.File);
-                    else if (evt.Progress > 0) progress?.Invoke(evt.Progress);
+                    handler.HandleProcessOutputLine(e.Data);
                 }
-                catch (System.Exception)
+                catch (Exception)
                 { }
             };
             process.Start();
             process.BeginOutputReadLine();
-            process.WaitForExitAsync().ContinueWith(t => System.Threading.Tasks.Task.Delay(1000)).ContinueWith(t =>
+            process.WaitForExitAsync().ContinueWith(t => Task.Delay(1000)).ContinueWith(t =>
             {
                 if (t.IsFaulted) source.TrySetException(t.Exception);
                 else if (t.IsCanceled) source.TrySetCanceled();
-                else if (process.ExitCode != 0) source.TrySetException(new System.Exception($"Process exited with code {process.ExitCode}"));
-                else source.TrySetException(new System.Exception($"Process ran successfully but provided no output."));
+                else if (process.ExitCode != 0) source.TrySetException(new Exception($"Process exited with code {process.ExitCode}"));
+                else source.TrySetResult(true);
             });
             return source.Task;
+        }
+        private static void AppendArgumentListSafe(this ProcessStartInfo psi, IEnumerable<string> args)
+        {
+            foreach (var a in args)
+            {
+                psi.ArgumentList.Add(a);
+            }
         }
     }
 }

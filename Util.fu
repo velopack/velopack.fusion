@@ -1,34 +1,49 @@
 
 static class Util
 {
+    /// Starts a new process and sychronously reads/returns its output.
+    public static string() StartProcessBlocking(List<string()> command_line) throws Exception
+    {
+        if (command_line.Count == 0) {
+            throw Exception("Command line is empty");
+        }
+
+        string() ret = "";
+        native { ret = VMACRO_NativeStartProcessBlocking(command_line); }
+        return Util.StrTrim(ret);
+    }
+
+    /// Starts a new process and returns immediately.
+    public static void StartProcessFireAndForget(List<string()> command_line) throws Exception
+    {
+        if (command_line.Count == 0) {
+            throw Exception("Command line is empty");
+        }
+        native { VMACRO_NativeStartProcessFireAndForget(command_line); }
+    }
+
+    public static FutureResult StartProcessAsyncReadLine(List<string()> command_line, ProcessReadLineHandler! handler) throws Exception
+    {
+        if (command_line.Count == 0) {
+            throw Exception("Command line is empty");
+        }
+
+        native { return VMACRO_NativeStartProcessAsyncReadLine(command_line, handler); }
+        return FutureResult.Create();
+    }
+
     /// Returns the path of the current process.
     public static string() GetCurrentProcessPath() throws Exception
     {
         string() ret = "";
-#if CPP
-        native { ret = util_get_own_exe_path(); }
-#elif CS
-        native { ret = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName; }
-#elif JS
-        native { ret = process.execPath; } 
-#else
-        throw Exception("Unsupported platform");
-#endif
+        native { ret = VMACRO_NativeGetCurrentProcessPath(); }
         return ret;
     }
 
     public static bool FileExists(string() path) throws Exception
     {
         bool ret = false;
-#if CPP
-        native { ret = util_does_file_exist(path); }
-#elif CS
-        native { ret = System.IO.File.Exists(path); }
-#elif JS
-        native { ret = require("fs").existsSync(path); } 
-#else
-        throw Exception("Unsupported platform");
-#endif
+        native { ret = VMACRO_NativeDoesFileExist(path); }
         return ret;
     }
 
@@ -96,38 +111,12 @@ static class Util
     public static string() GetOsName()
     {
         string() ret = "";
-#if CPP
-        native { ret = util_current_os_name(); }
-#elif CS
-        native { 
-            if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Windows)) {
-                ret = "win32";
-            } else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.Linux)) {
-                ret = "linux";
-            } else if (System.Runtime.InteropServices.RuntimeInformation.IsOSPlatform(System.Runtime.InteropServices.OSPlatform.OSX)) {
-                ret = "darwin";
-            } else {
-                throw new System.NotSupportedException("Unsupported platform");
-            }
-        }
-#elif JS
-        native { ret = process.platform; } 
-#else
-        throw Exception("Unsupported platform");
-#endif
+        native { ret = VMACRO_NativeCurrentOsName(); }
         return ret;
     }
 
     public static void Exit(int code)
     {
-#if CPP
-        native { ::exit(code); }
-#elif JS
-        native { process.exit(code) }
-#elif CS
-        native { Environment.Exit(code); }
-#else
-        throw Exception("Unsupported platform");
-#endif
+        native { VMACRO_NativeExitProcess(code); }
     }
 }

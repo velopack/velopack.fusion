@@ -9,14 +9,14 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
     if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
     return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
-var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _StringAppendable_builder, _StringAppendable_writer, _StringAppendable_initialised, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _UpdateManager__allowDowngrade, _UpdateManager__explicitChannel, _UpdateManager__urlOrPath, _VelopackApp_instances, _VelopackApp_handleArgs, _StringWriter_buf;
+var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _StringAppendable_builder, _StringAppendable_writer, _StringAppendable_initialised, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _ProcessReadLineHandler__progress, _UpdateManager__allowDowngrade, _UpdateManager__explicitChannel, _UpdateManager__urlOrPath, _VelopackApp_instances, _VelopackApp_handleArgs, _StringWriter_buf;
 //
 //  INTRODUCTION
 //
-//  This is a library to help developers integrate https://velopack.io into their 
-//  applications. Velopack is an update/installer framework for cross-platform 
-//  desktop applications. 
-//  
+//  This is a library to help developers integrate https://velopack.io into their
+//  applications. Velopack is an update/installer framework for cross-platform
+//  desktop applications.
+//
 //  This library is auto-generated using https://github.com/fusionlanguage/fut
 //  and this source file should not be directly modified.
 //
@@ -43,22 +43,71 @@ var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_strin
 //  SOFTWARE.
 //
 const { spawn, spawnSync } = require("child_process");
+const fs = require("fs");
 function emitLines(stream) {
     var backlog = "";
     stream.on("data", function (data) {
         backlog += data;
-        var n = backlog.indexOf('\n');
+        var n = backlog.indexOf("\n");
         // got a \n? emit one or more 'line' events
         while (~n) {
             stream.emit("line", backlog.substring(0, n));
             backlog = backlog.substring(n + 1);
-            n = backlog.indexOf('\n');
+            n = backlog.indexOf("\n");
         }
     });
     stream.on("end", function () {
         if (backlog) {
             stream.emit("line", backlog);
         }
+    });
+}
+function nativeDoesFileExist(path) {
+    return fs.existsSync(path);
+}
+function nativeGetCurrentProcessPath() {
+    return process.execPath;
+}
+function nativeCurrentOsName() {
+    return process.platform;
+}
+function nativeExitProcess(code) {
+    process.exit(code);
+}
+function nativeStartProcessFireAndForget(command_line) {
+    spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
+}
+function nativeStartProcessBlocking(command_line) {
+    const child = spawnSync(command_line[0], command_line.slice(1), {
+        encoding: "utf8",
+    });
+    return child.stdout;
+}
+function nativeStartProcessAsyncReadLine(command_line, handler) {
+    return new Promise((resolve, reject) => {
+        const child = spawn(command_line[0], command_line.slice(1), {
+            encoding: "utf8",
+        });
+        // Emitting lines for each stdout data event
+        emitLines(child.stdout);
+        child.stdout.resume();
+        child.stdout.setEncoding("utf8");
+        child.stdout.on("line", (data) => {
+            handler.handleProcessOutputLine(data);
+        });
+        // Handling the process exit
+        child.on("exit", (code) => {
+            if (code === 0) {
+                resolve(); // Process completed successfully
+            }
+            else {
+                reject(new Error(`Process exited with code: ${code}`)); // Process failed
+            }
+        });
+        // Handling process errors (e.g., if the process could not be spawned, killed or sending a message to it fails)
+        child.on("error", (err) => {
+            reject(err); // Process encountered an error
+        });
     });
 }
 export var JsonNodeType;
@@ -118,7 +167,11 @@ export class JsonNode {
      * Check if the JSON value is empty - eg. an empty string, array, or object.
      */
     isEmpty() {
-        return __classPrivateFieldGet(this, _JsonNode_type, "f") == JsonNodeType.NULL || (__classPrivateFieldGet(this, _JsonNode_type, "f") == JsonNodeType.STRING && __classPrivateFieldGet(this, _JsonNode_stringValue, "f").length == 0) || (__classPrivateFieldGet(this, _JsonNode_type, "f") == JsonNodeType.ARRAY && __classPrivateFieldGet(this, _JsonNode_arrayValue, "f").length == 0) || (__classPrivateFieldGet(this, _JsonNode_type, "f") == JsonNodeType.OBJECT && Object.keys(__classPrivateFieldGet(this, _JsonNode_objectValue, "f")).length == 0);
+        return (__classPrivateFieldGet(this, _JsonNode_type, "f") == JsonNodeType.NULL ||
+            (__classPrivateFieldGet(this, _JsonNode_type, "f") == JsonNodeType.STRING && __classPrivateFieldGet(this, _JsonNode_stringValue, "f").length == 0) ||
+            (__classPrivateFieldGet(this, _JsonNode_type, "f") == JsonNodeType.ARRAY && __classPrivateFieldGet(this, _JsonNode_arrayValue, "f").length == 0) ||
+            (__classPrivateFieldGet(this, _JsonNode_type, "f") == JsonNodeType.OBJECT &&
+                Object.keys(__classPrivateFieldGet(this, _JsonNode_objectValue, "f")).length == 0));
     }
     /**
      * Reinterpret a JSON value as an object. Throws exception if the value type was not an object.
@@ -281,7 +334,18 @@ class JsonParser {
     }
     peekWordbreak() {
         let c = this.peek();
-        return c == 32 || c == 44 || c == 58 || c == 34 || c == 123 || c == 125 || c == 91 || c == 93 || c == 9 || c == 10 || c == 13 || c == 47;
+        return (c == 32 ||
+            c == 44 ||
+            c == 58 ||
+            c == 34 ||
+            c == 123 ||
+            c == 125 ||
+            c == 91 ||
+            c == 93 ||
+            c == 9 ||
+            c == 10 ||
+            c == 13 ||
+            c == 47);
     }
     eatWhitespace() {
         while (!this.endReached() && this.peekWhitespace()) {
@@ -318,7 +382,7 @@ class JsonParser {
     }
     parseNumber() {
         let d;
-        if (!isNaN(d = parseFloat(this.readWord()))) {
+        if (!isNaN((d = parseFloat(this.readWord())))) {
             let node = new JsonNode();
             node.initNumber(d);
             return node;
@@ -366,7 +430,7 @@ class JsonParser {
                             break;
                         case 117:
                             let i;
-                            if (!isNaN(i = parseInt(this.readN(4), 16))) {
+                            if (!isNaN((i = parseInt(this.readN(4), 16)))) {
                                 __classPrivateFieldGet(this, _JsonParser_builder, "f").writeChar(i);
                             }
                             else {
@@ -511,44 +575,36 @@ _JsonParser_text = new WeakMap(), _JsonParser_position = new WeakMap(), _JsonPar
             return JsonToken.NONE;
     }
 };
-export class ProcessProgressHandler {
+export class ProgressHandler {
 }
-export class ProcessCompleteHandler {
-}
-class Process {
+class ProcessReadLineHandler {
     constructor() {
+        _ProcessReadLineHandler__progress.set(this, void 0);
     }
-    /**
-     * Starts a new process and sychronously reads/returns its output.
-     */
-    static startProcessBlocking(command_line) {
-        if (command_line.length == 0) {
-            throw new Error("Command line is empty");
+    setProgressHandler(progress) {
+        __classPrivateFieldSet(this, _ProcessReadLineHandler__progress, progress, "f");
+    }
+    handleProcessOutputLine(line) {
+        let ev = ProgressEvent.fromJson(line);
+        if (ev.complete) {
+            __classPrivateFieldGet(this, _ProcessReadLineHandler__progress, "f").onComplete(ev.file);
+            return true;
         }
-        let ret = "";
-        ret = spawnSync(command_line[0], command_line.slice(1), { encoding: "utf8" }).stdout;
-        return Util.strTrim(ret);
-    }
-    /**
-     * Starts a new process and returns immediately.
-     */
-    static startProcessFireAndForget(command_line) {
-        if (command_line.length == 0) {
-            throw new Error("Command line is empty");
+        else if (ev.error.length > 0) {
+            __classPrivateFieldGet(this, _ProcessReadLineHandler__progress, "f").onError(ev.error);
+            return true;
         }
-        spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
-    }
-    /**
-     * In the current process, starts a new process and asychronously reads its output line by line.
-     * When a line is read, HandleProcessOutputLine is called with the line.
-     * If HandleProcessOutputLine returns true, the reading loop is terminated.
-     * This method is non-blocking and returns immediately.
-     */
-    static startProcessAsyncReadLine(command_line, progress, complete) {
-        if (command_line.length == 0) {
-            throw new Error("Command line is empty");
+        else {
+            __classPrivateFieldGet(this, _ProcessReadLineHandler__progress, "f").onProgress(ev.progress);
+            return false;
         }
     }
+}
+_ProcessReadLineHandler__progress = new WeakMap();
+class DefaultProgressHandler extends ProgressHandler {
+    onProgress(progress) { }
+    onComplete(assetPath) { }
+    onError(error) { }
 }
 export var VelopackAssetType;
 (function (VelopackAssetType) {
@@ -606,7 +662,10 @@ export class VelopackAsset {
                     asset.version = v.asString();
                     break;
                 case "type":
-                    asset.type = v.asString().toLowerCase() == "full" ? VelopackAssetType.FULL : VelopackAssetType.DELTA;
+                    asset.type =
+                        v.asString().toLowerCase() == "full"
+                            ? VelopackAssetType.FULL
+                            : VelopackAssetType.DELTA;
                     break;
                 case "filename":
                     asset.fileName = v.asString();
@@ -677,16 +736,6 @@ export class ProgressEvent {
         return progressEvent;
     }
 }
-export class ProgressHandler {
-}
-class DefaultProgressHandler extends ProgressHandler {
-    onProgress(progress) {
-    }
-    onComplete(assetPath) {
-    }
-    onError(error) {
-    }
-}
 export class UpdateManager {
     constructor() {
         _UpdateManager__allowDowngrade.set(this, false);
@@ -710,7 +759,7 @@ export class UpdateManager {
         const command = [];
         command.push(Util.getUpdateExePath());
         command.push("get-version");
-        return Process.startProcessBlocking(command);
+        return Util.startProcessBlocking(command);
     }
     /**
      * This function will check for updates, and return information about the latest available release.
@@ -733,7 +782,7 @@ export class UpdateManager {
             command.push("--channel");
             command.push(__classPrivateFieldGet(this, _UpdateManager__explicitChannel, "f"));
         }
-        let output = Process.startProcessBlocking(command);
+        let output = Util.startProcessBlocking(command);
         if (output.length == 0 || output == "null") {
             return null;
         }
@@ -743,7 +792,7 @@ export class UpdateManager {
      * This function will request the update download, and then return immediately.
      * To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
      */
-    downloadUpdateAsync(updateInfo, progress, complete) {
+    downloadUpdateAsync(updateInfo, progressHandler = null) {
         if (__classPrivateFieldGet(this, _UpdateManager__urlOrPath, "f").length == 0) {
             throw new Error("Please call SetUrlOrPath before trying to download updates.");
         }
@@ -757,6 +806,10 @@ export class UpdateManager {
         command.push("json");
         command.push("--name");
         command.push(updateInfo.targetFullRelease.fileName);
+        let def = new DefaultProgressHandler();
+        let handler = new ProcessReadLineHandler();
+        handler.setProgressHandler(progressHandler == null ? def : progressHandler);
+        return Util.startProcessAsyncReadLine(command, handler);
     }
     applyUpdatesAndExit(assetPath) {
         const args = [];
@@ -786,24 +839,49 @@ export class UpdateManager {
             command.push("--");
             command.push(...restartArgs);
         }
-        Process.startProcessFireAndForget(command);
+        Util.startProcessFireAndForget(command);
     }
 }
 _UpdateManager__allowDowngrade = new WeakMap(), _UpdateManager__explicitChannel = new WeakMap(), _UpdateManager__urlOrPath = new WeakMap();
 class Util {
-    constructor() {
+    constructor() { }
+    /**
+     * Starts a new process and sychronously reads/returns its output.
+     */
+    static startProcessBlocking(command_line) {
+        if (command_line.length == 0) {
+            throw new Error("Command line is empty");
+        }
+        let ret = "";
+        ret = nativeStartProcessBlocking(command_line);
+        return Util.strTrim(ret);
+    }
+    /**
+     * Starts a new process and returns immediately.
+     */
+    static startProcessFireAndForget(command_line) {
+        if (command_line.length == 0) {
+            throw new Error("Command line is empty");
+        }
+        nativeStartProcessFireAndForget(command_line);
+    }
+    static startProcessAsyncReadLine(command_line, handler) {
+        if (command_line.length == 0) {
+            throw new Error("Command line is empty");
+        }
+        return nativeStartProcessAsyncReadLine(command_line, handler);
     }
     /**
      * Returns the path of the current process.
      */
     static getCurrentProcessPath() {
         let ret = "";
-        ret = process.execPath;
+        ret = nativeGetCurrentProcessPath();
         return ret;
     }
     static fileExists(path) {
         let ret = false;
-        ret = require("fs").existsSync(path);
+        ret = nativeDoesFileExist(path);
         return ret;
     }
     static getUpdateExePath() {
@@ -869,11 +947,11 @@ class Util {
      */
     static getOsName() {
         let ret = "";
-        ret = process.platform;
+        ret = nativeCurrentOsName();
         return ret;
     }
     static exit(code) {
-        process.exit(code);
+        nativeExitProcess(code);
     }
 }
 export class VelopackApp {

@@ -1,0 +1,35 @@
+public abstract class ProgressHandler 
+{
+    public abstract void OnProgress!(int progress);
+    public abstract void OnComplete!(string() assetPath);
+    public abstract void OnError!(string() error);
+}
+
+class ProcessReadLineHandler
+{
+    ProgressHandler! _progress;
+    public void SetProgressHandler!(ProgressHandler! progress) { _progress = progress; }
+    public bool HandleProcessOutputLine!(string() line) throws Exception, JsonParseException
+    {
+        ProgressEvent# ev = ProgressEvent.FromJson(line);
+        if (ev.Complete) {
+            _progress.OnComplete(ev.File);
+            return true;
+        } else if (ev.Error.Length > 0) {
+            _progress.OnError(ev.Error);
+            return true;
+        } else {
+            _progress.OnProgress(ev.Progress);
+            return false;
+        }
+    }
+}
+
+class DefaultProgressHandler : ProgressHandler
+{
+    public override void OnProgress!(int progress) {  }
+
+    public override void OnComplete!(string() assetPath) {  }
+
+    public override void OnError!(string() error) {  }
+}

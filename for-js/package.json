@@ -6,6 +6,7 @@
   "types": "Velopack.d.ts",
   "scripts": {
     "build": "tsc Velopack.ts --module es2020 --target es2020 --declaration --skipLibCheck",
+    "format": "prettier Velopack.ts --write",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -34,6 +35,7 @@
   "homepage": "https://velopack.io",
   "devDependencies": {
     "@types/node": "^20.11.19",
+    "prettier": "3.2.5",
     "typescript": "^5.3.3"
   }
 }
