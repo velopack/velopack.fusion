@@ -5,6 +5,9 @@ using System.Text.RegularExpressions;
 using Spectre.Console;
 
 string projectDir = GetMsbuildParameter("RootProjectDir");
+string vswherePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Visual Studio", "Installer", "vswhere.exe");
+string msbuildPath = RunProcess(vswherePath, "-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe", projectDir);
+
 var macros = LoadNativeMacros();
 RunAll(BuildJs, BuildCpp, BuildCs);
 
@@ -51,6 +54,7 @@ void BuildCpp()
     // final touches
     FixLineEndingAndTabs(outCpp);
     FixLineEndingAndTabs(outHpp);
+    RunProcess(msbuildPath, "for-cpp/samples/win32/VeloCppWinSample.sln /t:Build /p:Configuration=Release", projectDir);
 }
 
 void BuildCs()
@@ -303,7 +307,7 @@ string GetMsbuildParameter(string paramName)
         .Single().Value);
 }
 
-void RunProcess(string processPath, string arguments, string workDir, bool throwNonZeroExit = true)
+string RunProcess(string processPath, string arguments, string workDir, bool throwNonZeroExit = true)
 {
     var psi = new ProcessStartInfo()
     {
@@ -334,13 +338,17 @@ void RunProcess(string processPath, string arguments, string workDir, bool throw
     process.BeginOutputReadLine();
     process.WaitForExit();
 
-    if (output.ToString().Trim().Length > 0)
-        Console.WriteLine(output.ToString());
+    var final = output.ToString().Trim();
+
+    if (final.Length > 0)
+        Console.WriteLine(final);
 
     if (process.ExitCode != 0)
     {
         throw new Exception($"Process exited with code {process.ExitCode}");
     }
+
+    return final;
 }
 
 string FindExecutableInPath(string executable)
