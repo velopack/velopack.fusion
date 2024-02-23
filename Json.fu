@@ -39,7 +39,7 @@ public class JsonNode
     /// You should use this function and then call the corresponding
     /// AsObject, AsArray, AsString, etc. functions to get the actual
     /// parsed json information.
-    public JsonNodeType GetType()
+    public JsonNodeType GetKind()
     {
         return Type;
     }

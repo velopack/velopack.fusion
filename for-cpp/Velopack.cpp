@@ -1472,7 +1472,7 @@ std::shared_ptr<FutureResult> FutureResult::create()
     throw std::runtime_error("Not implemented");
 }
 
-JsonNodeType JsonNode::getType() const
+JsonNodeType JsonNode::getKind() const
 {
     return this->type;
 }

@@ -130,7 +130,7 @@ public:
      * AsObject, AsArray, AsString, etc. functions to get the actual
      * parsed json information.
      */
-    JsonNodeType getType() const;
+    JsonNodeType getKind() const;
     /**
      * Check if the JSON value is null.
      */

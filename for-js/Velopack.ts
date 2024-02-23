@@ -157,7 +157,7 @@ export class JsonNode {
    * AsObject, AsArray, AsString, etc. functions to get the actual
    * parsed json information.
    */
-  public getType(): JsonNodeType {
+  public getKind(): JsonNodeType {
     return this.#type;
   }
 

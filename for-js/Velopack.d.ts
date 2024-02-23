@@ -17,7 +17,7 @@ export declare class JsonNode {
      * AsObject, AsArray, AsString, etc. functions to get the actual
      * parsed json information.
      */
-    getType(): JsonNodeType;
+    getKind(): JsonNodeType;
     /**
      * Check if the JSON value is null.
      */

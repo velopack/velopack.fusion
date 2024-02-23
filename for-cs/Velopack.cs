@@ -96,7 +96,7 @@ namespace Velopack
         /// <remarks>You should use this function and then call the corresponding
         /// AsObject, AsArray, AsString, etc. functions to get the actual
         /// parsed json information.</remarks>
-        public JsonNodeType GetType()
+        public JsonNodeType GetKind()
         {
             return this.Type;
         }

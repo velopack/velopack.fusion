@@ -154,7 +154,7 @@ export class JsonNode {
      * AsObject, AsArray, AsString, etc. functions to get the actual
      * parsed json information.
      */
-    getType() {
+    getKind() {
         return __classPrivateFieldGet(this, _JsonNode_type, "f");
     }
     /**
