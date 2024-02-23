@@ -30,16 +30,20 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 //
+
 /*
    The latest version of this library is available on GitHub;
    https://github.com/sheredom/subprocess.h
 */
+
 /*
    This is free and unencumbered software released into the public domain.
+
    Anyone is free to copy, modify, publish, use, compile, sell, or
    distribute this software, either in source code form or as a compiled
    binary, for any purpose, commercial or non-commercial, and by any
    means.
+
    In jurisdictions that recognize copyright laws, the author or authors
    of this software dedicate any and all copyright interest in the
    software to the public domain. We make this dedication for the benefit
@@ -47,6 +51,7 @@
    successors. We intend this dedication to be an overt act of
    relinquishment in perpetuity of all present and future rights to this
    software under copyright law.
+
    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
@@ -54,26 +59,34 @@
    OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
    ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
    OTHER DEALINGS IN THE SOFTWARE.
+
    For more information, please refer to <http://unlicense.org/>
 */
+
 #ifndef SHEREDOM_SUBPROCESS_H_INCLUDED
 #define SHEREDOM_SUBPROCESS_H_INCLUDED
+
 #if defined(_MSC_VER)
 #pragma warning(push, 1)
+
 /* disable warning: '__cplusplus' is not defined as a preprocessor macro,
  * replacing with '0' for '#if/#elif' */
 #pragma warning(disable : 4668)
 #endif
+
 #include <stdio.h>
 #include <string.h>
+
 #if defined(_MSC_VER)
 #pragma warning(pop)
 #endif
+
 #if defined(__TINYC__)
 #define SUBPROCESS_ATTRIBUTE(a) __attribute((a))
 #else
 #define SUBPROCESS_ATTRIBUTE(a) __attribute__((a))
 #endif
+
 #if defined(_MSC_VER)
 #define subprocess_pure
 #define subprocess_weak __inline
@@ -89,25 +102,33 @@
 #else
 #error Non clang, non gcc, non MSVC compiler found!
 #endif
+
 struct subprocess_s;
+
 enum subprocess_option_e {
   // stdout and stderr are the same FILE.
   subprocess_option_combined_stdout_stderr = 0x1,
+
   // The child process should inherit the environment variables of the parent.
   subprocess_option_inherit_environment = 0x2,
+
   // Enable asynchronous reading of stdout/stderr before it has completed.
   subprocess_option_enable_async = 0x4,
+
   // Enable the child process to be spawned with no window visible if supported
   // by the platform.
   subprocess_option_no_window = 0x8,
+
   // Search for program names in the PATH variable. Always enabled on Windows.
   // Note: this will **not** search for paths in any provided custom environment
   // and instead uses the PATH of the spawning process.
   subprocess_option_search_user_path = 0x10
 };
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
+
 /// @brief Create a process.
 /// @param command_line An array of strings for the command line to execute for
 /// this process. The last element must be NULL to signify the end of the array.
@@ -119,6 +140,7 @@ extern "C" {
 subprocess_weak int subprocess_create(const char *const command_line[],
                                       int options,
                                       struct subprocess_s *const out_process);
+
 /// @brief Create a process (extended create).
 /// @param command_line An array of strings for the command line to execute for
 /// this process. The last element must be NULL to signify the end of the array.
@@ -137,6 +159,7 @@ subprocess_weak int
 subprocess_create_ex(const char *const command_line[], int options,
                      const char *const environment[],
                      struct subprocess_s *const out_process);
+
 /// @brief Get the standard input file for a process.
 /// @param process The process to query.
 /// @return The file for standard input of the process.
@@ -145,6 +168,7 @@ subprocess_create_ex(const char *const command_line[], int options,
 /// the standard input of the process.
 subprocess_pure subprocess_weak FILE *
 subprocess_stdin(const struct subprocess_s *const process);
+
 /// @brief Get the standard output file for a process.
 /// @param process The process to query.
 /// @return The file for standard output of the process.
@@ -153,6 +177,7 @@ subprocess_stdin(const struct subprocess_s *const process);
 /// the standard output of the child process.
 subprocess_pure subprocess_weak FILE *
 subprocess_stdout(const struct subprocess_s *const process);
+
 /// @brief Get the standard error file for a process.
 /// @param process The process to query.
 /// @return The file for standard error of the process.
@@ -165,6 +190,7 @@ subprocess_stdout(const struct subprocess_s *const process);
 /// function should be used for both the standard output and error combined.
 subprocess_pure subprocess_weak FILE *
 subprocess_stderr(const struct subprocess_s *const process);
+
 /// @brief Wait for a process to finish execution.
 /// @param process The process to wait for.
 /// @param out_return_code The return code of the returned process (can be
@@ -174,6 +200,7 @@ subprocess_stderr(const struct subprocess_s *const process);
 /// Joining a process will close the stdin pipe to the process.
 subprocess_weak int subprocess_join(struct subprocess_s *const process,
                                     int *const out_return_code);
+
 /// @brief Destroy a previously created process.
 /// @param process The process to destroy.
 /// @return On success zero is returned.
@@ -181,6 +208,7 @@ subprocess_weak int subprocess_join(struct subprocess_s *const process,
 /// If the process to be destroyed had not finished execution, it may out live
 /// the parent process.
 subprocess_weak int subprocess_destroy(struct subprocess_s *const process);
+
 /// @brief Terminate a previously created process.
 /// @param process The process to terminate.
 /// @return On success zero is returned.
@@ -188,6 +216,7 @@ subprocess_weak int subprocess_destroy(struct subprocess_s *const process);
 /// If the process to be destroyed had not finished execution, it will be
 /// terminated (i.e killed).
 subprocess_weak int subprocess_terminate(struct subprocess_s *const process);
+
 /// @brief Read the standard output from the child process.
 /// @param process The process to read from.
 /// @param buffer The buffer to read into.
@@ -201,6 +230,7 @@ subprocess_weak int subprocess_terminate(struct subprocess_s *const process);
 subprocess_weak unsigned
 subprocess_read_stdout(struct subprocess_s *const process, char *const buffer,
                        unsigned size);
+
 /// @brief Read the standard error from the child process.
 /// @param process The process to read from.
 /// @param buffer The buffer to read into.
@@ -214,10 +244,12 @@ subprocess_read_stdout(struct subprocess_s *const process, char *const buffer,
 subprocess_weak unsigned
 subprocess_read_stderr(struct subprocess_s *const process, char *const buffer,
                        unsigned size);
+
 /// @brief Returns if the subprocess is currently still alive and executing.
 /// @param process The process to check.
 /// @return If the process is still alive non-zero is returned.
 subprocess_weak int subprocess_alive(struct subprocess_s *const process);
+
 #if defined(__cplusplus)
 #define SUBPROCESS_CAST(type, x) static_cast<type>(x)
 #define SUBPROCESS_PTR_CAST(type, x) reinterpret_cast<type>(x)
@@ -229,6 +261,7 @@ subprocess_weak int subprocess_alive(struct subprocess_s *const process);
 #define SUBPROCESS_CONST_CAST(type, x) ((type)(x))
 #define SUBPROCESS_NULL 0
 #endif
+
 #if !defined(_WIN32)
 #include <signal.h>
 #include <spawn.h>
@@ -237,7 +270,9 @@ subprocess_weak int subprocess_alive(struct subprocess_s *const process);
 #include <sys/wait.h>
 #include <unistd.h>
 #endif
+
 #if defined(_WIN32)
+
 #if (_MSC_VER < 1920)
 #ifdef _WIN64
 typedef __int64 subprocess_intptr_t;
@@ -248,20 +283,25 @@ typedef unsigned int subprocess_size_t;
 #endif
 #else
 #include <inttypes.h>
+
 typedef intptr_t subprocess_intptr_t;
 typedef size_t subprocess_size_t;
 #endif
+
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreserved-identifier"
 #endif
+
 typedef struct _PROCESS_INFORMATION *LPPROCESS_INFORMATION;
 typedef struct _SECURITY_ATTRIBUTES *LPSECURITY_ATTRIBUTES;
 typedef struct _STARTUPINFOA *LPSTARTUPINFOA;
 typedef struct _OVERLAPPED *LPOVERLAPPED;
+
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
+
 #ifdef _MSC_VER
 #pragma warning(push, 1)
 #endif
@@ -269,17 +309,20 @@ typedef struct _OVERLAPPED *LPOVERLAPPED;
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 #endif
+
 struct subprocess_subprocess_information_s {
   void *hProcess;
   void *hThread;
   unsigned long dwProcessId;
   unsigned long dwThreadId;
 };
+
 struct subprocess_security_attributes_s {
   unsigned long nLength;
   void *lpSecurityDescriptor;
   int bInheritHandle;
 };
+
 struct subprocess_startup_info_s {
   unsigned long cb;
   char *lpReserved;
@@ -300,6 +343,7 @@ struct subprocess_startup_info_s {
   void *hStdOutput;
   void *hStdError;
 };
+
 struct subprocess_overlapped_s {
   uintptr_t Internal;
   uintptr_t InternalHigh;
@@ -310,14 +354,17 @@ struct subprocess_overlapped_s {
     } DUMMYSTRUCTNAME;
     void *Pointer;
   } DUMMYUNIONNAME;
+
   void *hEvent;
 };
+
 #ifdef __MINGW32__
 #pragma GCC diagnostic pop
 #endif
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
+
 __declspec(dllimport) unsigned long __stdcall GetLastError(void);
 __declspec(dllimport) int __stdcall SetHandleInformation(void *, unsigned long,
                                                          unsigned long);
@@ -351,29 +398,36 @@ __declspec(dllimport) unsigned long __stdcall WaitForMultipleObjects(
     unsigned long, void *const *, int, unsigned long);
 __declspec(dllimport) int __stdcall GetOverlappedResult(void *, LPOVERLAPPED,
                                                         unsigned long *, int);
+
 #if defined(_DLL)
 #define SUBPROCESS_DLLIMPORT __declspec(dllimport)
 #else
 #define SUBPROCESS_DLLIMPORT
 #endif
+
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wreserved-identifier"
 #endif
+
 SUBPROCESS_DLLIMPORT int __cdecl _fileno(FILE *);
 SUBPROCESS_DLLIMPORT int __cdecl _open_osfhandle(subprocess_intptr_t, int);
 SUBPROCESS_DLLIMPORT subprocess_intptr_t __cdecl _get_osfhandle(int);
+
 #ifndef __MINGW32__
 void *__cdecl _alloca(subprocess_size_t);
 #else
 #include <malloc.h>
 #endif
+
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
+
 #else
 typedef size_t subprocess_size_t;
 #endif
+
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wpadded"
@@ -382,6 +436,7 @@ struct subprocess_s {
   FILE *stdin_file;
   FILE *stdout_file;
   FILE *stderr_file;
+
 #if defined(_WIN32)
   void *hProcess;
   void *hStdInput;
@@ -391,17 +446,20 @@ struct subprocess_s {
   pid_t child;
   int return_status;
 #endif
+
   subprocess_size_t alive;
 };
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
+
 #if defined(__clang__)
 #if __has_warning("-Wunsafe-buffer-usage")
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
 #endif
 #endif
+
 #if defined(_WIN32)
 subprocess_weak int subprocess_create_named_pipe_helper(void **rd, void **wr);
 int subprocess_create_named_pipe_helper(void **rd, void **wr) {
@@ -419,6 +477,7 @@ int subprocess_create_named_pipe_helper(void **rd, void **wr) {
   char name[256] = {0};
   static subprocess_tls long index = 0;
   const long unique = index++;
+
 #if defined(_MSC_VER) && _MSC_VER < 1900
 #pragma warning(push, 1)
 #pragma warning(disable : 4996)
@@ -431,27 +490,34 @@ int subprocess_create_named_pipe_helper(void **rd, void **wr) {
            "\\\\.\\pipe\\sheredom_subprocess_h.%08lx.%08lx.%ld",
            GetCurrentProcessId(), GetCurrentThreadId(), unique);
 #endif
+
   *rd =
       CreateNamedPipeA(name, pipeAccessInbound | fileFlagOverlapped,
                        pipeTypeByte | pipeWait, 1, 4096, 4096, SUBPROCESS_NULL,
                        SUBPROCESS_PTR_CAST(LPSECURITY_ATTRIBUTES, &saAttr));
+
   if (invalidHandleValue == *rd) {
     return -1;
   }
+
   *wr = CreateFileA(name, genericWrite, SUBPROCESS_NULL,
                     SUBPROCESS_PTR_CAST(LPSECURITY_ATTRIBUTES, &saAttr),
                     openExisting, fileAttributeNormal, SUBPROCESS_NULL);
+
   if (invalidHandleValue == *wr) {
     return -1;
   }
+
   return 0;
 }
 #endif
+
 int subprocess_create(const char *const commandLine[], int options,
                       struct subprocess_s *const out_process) {
   return subprocess_create_ex(commandLine, options, SUBPROCESS_NULL,
                               out_process);
 }
+
 int subprocess_create_ex(const char *const commandLine[], int options,
                          const char *const environment[],
                          struct subprocess_s *const out_process) {
@@ -488,11 +554,14 @@ int subprocess_create_ex(const char *const commandLine[], int options,
                                                 SUBPROCESS_NULL,
                                                 SUBPROCESS_NULL,
                                                 SUBPROCESS_NULL};
+
   startInfo.cb = sizeof(startInfo);
   startInfo.dwFlags = startFUseStdHandles;
+
   if (subprocess_option_no_window == (options & subprocess_option_no_window)) {
     flags |= createNoWindow;
   }
+
   if (subprocess_option_inherit_environment !=
       (options & subprocess_option_inherit_environment)) {
     if (SUBPROCESS_NULL == environment) {
@@ -500,22 +569,29 @@ int subprocess_create_ex(const char *const commandLine[], int options,
     } else {
       // We always end with two null terminators.
       len = 2;
+
       for (i = 0; environment[i]; i++) {
         for (j = 0; '\0' != environment[i][j]; j++) {
           len++;
         }
+
         // For the null terminator too.
         len++;
       }
+
       used_environment = SUBPROCESS_CAST(char *, _alloca(len));
+
       // Re-use len for the insertion position
       len = 0;
+
       for (i = 0; environment[i]; i++) {
         for (j = 0; '\0' != environment[i][j]; j++) {
           used_environment[len++] = environment[i][j];
         }
+
         used_environment[len++] = '\0';
       }
+
       // End with the two null terminators.
       used_environment[len++] = '\0';
       used_environment[len++] = '\0';
@@ -525,21 +601,28 @@ int subprocess_create_ex(const char *const commandLine[], int options,
       return -1;
     }
   }
+
   if (!CreatePipe(&rd, &wr, SUBPROCESS_PTR_CAST(LPSECURITY_ATTRIBUTES, &saAttr),
                   0)) {
     return -1;
   }
+
   if (!SetHandleInformation(wr, handleFlagInherit, 0)) {
     return -1;
   }
+
   fd = _open_osfhandle(SUBPROCESS_PTR_CAST(subprocess_intptr_t, wr), 0);
+
   if (-1 != fd) {
     out_process->stdin_file = _fdopen(fd, "wb");
+
     if (SUBPROCESS_NULL == out_process->stdin_file) {
       return -1;
     }
   }
+
   startInfo.hStdInput = rd;
+
   if (options & subprocess_option_enable_async) {
     if (subprocess_create_named_pipe_helper(&rd, &wr)) {
       return -1;
@@ -550,17 +633,23 @@ int subprocess_create_ex(const char *const commandLine[], int options,
       return -1;
     }
   }
+
   if (!SetHandleInformation(rd, handleFlagInherit, 0)) {
     return -1;
   }
+
   fd = _open_osfhandle(SUBPROCESS_PTR_CAST(subprocess_intptr_t, rd), 0);
+
   if (-1 != fd) {
     out_process->stdout_file = _fdopen(fd, "rb");
+
     if (SUBPROCESS_NULL == out_process->stdout_file) {
       return -1;
     }
   }
+
   startInfo.hStdOutput = wr;
+
   if (subprocess_option_combined_stdout_stderr ==
       (options & subprocess_option_combined_stdout_stderr)) {
     out_process->stderr_file = out_process->stdout_file;
@@ -576,18 +665,24 @@ int subprocess_create_ex(const char *const commandLine[], int options,
         return -1;
       }
     }
+
     if (!SetHandleInformation(rd, handleFlagInherit, 0)) {
       return -1;
     }
+
     fd = _open_osfhandle(SUBPROCESS_PTR_CAST(subprocess_intptr_t, rd), 0);
+
     if (-1 != fd) {
       out_process->stderr_file = _fdopen(fd, "rb");
+
       if (SUBPROCESS_NULL == out_process->stderr_file) {
         return -1;
       }
     }
+
     startInfo.hStdError = wr;
   }
+
   if (options & subprocess_option_enable_async) {
     out_process->hEventOutput =
         CreateEventA(SUBPROCESS_PTR_CAST(LPSECURITY_ATTRIBUTES, &saAttr), 1, 1,
@@ -599,14 +694,17 @@ int subprocess_create_ex(const char *const commandLine[], int options,
     out_process->hEventOutput = SUBPROCESS_NULL;
     out_process->hEventError = SUBPROCESS_NULL;
   }
+
   // Combine commandLine together into a single string
   len = 0;
   for (i = 0; commandLine[i]; i++) {
     // for the trailing \0
     len++;
+
     // Quote the argument if it has a space in it
     if (strpbrk(commandLine[i], "\t\v ") != SUBPROCESS_NULL)
       len += 2;
+
     for (j = 0; '\0' != commandLine[i][j]; j++) {
       switch (commandLine[i][j]) {
       default:
@@ -615,6 +713,7 @@ int subprocess_create_ex(const char *const commandLine[], int options,
         if (commandLine[i][j + 1] == '"') {
           len++;
         }
+
         break;
       case '"':
         len++;
@@ -623,20 +722,26 @@ int subprocess_create_ex(const char *const commandLine[], int options,
       len++;
     }
   }
+
   commandLineCombined = SUBPROCESS_CAST(char *, _alloca(len));
+
   if (!commandLineCombined) {
     return -1;
   }
+
   // Gonna re-use len to store the write index into commandLineCombined
   len = 0;
+
   for (i = 0; commandLine[i]; i++) {
     if (0 != i) {
       commandLineCombined[len++] = ' ';
     }
+
     need_quoting = strpbrk(commandLine[i], "\t\v ") != SUBPROCESS_NULL;
     if (need_quoting) {
       commandLineCombined[len++] = '"';
     }
+
     for (j = 0; '\0' != commandLine[i][j]; j++) {
       switch (commandLine[i][j]) {
       default:
@@ -645,18 +750,22 @@ int subprocess_create_ex(const char *const commandLine[], int options,
         if (commandLine[i][j + 1] == '"') {
           commandLineCombined[len++] = '\\';
         }
+
         break;
       case '"':
         commandLineCombined[len++] = '\\';
         break;
       }
+
       commandLineCombined[len++] = commandLine[i][j];
     }
     if (need_quoting) {
       commandLineCombined[len++] = '"';
     }
   }
+
   commandLineCombined[len] = '\0';
+
   if (!CreateProcessA(
           SUBPROCESS_NULL,
           commandLineCombined, // command line
@@ -671,17 +780,24 @@ int subprocess_create_ex(const char *const commandLine[], int options,
           SUBPROCESS_PTR_CAST(LPPROCESS_INFORMATION, &processInfo))) {
     return -1;
   }
+
   out_process->hProcess = processInfo.hProcess;
+
   out_process->hStdInput = startInfo.hStdInput;
+
   // We don't need the handle of the primary thread in the called process.
   CloseHandle(processInfo.hThread);
+
   if (SUBPROCESS_NULL != startInfo.hStdOutput) {
     CloseHandle(startInfo.hStdOutput);
+
     if (startInfo.hStdError != startInfo.hStdOutput) {
       CloseHandle(startInfo.hStdError);
     }
   }
+
   out_process->alive = 1;
+
   return 0;
 #else
   int stdinfd[2];
@@ -692,24 +808,29 @@ int subprocess_create_ex(const char *const commandLine[], int options,
   char *const empty_environment[1] = {SUBPROCESS_NULL};
   posix_spawn_file_actions_t actions;
   char *const *used_environment;
+
   if (subprocess_option_inherit_environment ==
       (options & subprocess_option_inherit_environment)) {
     if (SUBPROCESS_NULL != environment) {
       return -1;
     }
   }
+
   if (0 != pipe(stdinfd)) {
     return -1;
   }
+
   if (0 != pipe(stdoutfd)) {
     return -1;
   }
+
   if (subprocess_option_combined_stdout_stderr !=
       (options & subprocess_option_combined_stdout_stderr)) {
     if (0 != pipe(stderrfd)) {
       return -1;
     }
   }
+
   if (environment) {
 #ifdef __clang__
 #pragma clang diagnostic push
@@ -726,31 +847,37 @@ int subprocess_create_ex(const char *const commandLine[], int options,
   } else {
     used_environment = empty_environment;
   }
+
   if (0 != posix_spawn_file_actions_init(&actions)) {
     return -1;
   }
+
   // Close the stdin write end
   if (0 != posix_spawn_file_actions_addclose(&actions, stdinfd[1])) {
     posix_spawn_file_actions_destroy(&actions);
     return -1;
   }
+
   // Map the read end to stdin
   if (0 !=
       posix_spawn_file_actions_adddup2(&actions, stdinfd[0], STDIN_FILENO)) {
     posix_spawn_file_actions_destroy(&actions);
     return -1;
   }
+
   // Close the stdout read end
   if (0 != posix_spawn_file_actions_addclose(&actions, stdoutfd[0])) {
     posix_spawn_file_actions_destroy(&actions);
     return -1;
   }
+
   // Map the write end to stdout
   if (0 !=
       posix_spawn_file_actions_adddup2(&actions, stdoutfd[1], STDOUT_FILENO)) {
     posix_spawn_file_actions_destroy(&actions);
     return -1;
   }
+
   if (subprocess_option_combined_stdout_stderr ==
       (options & subprocess_option_combined_stdout_stderr)) {
     if (0 != posix_spawn_file_actions_adddup2(&actions, STDOUT_FILENO,
@@ -771,6 +898,7 @@ int subprocess_create_ex(const char *const commandLine[], int options,
       return -1;
     }
   }
+
 #ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wcast-qual"
@@ -793,14 +921,17 @@ int subprocess_create_ex(const char *const commandLine[], int options,
 #ifdef __clang__
 #pragma clang diagnostic pop
 #endif
+
   // Close the stdin read end
   close(stdinfd[0]);
   // Store the stdin write end
   out_process->stdin_file = fdopen(stdinfd[1], "wb");
+
   // Close the stdout write end
   close(stdoutfd[1]);
   // Store the stdout read end
   out_process->stdout_file = fdopen(stdoutfd[0], "rb");
+
   if (subprocess_option_combined_stdout_stderr ==
       (options & subprocess_option_combined_stdout_stderr)) {
     out_process->stderr_file = out_process->stdout_file;
@@ -810,19 +941,25 @@ int subprocess_create_ex(const char *const commandLine[], int options,
     // Store the stderr read end
     out_process->stderr_file = fdopen(stderrfd[0], "rb");
   }
+
   // Store the child's pid
   out_process->child = child;
+
   out_process->alive = 1;
+
   posix_spawn_file_actions_destroy(&actions);
   return 0;
 #endif
 }
+
 FILE *subprocess_stdin(const struct subprocess_s *const process) {
   return process->stdin_file;
 }
+
 FILE *subprocess_stdout(const struct subprocess_s *const process) {
   return process->stdout_file;
 }
+
 FILE *subprocess_stderr(const struct subprocess_s *const process) {
   if (process->stdout_file != process->stderr_file) {
     return process->stderr_file;
@@ -830,19 +967,24 @@ FILE *subprocess_stderr(const struct subprocess_s *const process) {
     return SUBPROCESS_NULL;
   }
 }
+
 int subprocess_join(struct subprocess_s *const process,
                     int *const out_return_code) {
 #if defined(_WIN32)
   const unsigned long infinite = 0xFFFFFFFF;
+
   if (process->stdin_file) {
     fclose(process->stdin_file);
     process->stdin_file = SUBPROCESS_NULL;
   }
+
   if (process->hStdInput) {
     CloseHandle(process->hStdInput);
     process->hStdInput = SUBPROCESS_NULL;
   }
+
   WaitForSingleObject(process->hProcess, infinite);
+
   if (out_return_code) {
     if (!GetExitCodeProcess(
             process->hProcess,
@@ -850,67 +992,87 @@ int subprocess_join(struct subprocess_s *const process,
       return -1;
     }
   }
+
   process->alive = 0;
+
   return 0;
 #else
   int status;
+
   if (process->stdin_file) {
     fclose(process->stdin_file);
     process->stdin_file = SUBPROCESS_NULL;
   }
+
   if (process->child) {
     if (process->child != waitpid(process->child, &status, 0)) {
       return -1;
     }
+
     process->child = 0;
+
     if (WIFEXITED(status)) {
       process->return_status = WEXITSTATUS(status);
     } else {
       process->return_status = EXIT_FAILURE;
     }
+
     process->alive = 0;
   }
+
   if (out_return_code) {
     *out_return_code = process->return_status;
   }
+
   return 0;
 #endif
 }
+
 int subprocess_destroy(struct subprocess_s *const process) {
   if (process->stdin_file) {
     fclose(process->stdin_file);
     process->stdin_file = SUBPROCESS_NULL;
   }
+
   if (process->stdout_file) {
     fclose(process->stdout_file);
+
     if (process->stdout_file != process->stderr_file) {
       fclose(process->stderr_file);
     }
+
     process->stdout_file = SUBPROCESS_NULL;
     process->stderr_file = SUBPROCESS_NULL;
   }
+
 #if defined(_WIN32)
   if (process->hProcess) {
     CloseHandle(process->hProcess);
     process->hProcess = SUBPROCESS_NULL;
+
     if (process->hStdInput) {
       CloseHandle(process->hStdInput);
     }
+
     if (process->hEventOutput) {
       CloseHandle(process->hEventOutput);
     }
+
     if (process->hEventError) {
       CloseHandle(process->hEventError);
     }
   }
 #endif
+
   return 0;
 }
+
 int subprocess_terminate(struct subprocess_s *const process) {
 #if defined(_WIN32)
   unsigned int killed_process_exit_code;
   int success_terminate;
   int windows_call_result;
+
   killed_process_exit_code = 99;
   windows_call_result =
       TerminateProcess(process->hProcess, killed_process_exit_code);
@@ -922,6 +1084,7 @@ int subprocess_terminate(struct subprocess_s *const process) {
   return result;
 #endif
 }
+
 unsigned subprocess_read_stdout(struct subprocess_s *const process,
                                 char *const buffer, unsigned size) {
 #if defined(_WIN32)
@@ -929,12 +1092,15 @@ unsigned subprocess_read_stdout(struct subprocess_s *const process,
   unsigned long bytes_read = 0;
   struct subprocess_overlapped_s overlapped = {0, 0, {{0, 0}}, SUBPROCESS_NULL};
   overlapped.hEvent = process->hEventOutput;
+
   handle = SUBPROCESS_PTR_CAST(void *,
                                _get_osfhandle(_fileno(process->stdout_file)));
+
   if (!ReadFile(handle, buffer, size, &bytes_read,
                 SUBPROCESS_PTR_CAST(LPOVERLAPPED, &overlapped))) {
     const unsigned long errorIoPending = 997;
     unsigned long error = GetLastError();
+
     // Means we've got an async read!
     if (error == errorIoPending) {
       if (!GetOverlappedResult(handle,
@@ -943,22 +1109,27 @@ unsigned subprocess_read_stdout(struct subprocess_s *const process,
         const unsigned long errorIoIncomplete = 996;
         const unsigned long errorHandleEOF = 38;
         error = GetLastError();
+
         if ((error != errorIoIncomplete) && (error != errorHandleEOF)) {
           return 0;
         }
       }
     }
   }
+
   return SUBPROCESS_CAST(unsigned, bytes_read);
 #else
   const int fd = fileno(process->stdout_file);
   const ssize_t bytes_read = read(fd, buffer, size);
+
   if (bytes_read < 0) {
     return 0;
   }
+
   return SUBPROCESS_CAST(unsigned, bytes_read);
 #endif
 }
+
 unsigned subprocess_read_stderr(struct subprocess_s *const process,
                                 char *const buffer, unsigned size) {
 #if defined(_WIN32)
@@ -966,12 +1137,15 @@ unsigned subprocess_read_stderr(struct subprocess_s *const process,
   unsigned long bytes_read = 0;
   struct subprocess_overlapped_s overlapped = {0, 0, {{0, 0}}, SUBPROCESS_NULL};
   overlapped.hEvent = process->hEventError;
+
   handle = SUBPROCESS_PTR_CAST(void *,
                                _get_osfhandle(_fileno(process->stderr_file)));
+
   if (!ReadFile(handle, buffer, size, &bytes_read,
                 SUBPROCESS_PTR_CAST(LPOVERLAPPED, &overlapped))) {
     const unsigned long errorIoPending = 997;
     unsigned long error = GetLastError();
+
     // Means we've got an async read!
     if (error == errorIoPending) {
       if (!GetOverlappedResult(handle,
@@ -980,24 +1154,30 @@ unsigned subprocess_read_stderr(struct subprocess_s *const process,
         const unsigned long errorIoIncomplete = 996;
         const unsigned long errorHandleEOF = 38;
         error = GetLastError();
+
         if ((error != errorIoIncomplete) && (error != errorHandleEOF)) {
           return 0;
         }
       }
     }
   }
+
   return SUBPROCESS_CAST(unsigned, bytes_read);
 #else
   const int fd = fileno(process->stderr_file);
   const ssize_t bytes_read = read(fd, buffer, size);
+
   if (bytes_read < 0) {
     return 0;
   }
+
   return SUBPROCESS_CAST(unsigned, bytes_read);
 #endif
 }
+
 int subprocess_alive(struct subprocess_s *const process) {
   int is_alive = SUBPROCESS_CAST(int, process->alive);
+
   if (!is_alive) {
     return 0;
   }
@@ -1005,12 +1185,14 @@ int subprocess_alive(struct subprocess_s *const process) {
   {
     const unsigned long zero = 0x0;
     const unsigned long wait_object_0 = 0x00000000L;
+
     is_alive = wait_object_0 != WaitForSingleObject(process->hProcess, zero);
   }
 #else
   {
     int status;
     is_alive = 0 == waitpid(process->child, &status, WNOHANG);
+
     // If the process was successfully waited on we need to cleanup now.
     if (!is_alive) {
       if (WIFEXITED(status)) {
@@ -1018,29 +1200,37 @@ int subprocess_alive(struct subprocess_s *const process) {
       } else {
         process->return_status = EXIT_FAILURE;
       }
+
       // Since we've already successfully waited on the process, we need to wipe
       // the child now.
       process->child = 0;
+
       if (subprocess_join(process, SUBPROCESS_NULL)) {
         return -1;
       }
     }
   }
 #endif
+
   if (!is_alive) {
     process->alive = 0;
   }
+
   return is_alive;
 }
+
 #if defined(__clang__)
 #if __has_warning("-Wunsafe-buffer-usage")
 #pragma clang diagnostic pop
 #endif
 #endif
+
 #if defined(__cplusplus)
 } // extern "C"
 #endif
+
 #endif /* SHEREDOM_SUBPROCESS_H_INCLUDED */
+
 #include <string>
 #include <filesystem>
 #include <algorithm>
@@ -1052,11 +1242,13 @@ int subprocess_alive(struct subprocess_s *const process) {
 #include <sstream>
 #include <thread>
 #include "Velopack.hpp"
+
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #define PATH_MAX MAX_PATH
 #include <Windows.h>
 #endif // VELO_MSVC
+
 static std::string nativeCurrentOsName()
 {
 #if defined(__APPLE__)
@@ -1067,19 +1259,23 @@ static std::string nativeCurrentOsName()
     return "linux";
 #endif
 }
+
 static bool nativeDoesFileExist(std::string file_path)
 {
     return std::filesystem::exists(file_path);
 }
+
 static void nativeExitProcess(int exit_code)
 {
     ::exit(exit_code);
 }
+
 static std::string nativeGetCurrentProcessPath()
 {
     const size_t buf_size = PATH_MAX;
     char path_buf[buf_size];
     size_t bytes_read = buf_size;
+
 #if defined(__APPLE__)
     if (_NSGetExecutablePath(path_buf, &bytes_read) != 0)
     {
@@ -1095,8 +1291,10 @@ static std::string nativeGetCurrentProcessPath()
         throw std::runtime_error("Permission denied to /proc/self/exe.");
     }
 #endif
+
     return std::string(path_buf, bytes_read);
 }
+
 static subprocess_s nativeStartProcess(const std::vector<std::string> *command_line, int options)
 {
     auto size = command_line->size();
@@ -1106,30 +1304,38 @@ static subprocess_s nativeStartProcess(const std::vector<std::string> *command_l
         command_line_array[i] = command_line->at(i).c_str();
     }
     command_line_array[size] = NULL; // last element must be NULL
+
     struct subprocess_s subprocess;
     int result = subprocess_create(command_line_array, options, &subprocess);
     delete[] command_line_array; // clean up the array
+
     if (result != 0)
     {
         throw std::runtime_error("Unable to start Update process.");
     }
+
     return subprocess;
 }
+
 static void nativeStartProcessFireAndForget(const std::vector<std::string> *command_line)
 {
     nativeStartProcess(command_line, subprocess_option_no_window);
 }
+
 static std::thread nativeStartProcessAsyncReadLine(const std::vector<std::string> *command_line, Velopack::ProcessReadLineHandler *handler)
 {
     subprocess_s subprocess = nativeStartProcess(command_line, subprocess_option_no_window | subprocess_option_enable_async);
+
     std::thread outputThread([subprocess, handler]() mutable
     {
         const unsigned BUFFER_SIZE = 1024;
         char readBuffer[BUFFER_SIZE];
         std::string accumulatedData;
+
         // read all stdout from the process one line at a time
         while (true) {
             unsigned bytesRead = subprocess_read_stdout(&subprocess, readBuffer, BUFFER_SIZE - 1);
+
             if (bytesRead == 0) {
                 // bytesRead is 0, indicating the process has completed
                 // Process any remaining data in accumulatedData as the last line if needed
@@ -1138,7 +1344,9 @@ static std::thread nativeStartProcessAsyncReadLine(const std::vector<std::string
                 }
                 return;
             }
+
             accumulatedData += std::string(readBuffer, bytesRead);
+
             // Process accumulated data for lines
             size_t pos;
             while ((pos = accumulatedData.find('\n')) != std::string::npos) {
@@ -1150,8 +1358,10 @@ static std::thread nativeStartProcessAsyncReadLine(const std::vector<std::string
             }
         } 
     });
+
     return outputThread;
 }
+
 static std::string nativeStartProcessBlocking(const std::vector<std::string> *command_line)
 {
     subprocess_s subprocess = nativeStartProcess(command_line, subprocess_option_no_window);
@@ -1162,6 +1372,7 @@ static std::string nativeStartProcessBlocking(const std::vector<std::string> *co
     buffer << is.rdbuf();
     return buffer.str();
 }
+
 namespace Velopack
 {
 #if UNICODE
@@ -1188,6 +1399,7 @@ namespace Velopack
         }
     }
 #endif // UNICODE
+
     void startup(char **args, size_t c_args)
     {
         for (size_t i = 0; i < c_args; ++i)
@@ -1211,12 +1423,16 @@ namespace Velopack
         }
     }
 } // namespace Velopack
+
 #include <algorithm>
 #include <cstdlib>
 #include <regex>
 #include "Velopack.hpp"
+
 #ifdef _WIN32
+
 #include <Windows.h>
+
 static std::string FuString_Win32LCMap(std::string_view s, DWORD flags)
 {
     int size = MultiByteToWideChar(CP_UTF8, 0, s.data(), (int) s.size(), nullptr, 0);
@@ -1230,36 +1446,47 @@ static std::string FuString_Win32LCMap(std::string_view s, DWORD flags)
     WideCharToMultiByte(CP_UTF8, 0, wideResult.data(), size, result.data(), resultSize, nullptr, nullptr);
     return result;
 }
+
 static std::string FuString_ToLower(std::string_view s)
 {
     return FuString_Win32LCMap(s, LCMAP_LOWERCASE);
 }
+
 #else
+
 #include <unicode/unistr.h>
+
 static std::string FuString_ToLower(std::string_view s)
 {
     std::string result;
     return icu::UnicodeString::fromUTF8(s).toLower().toUTF8String(result);
 }
+
 #endif
+
 namespace Velopack
 {
+
 std::shared_ptr<FutureResult> FutureResult::create()
 {
     throw std::runtime_error("Not implemented");
 }
+
 JsonNodeType JsonNode::getType() const
 {
     return this->type;
 }
+
 bool JsonNode::isNull() const
 {
     return this->type == JsonNodeType::null;
 }
+
 bool JsonNode::isEmpty() const
 {
     return this->type == JsonNodeType::null || (this->type == JsonNodeType::string && this->stringValue.empty()) || (this->type == JsonNodeType::array && std::ssize(this->arrayValue) == 0) || (this->type == JsonNodeType::object && std::ssize(this->objectValue) == 0);
 }
+
 const std::unordered_map<std::string, std::shared_ptr<JsonNode>> * JsonNode::asObject() const
 {
     if (this->type != JsonNodeType::object) {
@@ -1267,6 +1494,7 @@ const std::unordered_map<std::string, std::shared_ptr<JsonNode>> * JsonNode::asO
     }
     return &this->objectValue;
 }
+
 const std::vector<std::shared_ptr<JsonNode>> * JsonNode::asArray() const
 {
     if (this->type != JsonNodeType::array) {
@@ -1274,6 +1502,7 @@ const std::vector<std::shared_ptr<JsonNode>> * JsonNode::asArray() const
     }
     return &this->arrayValue;
 }
+
 double JsonNode::asNumber() const
 {
     if (this->type != JsonNodeType::number) {
@@ -1281,6 +1510,7 @@ double JsonNode::asNumber() const
     }
     return this->numberValue;
 }
+
 bool JsonNode::asBool() const
 {
     if (this->type != JsonNodeType::bool_) {
@@ -1288,6 +1518,7 @@ bool JsonNode::asBool() const
     }
     return this->boolValue;
 }
+
 std::string_view JsonNode::asString() const
 {
     if (this->type != JsonNodeType::string) {
@@ -1295,12 +1526,14 @@ std::string_view JsonNode::asString() const
     }
     return this->stringValue;
 }
+
 std::shared_ptr<JsonNode> JsonNode::parse(std::string_view text)
 {
     std::shared_ptr<JsonParser> parser = std::make_shared<JsonParser>();
     parser->load(text);
     return parser->parseValue();
 }
+
 void JsonNode::initBool(bool value)
 {
     if (this->type != JsonNodeType::null) {
@@ -1309,6 +1542,7 @@ void JsonNode::initBool(bool value)
     this->type = JsonNodeType::bool_;
     this->boolValue = value;
 }
+
 void JsonNode::initArray()
 {
     if (this->type != JsonNodeType::null) {
@@ -1316,6 +1550,7 @@ void JsonNode::initArray()
     }
     this->type = JsonNodeType::array;
 }
+
 void JsonNode::addArrayChild(std::shared_ptr<JsonNode> child)
 {
     if (this->type != JsonNodeType::array) {
@@ -1323,6 +1558,7 @@ void JsonNode::addArrayChild(std::shared_ptr<JsonNode> child)
     }
     this->arrayValue.push_back(child);
 }
+
 void JsonNode::initObject()
 {
     if (this->type != JsonNodeType::null) {
@@ -1330,6 +1566,7 @@ void JsonNode::initObject()
     }
     this->type = JsonNodeType::object;
 }
+
 void JsonNode::addObjectChild(std::string_view key, std::shared_ptr<JsonNode> child)
 {
     if (this->type != JsonNodeType::object) {
@@ -1337,6 +1574,7 @@ void JsonNode::addObjectChild(std::string_view key, std::shared_ptr<JsonNode> ch
     }
     this->objectValue[std::string(key)] = child;
 }
+
 void JsonNode::initNumber(double value)
 {
     if (this->type != JsonNodeType::null) {
@@ -1345,6 +1583,7 @@ void JsonNode::initNumber(double value)
     this->type = JsonNodeType::number;
     this->numberValue = value;
 }
+
 void JsonNode::initString(std::string_view value)
 {
     if (this->type != JsonNodeType::null) {
@@ -1353,10 +1592,12 @@ void JsonNode::initString(std::string_view value)
     this->type = JsonNodeType::string;
     this->stringValue = value;
 }
+
 void StringAppendable::clear()
 {
     this->builder.str(std::string());
 }
+
 void StringAppendable::writeChar(int c)
 {
     if (!this->initialised) {
@@ -1365,19 +1606,23 @@ void StringAppendable::writeChar(int c)
     }
     *this->writer << static_cast<char>(c);
 }
+
 std::string StringAppendable::toString() const
 {
     return std::string(this->builder.str());
 }
+
 void JsonParser::load(std::string_view text)
 {
     this->text = text;
     this->position = 0;
 }
+
 bool JsonParser::endReached() const
 {
     return this->position >= std::ssize(this->text);
 }
+
 std::string JsonParser::readN(int n)
 {
     if (this->position + n > std::ssize(this->text)) {
@@ -1387,6 +1632,7 @@ std::string JsonParser::readN(int n)
     this->position += n;
     return result;
 }
+
 int JsonParser::read()
 {
     if (this->position >= std::ssize(this->text)) {
@@ -1396,6 +1642,7 @@ int JsonParser::read()
     this->position++;
     return c;
 }
+
 int JsonParser::peek() const
 {
     if (this->position >= std::ssize(this->text)) {
@@ -1403,16 +1650,19 @@ int JsonParser::peek() const
     }
     return this->text[this->position];
 }
+
 bool JsonParser::peekWhitespace() const
 {
     int c = peek();
     return c == ' ' || c == '\t' || c == '\n' || c == '\r';
 }
+
 bool JsonParser::peekWordbreak() const
 {
     int c = peek();
     return c == ' ' || c == ',' || c == ':' || c == '"' || c == '{' || c == '}' || c == '[' || c == ']' || c == '\t' || c == '\n' || c == '\r' || c == '/';
 }
+
 JsonToken JsonParser::peekToken()
 {
     eatWhitespace();
@@ -1472,12 +1722,14 @@ JsonToken JsonParser::peekToken()
         return JsonToken::none;
     }
 }
+
 void JsonParser::eatWhitespace()
 {
     while (!endReached() && peekWhitespace()) {
         read();
     }
 }
+
 std::string JsonParser::readWord()
 {
     this->builder.clear();
@@ -1486,12 +1738,14 @@ std::string JsonParser::readWord()
     }
     return this->builder.toString();
 }
+
 std::shared_ptr<JsonNode> JsonParser::parseNull()
 {
     readWord();
     std::shared_ptr<JsonNode> node = std::make_shared<JsonNode>();
     return node;
 }
+
 std::shared_ptr<JsonNode> JsonParser::parseBool()
 {
     std::string boolValue{readWord()};
@@ -1509,6 +1763,7 @@ std::shared_ptr<JsonNode> JsonParser::parseBool()
         throw JsonParseException("Invalid boolean");
     }
 }
+
 std::shared_ptr<JsonNode> JsonParser::parseNumber()
 {
     double d;
@@ -1519,6 +1774,7 @@ std::shared_ptr<JsonNode> JsonParser::parseNumber()
     }
     throw JsonParseException("Invalid number");
 }
+
 std::shared_ptr<JsonNode> JsonParser::parseString()
 {
     this->builder.clear();
@@ -1580,6 +1836,7 @@ std::shared_ptr<JsonNode> JsonParser::parseString()
         }
     }
 }
+
 std::shared_ptr<JsonNode> JsonParser::parseObject()
 {
     read();
@@ -1607,6 +1864,7 @@ std::shared_ptr<JsonNode> JsonParser::parseObject()
         }
     }
 }
+
 std::shared_ptr<JsonNode> JsonParser::parseArray()
 {
     read();
@@ -1637,6 +1895,7 @@ std::shared_ptr<JsonNode> JsonParser::parseArray()
         }
     }
 }
+
 std::shared_ptr<JsonNode> JsonParser::parseValue()
 {
     switch (peekToken()) {
@@ -1656,6 +1915,7 @@ std::shared_ptr<JsonNode> JsonParser::parseValue()
         throw JsonParseException("Invalid token");
     }
 }
+
 std::string Platform::startProcessBlocking(const std::vector<std::string> * command_line)
 {
     if (std::ssize(*command_line) == 0) {
@@ -1664,12 +1924,14 @@ std::string Platform::startProcessBlocking(const std::vector<std::string> * comm
     std::string ret{""};
      ret = nativeStartProcessBlocking(command_line); return strTrim(ret);
 }
+
 void Platform::startProcessFireAndForget(const std::vector<std::string> * command_line)
 {
     if (std::ssize(*command_line) == 0) {
         throw std::runtime_error("Command line is empty");
     }
      nativeStartProcessFireAndForget(command_line); }
+
 std::thread Platform::startProcessAsyncReadLine(const std::vector<std::string> * command_line, ProcessReadLineHandler * handler)
 {
     if (std::ssize(*command_line) == 0) {
@@ -1677,16 +1939,19 @@ std::thread Platform::startProcessAsyncReadLine(const std::vector<std::string> *
     }
      return nativeStartProcessAsyncReadLine(command_line, handler); 
 }
+
 std::string Platform::getCurrentProcessPath()
 {
     std::string ret{""};
      ret = nativeGetCurrentProcessPath(); return ret;
 }
+
 bool Platform::fileExists(std::string path)
 {
     bool ret = false;
      ret = nativeDoesFileExist(path); return ret;
 }
+
 std::string Platform::getUpdateExePath()
 {
     std::string exePath{getCurrentProcessPath()};
@@ -1707,6 +1972,7 @@ std::string Platform::getUpdateExePath()
     }
     return exePath;
 }
+
 std::string Platform::strTrim(std::string str)
 {
     std::cmatch match;
@@ -1715,6 +1981,7 @@ std::string Platform::strTrim(std::string str)
     }
     return str;
 }
+
 std::string Platform::pathParent(std::string str)
 {
     int ix_win = static_cast<int>(str.rfind('\\'));
@@ -1722,6 +1989,7 @@ std::string Platform::pathParent(std::string str)
     int ix = (std::max)(ix_win, ix_nix);
     return str.substr(0, ix);
 }
+
 std::string Platform::pathJoin(std::string s1, std::string s2)
 {
     while (s1.ends_with('/') || s1.ends_with('\\')) {
@@ -1732,6 +2000,7 @@ std::string Platform::pathJoin(std::string s1, std::string s2)
     }
     return s1 + std::string(pathSeparator()) + s2;
 }
+
 std::string_view Platform::pathSeparator()
 {
     if (isWindows()) {
@@ -1741,30 +2010,37 @@ std::string_view Platform::pathSeparator()
         return "/";
     }
 }
+
 bool Platform::isWindows()
 {
     return getOsName() == "win32";
 }
+
 bool Platform::isLinux()
 {
     return getOsName() == "linux";
 }
+
 bool Platform::isOsx()
 {
     return getOsName() == "darwin";
 }
+
 std::string Platform::getOsName()
 {
     std::string ret{""};
      ret = nativeCurrentOsName(); return ret;
 }
+
 void Platform::exit(int code)
 {
      nativeExitProcess(code); }
+
 void ProcessReadLineHandler::setProgressHandler(ProgressHandler * progress)
 {
     this->_progress = progress;
 }
+
 bool ProcessReadLineHandler::handleProcessOutputLine(std::string line)
 {
     std::shared_ptr<ProgressEvent> ev = ProgressEvent::fromJson(line);
@@ -1781,20 +2057,25 @@ bool ProcessReadLineHandler::handleProcessOutputLine(std::string line)
         return false;
     }
 }
+
 void DefaultProgressHandler::onProgress(int progress)
 {
 }
+
 void DefaultProgressHandler::onComplete(std::string assetPath)
 {
 }
+
 void DefaultProgressHandler::onError(std::string error)
 {
 }
+
 std::shared_ptr<VelopackAsset> VelopackAsset::fromJson(std::string_view json)
 {
     std::shared_ptr<JsonNode> node = JsonNode::parse(json);
     return fromNode(node);
 }
+
 std::shared_ptr<VelopackAsset> VelopackAsset::fromNode(std::shared_ptr<JsonNode> node)
 {
     std::shared_ptr<VelopackAsset> asset = std::make_shared<VelopackAsset>();
@@ -1818,6 +2099,7 @@ std::shared_ptr<VelopackAsset> VelopackAsset::fromNode(std::shared_ptr<JsonNode>
     }
     return asset;
 }
+
 std::shared_ptr<UpdateInfo> UpdateInfo::fromJson(std::string_view json)
 {
     std::shared_ptr<JsonNode> node = JsonNode::parse(json);
@@ -1830,6 +2112,7 @@ std::shared_ptr<UpdateInfo> UpdateInfo::fromJson(std::string_view json)
     }
     return updateInfo;
 }
+
 std::shared_ptr<ProgressEvent> ProgressEvent::fromJson(std::string_view json)
 {
     std::shared_ptr<JsonNode> node = JsonNode::parse(json);
@@ -1846,18 +2129,22 @@ std::shared_ptr<ProgressEvent> ProgressEvent::fromJson(std::string_view json)
     }
     return progressEvent;
 }
+
 void UpdateManager::setUrlOrPath(std::string urlOrPath)
 {
     this->_urlOrPath = urlOrPath;
 }
+
 void UpdateManager::setAllowDowngrade(bool allowDowngrade)
 {
     this->_allowDowngrade = allowDowngrade;
 }
+
 void UpdateManager::setExplicitChannel(std::string explicitChannel)
 {
     this->_explicitChannel = explicitChannel;
 }
+
 std::string UpdateManager::getCurrentVersion() const
 {
     std::vector<std::string> command;
@@ -1865,6 +2152,7 @@ std::string UpdateManager::getCurrentVersion() const
     command.push_back("get-version");
     return Platform::startProcessBlocking(&command);
 }
+
 std::shared_ptr<UpdateInfo> UpdateManager::checkForUpdates() const
 {
     if (this->_urlOrPath.empty()) {
@@ -1890,6 +2178,7 @@ std::shared_ptr<UpdateInfo> UpdateManager::checkForUpdates() const
     }
     return UpdateInfo::fromJson(output);
 }
+
 std::thread UpdateManager::downloadUpdateAsync(std::shared_ptr<UpdateInfo> updateInfo, ProgressHandler * progressHandler)
 {
     if (this->_urlOrPath.empty()) {
@@ -1910,17 +2199,20 @@ std::thread UpdateManager::downloadUpdateAsync(std::shared_ptr<UpdateInfo> updat
     handler->setProgressHandler(progressHandler == nullptr ? def.get() : progressHandler);
     return Platform::startProcessAsyncReadLine(&command, handler.get());
 }
+
 void UpdateManager::applyUpdatesAndExit(std::string assetPath) const
 {
     std::vector<std::string> args;
     waitExitThenApplyUpdates(assetPath, false, false, &args);
     Platform::exit(0);
 }
+
 void UpdateManager::applyUpdatesAndRestart(std::string assetPath, const std::vector<std::string> * restartArgs) const
 {
     waitExitThenApplyUpdates(assetPath, false, true, restartArgs);
     Platform::exit(0);
 }
+
 void UpdateManager::waitExitThenApplyUpdates(std::string assetPath, bool silent, bool restart, const std::vector<std::string> * restartArgs) const
 {
     std::vector<std::string> command;

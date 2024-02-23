@@ -30,11 +30,14 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 //
+
 #ifndef VELOPACK_H_INCLUDED
 #define VELOPACK_H_INCLUDED
+
 #include <string>
 #include <vector>
 #include <thread>
+
 namespace Velopack
 {
 #if UNICODE
@@ -43,6 +46,7 @@ namespace Velopack
     void startup(char **args, size_t c_args);
 }
 #endif // VELOPACK_H_INCLUDED
+
 // Generated automatically with "fut". Do not edit.
 #pragma once
 #include <cstdint>
@@ -54,9 +58,11 @@ namespace Velopack
 #include <string_view>
 #include <unordered_map>
 #include <vector>
+
 namespace Velopack
 {
 class FutureResult;
+
 enum class JsonNodeType
 {
     null,
@@ -66,6 +72,7 @@ enum class JsonNodeType
     number,
     string
 };
+
 enum class JsonToken
 {
     none,
@@ -88,6 +95,7 @@ class Platform;
 class ProgressHandler;
 class ProcessReadLineHandler;
 class DefaultProgressHandler;
+
 enum class VelopackAssetType
 {
     unknown,
@@ -98,17 +106,20 @@ class VelopackAsset;
 class UpdateInfo;
 class ProgressEvent;
 class UpdateManager;
+
 class FutureResult
 {
 public:
     FutureResult() = default;
     static std::shared_ptr<FutureResult> create();
 };
+
 class JsonParseException : public std::runtime_error
 {
 public:
     using std::runtime_error::runtime_error;
 };
+
 class JsonNode
 {
 public:
@@ -165,6 +176,7 @@ private:
     double numberValue;
     bool boolValue;
 };
+
 class StringAppendable
 {
 public:
@@ -177,6 +189,7 @@ private:
     std::ostream * writer;
     bool initialised;
 };
+
 class JsonParser
 {
 public:
@@ -203,6 +216,7 @@ private:
     StringAppendable builder;
     JsonToken peekToken();
 };
+
 class Platform
 {
 public:
@@ -236,6 +250,7 @@ public:
 private:
     Platform() = delete;
 };
+
 class ProgressHandler
 {
 public:
@@ -246,6 +261,7 @@ public:
 protected:
     ProgressHandler() = default;
 };
+
 class ProcessReadLineHandler
 {
 public:
@@ -255,6 +271,7 @@ public:
 private:
     ProgressHandler * _progress;
 };
+
 class DefaultProgressHandler : public ProgressHandler
 {
 public:
@@ -263,6 +280,7 @@ public:
     void onComplete(std::string assetPath) override;
     void onError(std::string error) override;
 };
+
 class VelopackAsset
 {
 public:
@@ -303,6 +321,7 @@ public:
      */
     std::string notesHTML{""};
 };
+
 class UpdateInfo
 {
 public:
@@ -312,6 +331,7 @@ public:
     std::shared_ptr<VelopackAsset> targetFullRelease;
     bool isDowngrade = false;
 };
+
 class ProgressEvent
 {
 public:
@@ -323,6 +343,7 @@ public:
     int progress = 0;
     std::string error{""};
 };
+
 class UpdateManager
 {
 public:

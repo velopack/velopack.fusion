@@ -30,8 +30,10 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 //
+
 const { spawn, spawnSync } = require("child_process");
 const fs = require("fs");
+
 function emitLines(stream) {
   var backlog = "";
   stream.on("data", function (data) {
@@ -50,29 +52,36 @@ function emitLines(stream) {
     }
   });
 }
+
 function nativeDoesFileExist(path: string): boolean {
   return fs.existsSync(path);
 }
+
 function nativeGetCurrentProcessPath(): string {
   return process.execPath;
 }
+
 function nativeCurrentOsName(): string {
   return process.platform;
 }
+
 function nativeExitProcess(code: number): void {
   process.exit(code);
 }
+
 function nativeStartProcessFireAndForget(
   command_line: readonly string[],
 ): void {
   spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
 }
+
 function nativeStartProcessBlocking(command_line: readonly string[]): string {
   const child = spawnSync(command_line[0], command_line.slice(1), {
     encoding: "utf8",
   });
   return child.stdout;
 }
+
 function nativeStartProcessAsyncReadLine(
   command_line: readonly string[],
   handler,
@@ -81,13 +90,16 @@ function nativeStartProcessAsyncReadLine(
     const child = spawn(command_line[0], command_line.slice(1), {
       encoding: "utf8",
     });
+
     // Emitting lines for each stdout data event
     emitLines(child.stdout);
+
     child.stdout.resume();
     child.stdout.setEncoding("utf8");
     child.stdout.on("line", (data) => {
       handler.handleProcessOutputLine(data);
     });
+
     // Handling the process exit
     child.on("exit", (code) => {
       if (code === 0) {
@@ -96,12 +108,14 @@ function nativeStartProcessAsyncReadLine(
         reject(new Error(`Process exited with code: ${code}`)); // Process failed
       }
     });
+
     // Handling process errors (e.g., if the process could not be spawned, killed or sending a message to it fails)
     child.on("error", (err) => {
       reject(err); // Process encountered an error
     });
   });
 }
+
 export enum JsonNodeType {
   NULL,
   BOOL,
@@ -110,6 +124,7 @@ export enum JsonNodeType {
   NUMBER,
   STRING,
 }
+
 enum JsonToken {
   NONE,
   CURLY_OPEN,
@@ -123,9 +138,11 @@ enum JsonToken {
   BOOL,
   NULL,
 }
+
 export class JsonParseException extends Error {
   name = "JsonParseException";
 }
+
 export class JsonNode {
   #type: JsonNodeType = JsonNodeType.NULL;
   readonly #objectValue: Record<string, JsonNode> = {};
@@ -133,6 +150,7 @@ export class JsonNode {
   #stringValue: string;
   #numberValue: number;
   #boolValue: boolean;
+
   /**
    * Get the type of this node, such as string, object, array, etc.
    * You should use this function and then call the corresponding
@@ -142,12 +160,14 @@ export class JsonNode {
   public getType(): JsonNodeType {
     return this.#type;
   }
+
   /**
    * Check if the JSON value is null.
    */
   public isNull(): boolean {
     return this.#type == JsonNodeType.NULL;
   }
+
   /**
    * Check if the JSON value is empty - eg. an empty string, array, or object.
    */
@@ -160,6 +180,7 @@ export class JsonNode {
         Object.keys(this.#objectValue).length == 0)
     );
   }
+
   /**
    * Reinterpret a JSON value as an object. Throws exception if the value type was not an object.
    */
@@ -171,6 +192,7 @@ export class JsonNode {
     }
     return this.#objectValue;
   }
+
   /**
    * Reinterpret a JSON value as an array. Throws exception if the value type was not an array.
    */
@@ -180,6 +202,7 @@ export class JsonNode {
     }
     return this.#arrayValue;
   }
+
   /**
    * Reinterpret a JSON value as a number. Throws exception if the value type was not a double.
    */
@@ -191,6 +214,7 @@ export class JsonNode {
     }
     return this.#numberValue;
   }
+
   /**
    * Reinterpret a JSON value as a boolean. Throws exception if the value type was not a boolean.
    */
@@ -200,6 +224,7 @@ export class JsonNode {
     }
     return this.#boolValue;
   }
+
   /**
    * Reinterpret a JSON value as a string. Throws exception if the value type was not a string.
    */
@@ -211,11 +236,13 @@ export class JsonNode {
     }
     return this.#stringValue;
   }
+
   public static parse(text: string): JsonNode {
     let parser: JsonParser = new JsonParser();
     parser.load(text);
     return parser.parseValue();
   }
+
   initBool(value: boolean): void {
     if (this.#type != JsonNodeType.NULL) {
       throw new JsonParseException(
@@ -225,6 +252,7 @@ export class JsonNode {
     this.#type = JsonNodeType.BOOL;
     this.#boolValue = value;
   }
+
   initArray(): void {
     if (this.#type != JsonNodeType.NULL) {
       throw new JsonParseException(
@@ -233,6 +261,7 @@ export class JsonNode {
     }
     this.#type = JsonNodeType.ARRAY;
   }
+
   addArrayChild(child: JsonNode): void {
     if (this.#type != JsonNodeType.ARRAY) {
       throw new JsonParseException(
@@ -241,6 +270,7 @@ export class JsonNode {
     }
     this.#arrayValue.push(child);
   }
+
   initObject(): void {
     if (this.#type != JsonNodeType.NULL) {
       throw new JsonParseException(
@@ -249,6 +279,7 @@ export class JsonNode {
     }
     this.#type = JsonNodeType.OBJECT;
   }
+
   addObjectChild(key: string, child: JsonNode): void {
     if (this.#type != JsonNodeType.OBJECT) {
       throw new JsonParseException(
@@ -257,6 +288,7 @@ export class JsonNode {
     }
     this.#objectValue[key] = child;
   }
+
   initNumber(value: number): void {
     if (this.#type != JsonNodeType.NULL) {
       throw new JsonParseException(
@@ -266,6 +298,7 @@ export class JsonNode {
     this.#type = JsonNodeType.NUMBER;
     this.#numberValue = value;
   }
+
   initString(value: string): void {
     if (this.#type != JsonNodeType.NULL) {
       throw new JsonParseException(
@@ -276,13 +309,16 @@ export class JsonNode {
     this.#stringValue = value;
   }
 }
+
 class StringAppendable {
   readonly #builder: StringWriter = new StringWriter();
   #writer: StringWriter;
   #initialised: boolean;
+
   public clear(): void {
     this.#builder.clear();
   }
+
   public writeChar(c: number): void {
     if (!this.#initialised) {
       this.#writer = this.#builder;
@@ -290,21 +326,26 @@ class StringAppendable {
     }
     this.#writer.write(String.fromCharCode(c));
   }
+
   public toString(): string {
     return this.#builder.toString();
   }
 }
+
 class JsonParser {
   #text: string = "";
   #position: number = 0;
   readonly #builder: StringAppendable = new StringAppendable();
+
   public load(text: string): void {
     this.#text = text;
     this.#position = 0;
   }
+
   public endReached(): boolean {
     return this.#position >= this.#text.length;
   }
+
   public readN(n: number): string {
     if (this.#position + n > this.#text.length) {
       throw new JsonParseException("Unexpected end of input");
@@ -316,6 +357,7 @@ class JsonParser {
     this.#position += n;
     return result;
   }
+
   public read(): number {
     if (this.#position >= this.#text.length) {
       return -1;
@@ -324,16 +366,19 @@ class JsonParser {
     this.#position++;
     return c;
   }
+
   public peek(): number {
     if (this.#position >= this.#text.length) {
       return -1;
     }
     return this.#text.charCodeAt(this.#position);
   }
+
   public peekWhitespace(): boolean {
     let c: number = this.peek();
     return c == 32 || c == 9 || c == 10 || c == 13;
   }
+
   public peekWordbreak(): boolean {
     let c: number = this.peek();
     return (
@@ -351,6 +396,7 @@ class JsonParser {
       c == 47
     );
   }
+
   #peekToken(): JsonToken {
     this.eatWhitespace();
     if (this.endReached()) return JsonToken.NONE;
@@ -407,11 +453,13 @@ class JsonParser {
         return JsonToken.NONE;
     }
   }
+
   public eatWhitespace(): void {
     while (!this.endReached() && this.peekWhitespace()) {
       this.read();
     }
   }
+
   public readWord(): string {
     this.#builder.clear();
     while (!this.endReached() && !this.peekWordbreak()) {
@@ -419,11 +467,13 @@ class JsonParser {
     }
     return this.#builder.toString();
   }
+
   public parseNull(): JsonNode {
     this.readWord();
     let node: JsonNode = new JsonNode();
     return node;
   }
+
   public parseBool(): JsonNode {
     let boolValue: string = this.readWord();
     if (boolValue == "true") {
@@ -438,6 +488,7 @@ class JsonParser {
       throw new JsonParseException("Invalid boolean");
     }
   }
+
   public parseNumber(): JsonNode {
     let d: number;
     if (!isNaN((d = parseFloat(this.readWord())))) {
@@ -447,6 +498,7 @@ class JsonParser {
     }
     throw new JsonParseException("Invalid number");
   }
+
   public parseString(): JsonNode {
     this.#builder.clear();
     this.read();
@@ -502,6 +554,7 @@ class JsonParser {
       }
     }
   }
+
   public parseObject(): JsonNode {
     this.read();
     let node: JsonNode = new JsonNode();
@@ -526,6 +579,7 @@ class JsonParser {
       }
     }
   }
+
   public parseArray(): JsonNode {
     this.read();
     let node: JsonNode = new JsonNode();
@@ -555,6 +609,7 @@ class JsonParser {
       }
     }
   }
+
   public parseValue(): JsonNode {
     switch (this.#peekToken()) {
       case JsonToken.STRING:
@@ -574,8 +629,10 @@ class JsonParser {
     }
   }
 }
+
 class Platform {
   private constructor() {}
+
   /**
    * Starts a new process and sychronously reads/returns its output.
    */
@@ -587,6 +644,7 @@ class Platform {
     ret = nativeStartProcessBlocking(command_line);
     return Platform.strTrim(ret);
   }
+
   /**
    * Starts a new process and returns immediately.
    */
@@ -598,6 +656,7 @@ class Platform {
     }
     nativeStartProcessFireAndForget(command_line);
   }
+
   public static startProcessAsyncReadLine(
     command_line: readonly string[],
     handler: ProcessReadLineHandler,
@@ -607,6 +666,7 @@ class Platform {
     }
     return nativeStartProcessAsyncReadLine(command_line, handler);
   }
+
   /**
    * Returns the path of the current process.
    */
@@ -615,11 +675,13 @@ class Platform {
     ret = nativeGetCurrentProcessPath();
     return ret;
   }
+
   public static fileExists(path: string): boolean {
     let ret: boolean = false;
     ret = nativeDoesFileExist(path);
     return ret;
   }
+
   public static getUpdateExePath(): string {
     let exePath: string = Platform.getCurrentProcessPath();
     if (Platform.isWindows()) {
@@ -639,6 +701,7 @@ class Platform {
     }
     return exePath;
   }
+
   public static strTrim(str: string): string {
     let match: RegExpMatchArray | null;
     if ((match = /(\S.*\S|\S)/.exec(str)) != null) {
@@ -646,12 +709,14 @@ class Platform {
     }
     return str;
   }
+
   public static pathParent(str: string): string {
     let ix_win: number = str.lastIndexOf("\\");
     let ix_nix: number = str.lastIndexOf("/");
     let ix: number = Math.max(ix_win, ix_nix);
     return str.substring(0, ix);
   }
+
   public static pathJoin(s1: string, s2: string): string {
     while (s1.endsWith("/") || s1.endsWith("\\")) {
       s1 = s1.substring(0, s1.length - 1);
@@ -661,6 +726,7 @@ class Platform {
     }
     return s1 + Platform.pathSeparator() + s2;
   }
+
   public static pathSeparator(): string {
     if (Platform.isWindows()) {
       return "\\";
@@ -668,15 +734,19 @@ class Platform {
       return "/";
     }
   }
+
   public static isWindows(): boolean {
     return Platform.getOsName() == "win32";
   }
+
   public static isLinux(): boolean {
     return Platform.getOsName() == "linux";
   }
+
   public static isOsx(): boolean {
     return Platform.getOsName() == "darwin";
   }
+
   /**
    * Returns the name of the operating system.
    */
@@ -685,20 +755,27 @@ class Platform {
     ret = nativeCurrentOsName();
     return ret;
   }
+
   public static exit(code: number): void {
     nativeExitProcess(code);
   }
 }
+
 export abstract class ProgressHandler {
   public abstract onProgress(progress: number): void;
+
   public abstract onComplete(assetPath: string): void;
+
   public abstract onError(error: string): void;
 }
+
 class ProcessReadLineHandler {
   #_progress: ProgressHandler;
+
   public setProgressHandler(progress: ProgressHandler): void {
     this.#_progress = progress;
   }
+
   public handleProcessOutputLine(line: string): boolean {
     let ev: ProgressEvent = ProgressEvent.fromJson(line);
     if (ev.complete) {
@@ -713,16 +790,21 @@ class ProcessReadLineHandler {
     }
   }
 }
+
 class DefaultProgressHandler extends ProgressHandler {
   public onProgress(progress: number): void {}
+
   public onComplete(assetPath: string): void {}
+
   public onError(error: string): void {}
 }
+
 export enum VelopackAssetType {
   UNKNOWN,
   FULL,
   DELTA,
 }
+
 export class VelopackAsset {
   /**
    * The name or Id of the package containing this release.
@@ -756,10 +838,12 @@ export class VelopackAsset {
    * The release notes in HTML format, transformed from Markdown when packaging the release.
    */
   notesHTML: string = "";
+
   public static fromJson(json: string): VelopackAsset {
     let node: JsonNode = JsonNode.parse(json);
     return VelopackAsset.fromNode(node);
   }
+
   public static fromNode(node: JsonNode): VelopackAsset {
     let asset: VelopackAsset = new VelopackAsset();
     for (const [k, v] of Object.entries(node.asObject())) {
@@ -796,9 +880,11 @@ export class VelopackAsset {
     return asset;
   }
 }
+
 export class UpdateInfo {
   targetFullRelease: VelopackAsset;
   isDowngrade: boolean = false;
+
   public static fromJson(json: string): UpdateInfo {
     let node: JsonNode = JsonNode.parse(json);
     let updateInfo: UpdateInfo | null = new UpdateInfo();
@@ -815,11 +901,13 @@ export class UpdateInfo {
     return updateInfo;
   }
 }
+
 export class ProgressEvent {
   file: string = "";
   complete: boolean = false;
   progress: number = 0;
   error: string = "";
+
   public static fromJson(json: string): ProgressEvent {
     let node: JsonNode = JsonNode.parse(json);
     let progressEvent: ProgressEvent = new ProgressEvent();
@@ -842,19 +930,24 @@ export class ProgressEvent {
     return progressEvent;
   }
 }
+
 export class UpdateManager {
   #_allowDowngrade: boolean = false;
   #_explicitChannel: string = "";
   #_urlOrPath: string = "";
+
   public setUrlOrPath(urlOrPath: string): void {
     this.#_urlOrPath = urlOrPath;
   }
+
   public setAllowDowngrade(allowDowngrade: boolean): void {
     this.#_allowDowngrade = allowDowngrade;
   }
+
   public setExplicitChannel(explicitChannel: string): void {
     this.#_explicitChannel = explicitChannel;
   }
+
   /**
    * This function will return the current installed version of the application
    * or throw, if the application is not installed.
@@ -865,6 +958,7 @@ export class UpdateManager {
     command.push("get-version");
     return Platform.startProcessBlocking(command);
   }
+
   /**
    * This function will check for updates, and return information about the latest available release.
    */
@@ -894,6 +988,7 @@ export class UpdateManager {
     }
     return UpdateInfo.fromJson(output);
   }
+
   /**
    * This function will request the update download, and then return immediately.
    * To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
@@ -922,11 +1017,13 @@ export class UpdateManager {
     handler.setProgressHandler(progressHandler == null ? def : progressHandler);
     return Platform.startProcessAsyncReadLine(command, handler);
   }
+
   public applyUpdatesAndExit(assetPath: string): void {
     const args: string[] = [];
     this.waitExitThenApplyUpdates(assetPath, false, false, args);
     Platform.exit(0);
   }
+
   public applyUpdatesAndRestart(
     assetPath: string,
     restartArgs: readonly string[] | null = null,
@@ -934,6 +1031,7 @@ export class UpdateManager {
     this.waitExitThenApplyUpdates(assetPath, false, true, restartArgs);
     Platform.exit(0);
   }
+
   public waitExitThenApplyUpdates(
     assetPath: string,
     silent: boolean,
@@ -961,16 +1059,19 @@ export class UpdateManager {
     Platform.startProcessFireAndForget(command);
   }
 }
+
 export class VelopackApp {
   public static build(): VelopackApp {
     const app: VelopackApp = new VelopackApp();
     return app;
   }
+
   public run(): void {
     const args: string[] = [];
     Array.prototype.push.apply(args, process.argv);
     this.#handleArgs(args);
   }
+
   #handleArgs(args: readonly string[]): void {
     for (let i: number = 0; i < args.length; i++) {
       let val: string = Platform.strTrim(args[i]).toLowerCase();
@@ -989,14 +1090,18 @@ export class VelopackApp {
     }
   }
 }
+
 class StringWriter {
   #buf = "";
+
   write(s) {
     this.#buf += s;
   }
+
   clear() {
     this.#buf = "";
   }
+
   toString() {
     return this.#buf;
   }

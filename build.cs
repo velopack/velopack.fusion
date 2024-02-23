@@ -230,9 +230,10 @@ void FixLineEndingAndTabs(string outputFile)
     var txt = File.ReadAllText(outputFile);
     txt = txt.Replace("\t", "    ");
     txt = txt.Replace("\r\n", "\n");
-    txt = txt.Replace("\n\n", "\n");
-    txt = txt.Replace("\n\n", "\n");
-    txt = txt.Replace("\n\n", "\n");
+    // remove excessive newlines
+    txt = txt.Replace("\n\n\n", "\n\n");
+    txt = txt.Replace("\n\n\n", "\n\n");
+    txt = txt.Replace("\n\n\n", "\n\n");
     File.WriteAllText(outputFile, txt.Trim());
 }
 

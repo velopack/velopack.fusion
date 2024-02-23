@@ -30,11 +30,13 @@
 //  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 //  SOFTWARE.
 //
+
 using System.Threading.Tasks;
 using System.Diagnostics;
 using System.Text;
 using System.Runtime.InteropServices;
 using System.Linq;
+
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -42,6 +44,7 @@ using System.IO;
 using System.Text.RegularExpressions;
 namespace Velopack
 {
+
     public enum JsonNodeType
     {
         Null,
@@ -51,6 +54,7 @@ namespace Velopack
         Number,
         String
     }
+
     enum JsonToken
     {
         None,
@@ -65,20 +69,29 @@ namespace Velopack
         Bool,
         Null
     }
+
     public class JsonParseException : Exception
     {
         public JsonParseException() { }
         public JsonParseException(String message) : base(message) { }
         public JsonParseException(String message, Exception innerException) : base(message, innerException) { }
     }
+
     public class JsonNode
     {
+
         JsonNodeType Type = JsonNodeType.Null;
+
         readonly Dictionary<string, JsonNode> ObjectValue = new Dictionary<string, JsonNode>();
+
         readonly List<JsonNode> ArrayValue = new List<JsonNode>();
+
         string StringValue;
+
         double NumberValue;
+
         bool BoolValue;
+
         /// <summary>Get the type of this node, such as string, object, array, etc.</summary>
         /// <remarks>You should use this function and then call the corresponding
         /// AsObject, AsArray, AsString, etc. functions to get the actual
@@ -87,16 +100,19 @@ namespace Velopack
         {
             return this.Type;
         }
+
         /// <summary>Check if the JSON value is null.</summary>
         public bool IsNull()
         {
             return this.Type == JsonNodeType.Null;
         }
+
         /// <summary>Check if the JSON value is empty - eg. an empty string, array, or object.</summary>
         public bool IsEmpty()
         {
             return this.Type == JsonNodeType.Null || (this.Type == JsonNodeType.String && this.StringValue.Length == 0) || (this.Type == JsonNodeType.Array && this.ArrayValue.Count == 0) || (this.Type == JsonNodeType.Object && this.ObjectValue.Count == 0);
         }
+
         /// <summary>Reinterpret a JSON value as an object. Throws exception if the value type was not an object.</summary>
         public Dictionary<string, JsonNode> AsObject()
         {
@@ -106,6 +122,7 @@ namespace Velopack
             }
             return this.ObjectValue;
         }
+
         /// <summary>Reinterpret a JSON value as an array. Throws exception if the value type was not an array.</summary>
         public List<JsonNode> AsArray()
         {
@@ -115,6 +132,7 @@ namespace Velopack
             }
             return this.ArrayValue;
         }
+
         /// <summary>Reinterpret a JSON value as a number. Throws exception if the value type was not a double.</summary>
         public double AsNumber()
         {
@@ -124,6 +142,7 @@ namespace Velopack
             }
             return this.NumberValue;
         }
+
         /// <summary>Reinterpret a JSON value as a boolean. Throws exception if the value type was not a boolean.</summary>
         public bool AsBool()
         {
@@ -133,6 +152,7 @@ namespace Velopack
             }
             return this.BoolValue;
         }
+
         /// <summary>Reinterpret a JSON value as a string. Throws exception if the value type was not a string.</summary>
         public string AsString()
         {
@@ -142,12 +162,14 @@ namespace Velopack
             }
             return this.StringValue;
         }
+
         public static JsonNode Parse(string text)
         {
             JsonParser parser = new JsonParser();
             parser.Load(text);
             return parser.ParseValue();
         }
+
         public void InitBool(bool value)
         {
             if (this.Type != JsonNodeType.Null)
@@ -157,6 +179,7 @@ namespace Velopack
             this.Type = JsonNodeType.Bool;
             this.BoolValue = value;
         }
+
         public void InitArray()
         {
             if (this.Type != JsonNodeType.Null)
@@ -165,6 +188,7 @@ namespace Velopack
             }
             this.Type = JsonNodeType.Array;
         }
+
         public void AddArrayChild(JsonNode child)
         {
             if (this.Type != JsonNodeType.Array)
@@ -173,6 +197,7 @@ namespace Velopack
             }
             this.ArrayValue.Add(child);
         }
+
         public void InitObject()
         {
             if (this.Type != JsonNodeType.Null)
@@ -181,6 +206,7 @@ namespace Velopack
             }
             this.Type = JsonNodeType.Object;
         }
+
         public void AddObjectChild(string key, JsonNode child)
         {
             if (this.Type != JsonNodeType.Object)
@@ -189,6 +215,7 @@ namespace Velopack
             }
             this.ObjectValue[key] = child;
         }
+
         public void InitNumber(double value)
         {
             if (this.Type != JsonNodeType.Null)
@@ -198,6 +225,7 @@ namespace Velopack
             this.Type = JsonNodeType.Number;
             this.NumberValue = value;
         }
+
         public void InitString(string value)
         {
             if (this.Type != JsonNodeType.Null)
@@ -208,15 +236,21 @@ namespace Velopack
             this.StringValue = value;
         }
     }
+
     class StringAppendable
     {
+
         readonly StringWriter builder = new StringWriter();
+
         TextWriter writer;
+
         bool initialised;
+
         public void Clear()
         {
             this.builder.GetStringBuilder().Clear();
         }
+
         public void WriteChar(int c)
         {
             if (!this.initialised)
@@ -226,25 +260,33 @@ namespace Velopack
             }
             this.writer.Write((char)c);
         }
+
         public override string ToString()
         {
             return this.builder.ToString();
         }
     }
+
     class JsonParser
     {
+
         string text = "";
+
         int position = 0;
+
         readonly StringAppendable builder = new StringAppendable();
+
         public void Load(string text)
         {
             this.text = text;
             this.position = 0;
         }
+
         public bool EndReached()
         {
             return this.position >= this.text.Length;
         }
+
         public string ReadN(int n)
         {
             if (this.position + n > this.text.Length)
@@ -255,6 +297,7 @@ namespace Velopack
             this.position += n;
             return result;
         }
+
         public int Read()
         {
             if (this.position >= this.text.Length)
@@ -265,6 +308,7 @@ namespace Velopack
             this.position++;
             return c;
         }
+
         public int Peek()
         {
             if (this.position >= this.text.Length)
@@ -273,16 +317,19 @@ namespace Velopack
             }
             return this.text[this.position];
         }
+
         public bool PeekWhitespace()
         {
             int c = Peek();
             return c == ' ' || c == '\t' || c == '\n' || c == '\r';
         }
+
         public bool PeekWordbreak()
         {
             int c = Peek();
             return c == ' ' || c == ',' || c == ':' || c == '"' || c == '{' || c == '}' || c == '[' || c == ']' || c == '\t' || c == '\n' || c == '\r' || c == '/';
         }
+
         JsonToken PeekToken()
         {
             EatWhitespace();
@@ -348,6 +395,7 @@ namespace Velopack
                     return JsonToken.None;
             }
         }
+
         public void EatWhitespace()
         {
             while (!EndReached() && PeekWhitespace())
@@ -355,6 +403,7 @@ namespace Velopack
                 Read();
             }
         }
+
         public string ReadWord()
         {
             this.builder.Clear();
@@ -364,12 +413,14 @@ namespace Velopack
             }
             return this.builder.ToString();
         }
+
         public JsonNode ParseNull()
         {
             ReadWord();
             JsonNode node = new JsonNode();
             return node;
         }
+
         public JsonNode ParseBool()
         {
             string boolValue = ReadWord();
@@ -390,6 +441,7 @@ namespace Velopack
                 throw new JsonParseException("Invalid boolean");
             }
         }
+
         public JsonNode ParseNumber()
         {
             double d;
@@ -401,6 +453,7 @@ namespace Velopack
             }
             throw new JsonParseException("Invalid number");
         }
+
         public JsonNode ParseString()
         {
             this.builder.Clear();
@@ -465,6 +518,7 @@ namespace Velopack
                 }
             }
         }
+
         public JsonNode ParseObject()
         {
             Read();
@@ -492,6 +546,7 @@ namespace Velopack
                 }
             }
         }
+
         public JsonNode ParseArray()
         {
             Read();
@@ -526,6 +581,7 @@ namespace Velopack
                 }
             }
         }
+
         public JsonNode ParseValue()
         {
             switch (PeekToken())
@@ -547,8 +603,10 @@ namespace Velopack
             }
         }
     }
+
     static class Platform
     {
+
         /// <summary>Starts a new process and sychronously reads/returns its output.</summary>
         public static string StartProcessBlocking(List<string> command_line)
         {
@@ -559,6 +617,7 @@ namespace Velopack
             string ret = "";
             ret = NativeMethods.NativeStartProcessBlocking(command_line); return StrTrim(ret);
         }
+
         /// <summary>Starts a new process and returns immediately.</summary>
         public static void StartProcessFireAndForget(List<string> command_line)
         {
@@ -568,6 +627,7 @@ namespace Velopack
             }
             NativeMethods.NativeStartProcessFireAndForget(command_line);
         }
+
         public static Task StartProcessAsyncReadLine(List<string> command_line, ProcessReadLineHandler handler)
         {
             if (command_line.Count == 0)
@@ -576,17 +636,20 @@ namespace Velopack
             }
             return NativeMethods.NativeStartProcessAsyncReadline(command_line, handler);
         }
+
         /// <summary>Returns the path of the current process.</summary>
         public static string GetCurrentProcessPath()
         {
             string ret = "";
             ret = NativeMethods.NativeGetCurrentProcessPath(); return ret;
         }
+
         public static bool FileExists(string path)
         {
             bool ret = false;
             ret = NativeMethods.NativeDoesFileExist(path); return ret;
         }
+
         public static string GetUpdateExePath()
         {
             string exePath = GetCurrentProcessPath();
@@ -612,6 +675,7 @@ namespace Velopack
             }
             return exePath;
         }
+
         public static string StrTrim(string str)
         {
             Match match;
@@ -621,6 +685,7 @@ namespace Velopack
             }
             return str;
         }
+
         public static string PathParent(string str)
         {
             int ix_win = str.LastIndexOf('\\');
@@ -628,6 +693,7 @@ namespace Velopack
             int ix = Math.Max(ix_win, ix_nix);
             return str.Substring(0, ix);
         }
+
         public static string PathJoin(string s1, string s2)
         {
             while (s1.EndsWith("/") || s1.EndsWith("\\"))
@@ -640,6 +706,7 @@ namespace Velopack
             }
             return s1 + PathSeparator() + s2;
         }
+
         public static string PathSeparator()
         {
             if (IsWindows())
@@ -651,42 +718,55 @@ namespace Velopack
                 return "/";
             }
         }
+
         public static bool IsWindows()
         {
             return GetOsName() == "win32";
         }
+
         public static bool IsLinux()
         {
             return GetOsName() == "linux";
         }
+
         public static bool IsOsx()
         {
             return GetOsName() == "darwin";
         }
+
         /// <summary>Returns the name of the operating system.</summary>
         public static string GetOsName()
         {
             string ret = "";
             ret = NativeMethods.NativeCurrentOsName(); return ret;
         }
+
         public static void Exit(int code)
         {
             NativeMethods.NativeExitProcess(code);
         }
     }
+
     public abstract class ProgressHandler
     {
+
         public abstract void OnProgress(int progress);
+
         public abstract void OnComplete(string assetPath);
+
         public abstract void OnError(string error);
     }
+
     class ProcessReadLineHandler
     {
+
         ProgressHandler _progress;
+
         public void SetProgressHandler(ProgressHandler progress)
         {
             this._progress = progress;
         }
+
         public bool HandleProcessOutputLine(string line)
         {
             ProgressEvent ev = ProgressEvent.FromJson(line);
@@ -707,47 +787,63 @@ namespace Velopack
             }
         }
     }
+
     class DefaultProgressHandler : ProgressHandler
     {
+
         public override void OnProgress(int progress)
         {
         }
+
         public override void OnComplete(string assetPath)
         {
         }
+
         public override void OnError(string error)
         {
         }
     }
+
     public enum VelopackAssetType
     {
         Unknown,
         Full,
         Delta
     }
+
     public class VelopackAsset
     {
+
         /// <summary>The name or Id of the package containing this release.</summary>
         public string PackageId = "";
+
         /// <summary>The version of this release.</summary>
         public string Version = "";
+
         /// <summary>The type of asset (eg. full or delta).</summary>
         public VelopackAssetType Type = VelopackAssetType.Unknown;
+
         /// <summary>The filename of the update package containing this release.</summary>
         public string FileName = "";
+
         /// <summary>The SHA1 checksum of the update package containing this release.</summary>
         public string Sha1 = "";
+
         /// <summary>The size in bytes of the update package containing this release.</summary>
         public long Size = 0;
+
         /// <summary>The release notes in markdown format, as passed to Velopack when packaging the release.</summary>
         public string NotesMarkdown = "";
+
         /// <summary>The release notes in HTML format, transformed from Markdown when packaging the release.</summary>
         public string NotesHTML = "";
+
         public static VelopackAsset FromJson(string json)
         {
             JsonNode node = JsonNode.Parse(json);
             return FromNode(node);
         }
+
         public static VelopackAsset FromNode(JsonNode node)
         {
             VelopackAsset asset = new VelopackAsset();
@@ -784,10 +880,14 @@ namespace Velopack
             return asset;
         }
     }
+
     public class UpdateInfo
     {
+
         public VelopackAsset TargetFullRelease;
+
         public bool IsDowngrade = false;
+
         public static UpdateInfo FromJson(string json)
         {
             JsonNode node = JsonNode.Parse(json);
@@ -807,12 +907,18 @@ namespace Velopack
             return updateInfo;
         }
     }
+
     public class ProgressEvent
     {
+
         public string File = "";
+
         public bool Complete = false;
+
         public int Progress = 0;
+
         public string Error = "";
+
         public static ProgressEvent FromJson(string json)
         {
             JsonNode node = JsonNode.Parse(json);
@@ -838,23 +944,31 @@ namespace Velopack
             return progressEvent;
         }
     }
+
     public class UpdateManager
     {
+
         bool _allowDowngrade = false;
+
         string _explicitChannel = "";
+
         string _urlOrPath = "";
+
         public void SetUrlOrPath(string urlOrPath)
         {
             this._urlOrPath = urlOrPath;
         }
+
         public void SetAllowDowngrade(bool allowDowngrade)
         {
             this._allowDowngrade = allowDowngrade;
         }
+
         public void SetExplicitChannel(string explicitChannel)
         {
             this._explicitChannel = explicitChannel;
         }
+
         /// <summary>This function will return the current installed version of the application
         /// or throw, if the application is not installed.</summary>
         public string GetCurrentVersion()
@@ -864,6 +978,7 @@ namespace Velopack
             command.Add("get-version");
             return Platform.StartProcessBlocking(command);
         }
+
         /// <summary>This function will check for updates, and return information about the latest available release.</summary>
         public UpdateInfo CheckForUpdates()
         {
@@ -894,6 +1009,7 @@ namespace Velopack
             }
             return UpdateInfo.FromJson(output);
         }
+
         /// <summary>This function will request the update download, and then return immediately.</summary>
         /// <remarks>To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.</remarks>
         public Task DownloadUpdateAsync(UpdateInfo updateInfo, ProgressHandler progressHandler = null)
@@ -917,17 +1033,20 @@ namespace Velopack
             handler.SetProgressHandler(progressHandler == null ? def : progressHandler);
             return Platform.StartProcessAsyncReadLine(command, handler);
         }
+
         public void ApplyUpdatesAndExit(string assetPath)
         {
             List<string> args = new List<string>();
             WaitExitThenApplyUpdates(assetPath, false, false, args);
             Platform.Exit(0);
         }
+
         public void ApplyUpdatesAndRestart(string assetPath, List<string> restartArgs = null)
         {
             WaitExitThenApplyUpdates(assetPath, false, true, restartArgs);
             Platform.Exit(0);
         }
+
         public void WaitExitThenApplyUpdates(string assetPath, bool silent, bool restart, List<string> restartArgs = null)
         {
             List<string> command = new List<string>();
@@ -955,18 +1074,22 @@ namespace Velopack
             Platform.StartProcessFireAndForget(command);
         }
     }
+
     public class VelopackApp
     {
+
         public static VelopackApp Build()
         {
             VelopackApp app = new VelopackApp();
             return app;
         }
+
         public void Run()
         {
             List<string> args = new List<string>();
             args = Environment.GetCommandLineArgs().ToList(); HandleArgs(args);
         }
+
         void HandleArgs(List<string> args)
         {
             for (int i = 0; i < args.Count; i++)
@@ -992,6 +1115,7 @@ namespace Velopack
         }
     }
 }
+
 namespace Velopack
 {
     static class NativeMethods
@@ -1000,6 +1124,7 @@ namespace Velopack
         {
             Environment.Exit(code);
         }
+
         public static string NativeCurrentOsName()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
@@ -1019,14 +1144,17 @@ namespace Velopack
                 throw new NotSupportedException("Unsupported platform");
             }
         }
+
         public static bool NativeDoesFileExist(string file)
         {
             return File.Exists(file);
         }
+
         public static string NativeGetCurrentProcessPath()
         {
             return Process.GetCurrentProcess().MainModule.FileName;
         }
+
         public static string NativeStartProcessBlocking(List<string> command_line)
         {
             var psi = new ProcessStartInfo()
@@ -1038,7 +1166,9 @@ namespace Velopack
                 UseShellExecute = false,
             };
             psi.AppendArgumentListSafe(command_line.Skip(1));
+
             var output = new StringBuilder();
+
             var process = new Process();
             process.StartInfo = psi;
             process.ErrorDataReceived += (sender, e) =>
@@ -1049,16 +1179,20 @@ namespace Velopack
             {
                 if (e.Data != null) output.AppendLine(e.Data);
             };
+
             process.Start();
             process.BeginErrorReadLine();
             process.BeginOutputReadLine();
             process.WaitForExit();
+
             if (process.ExitCode != 0)
             {
                 throw new Exception($"Process exited with code {process.ExitCode}");
             }
+
             return output.ToString();
         }
+
         public static void NativeStartProcessFireAndForget(List<string> command_line)
         {
             var psi = new ProcessStartInfo()
@@ -1069,6 +1203,7 @@ namespace Velopack
             psi.AppendArgumentListSafe(command_line.Skip(1));
             Process.Start(psi);
         }
+
         public static Task NativeStartProcessAsyncReadline(List<string> command_line, ProcessReadLineHandler handler)
         {
             var source = new TaskCompletionSource<bool>();
@@ -1080,6 +1215,7 @@ namespace Velopack
                 UseShellExecute = false,
             };
             psi.AppendArgumentListSafe(command_line.Skip(1));
+
             var process = new Process();
             process.StartInfo = psi;
             process.OutputDataReceived += (sender, e) =>
@@ -1092,6 +1228,7 @@ namespace Velopack
                 catch (Exception)
                 { }
             };
+
             process.Start();
             process.BeginOutputReadLine();
             process.WaitForExitAsync().ContinueWith(t => Task.Delay(1000)).ContinueWith(t =>
@@ -1101,8 +1238,10 @@ namespace Velopack
                 else if (process.ExitCode != 0) source.TrySetException(new Exception($"Process exited with code {process.ExitCode}"));
                 else source.TrySetResult(true);
             });
+
             return source.Task;
         }
+
         private static void AppendArgumentListSafe(this ProcessStartInfo psi, IEnumerable<string> args)
         {
             foreach (var a in args)
