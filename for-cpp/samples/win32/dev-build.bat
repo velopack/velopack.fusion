@@ -44,10 +44,10 @@ echo #define UPDATE_URL R"(%~dp0releases)" > constants.h
 echo.
 echo Building VeloCppWinSample
 cd %~dp0
-"%MSBUILD_PATH%" VeloCppWinSample.sln /p:Configuration=Release
+"%MSBUILD_PATH%" VeloCppWinSample.sln
 
 echo #define UPDATE_URL "REPLACE_ME" > constants.h
 
 echo.
 echo Building Velopack Release v%~1
-%~dp0..\..\..\..\velopack\build\Debug\net8.0\vpk pack -u VeloCppWinSample -o releases -p x64\Release -f net8-x64-desktop -v %*
+%~dp0..\..\..\..\velopack\build\Debug\net8.0\vpk pack -u VeloCppWinSample -o releases -p x64\Debug -f net8-x64-desktop -v %*

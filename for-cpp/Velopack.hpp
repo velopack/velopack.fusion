@@ -351,6 +351,7 @@ public:
     void setUrlOrPath(std::string urlOrPath);
     void setAllowDowngrade(bool allowDowngrade);
     void setExplicitChannel(std::string explicitChannel);
+    void setProgressHandler(ProgressHandler * progress);
     /**
      * This function will return the current installed version of the application
      * or throw, if the application is not installed.
@@ -364,7 +365,7 @@ public:
      * This function will request the update download, and then return immediately.
      * To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
      */
-    std::thread downloadUpdateAsync(std::shared_ptr<UpdateInfo> updateInfo, ProgressHandler * progressHandler = nullptr);
+    std::thread downloadUpdateAsync(std::shared_ptr<UpdateInfo> updateInfo);
     void applyUpdatesAndExit(std::string assetPath) const;
     void applyUpdatesAndRestart(std::string assetPath, const std::vector<std::string> * restartArgs = nullptr) const;
     void waitExitThenApplyUpdates(std::string assetPath, bool silent, bool restart, const std::vector<std::string> * restartArgs = nullptr) const;
@@ -372,5 +373,8 @@ private:
     bool _allowDowngrade = false;
     std::string _explicitChannel{""};
     std::string _urlOrPath{""};
+    std::shared_ptr<ProgressHandler> _pDefault = std::make_shared<DefaultProgressHandler>();
+    ProgressHandler * _progress = nullptr;
+    std::shared_ptr<ProcessReadLineHandler> _readline = std::make_shared<ProcessReadLineHandler>();
 };
 }

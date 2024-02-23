@@ -41,7 +41,7 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
     if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
     return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
-var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _StringAppendable_builder, _StringAppendable_writer, _StringAppendable_initialised, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _ProcessReadLineHandler__progress, _UpdateManager__allowDowngrade, _UpdateManager__explicitChannel, _UpdateManager__urlOrPath, _VelopackApp_instances, _VelopackApp_handleArgs, _StringWriter_buf;
+var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _StringAppendable_builder, _StringAppendable_writer, _StringAppendable_initialised, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _ProcessReadLineHandler__progress, _UpdateManager__allowDowngrade, _UpdateManager__explicitChannel, _UpdateManager__urlOrPath, _UpdateManager__pDefault, _UpdateManager__progress, _UpdateManager__readline, _VelopackApp_instances, _VelopackApp_handleArgs, _StringWriter_buf;
 const { spawn, spawnSync } = require("child_process");
 const fs = require("fs");
 function emitLines(stream) {
@@ -852,6 +852,9 @@ export class UpdateManager {
         _UpdateManager__allowDowngrade.set(this, false);
         _UpdateManager__explicitChannel.set(this, "");
         _UpdateManager__urlOrPath.set(this, "");
+        _UpdateManager__pDefault.set(this, new DefaultProgressHandler());
+        _UpdateManager__progress.set(this, null);
+        _UpdateManager__readline.set(this, new ProcessReadLineHandler());
     }
     setUrlOrPath(urlOrPath) {
         __classPrivateFieldSet(this, _UpdateManager__urlOrPath, urlOrPath, "f");
@@ -861,6 +864,9 @@ export class UpdateManager {
     }
     setExplicitChannel(explicitChannel) {
         __classPrivateFieldSet(this, _UpdateManager__explicitChannel, explicitChannel, "f");
+    }
+    setProgressHandler(progress) {
+        __classPrivateFieldSet(this, _UpdateManager__progress, progress, "f");
     }
     /**
      * This function will return the current installed version of the application
@@ -903,7 +909,7 @@ export class UpdateManager {
      * This function will request the update download, and then return immediately.
      * To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
      */
-    downloadUpdateAsync(updateInfo, progressHandler = null) {
+    downloadUpdateAsync(updateInfo) {
         if (__classPrivateFieldGet(this, _UpdateManager__urlOrPath, "f").length == 0) {
             throw new Error("Please call SetUrlOrPath before trying to download updates.");
         }
@@ -917,10 +923,8 @@ export class UpdateManager {
         command.push("json");
         command.push("--name");
         command.push(updateInfo.targetFullRelease.fileName);
-        let def = new DefaultProgressHandler();
-        let handler = new ProcessReadLineHandler();
-        handler.setProgressHandler(progressHandler == null ? def : progressHandler);
-        return Platform.startProcessAsyncReadLine(command, handler);
+        __classPrivateFieldGet(this, _UpdateManager__readline, "f").setProgressHandler(__classPrivateFieldGet(this, _UpdateManager__progress, "f") == null ? __classPrivateFieldGet(this, _UpdateManager__pDefault, "f") : __classPrivateFieldGet(this, _UpdateManager__progress, "f"));
+        return Platform.startProcessAsyncReadLine(command, __classPrivateFieldGet(this, _UpdateManager__readline, "f"));
     }
     applyUpdatesAndExit(assetPath) {
         const args = [];
@@ -953,7 +957,7 @@ export class UpdateManager {
         Platform.startProcessFireAndForget(command);
     }
 }
-_UpdateManager__allowDowngrade = new WeakMap(), _UpdateManager__explicitChannel = new WeakMap(), _UpdateManager__urlOrPath = new WeakMap();
+_UpdateManager__allowDowngrade = new WeakMap(), _UpdateManager__explicitChannel = new WeakMap(), _UpdateManager__urlOrPath = new WeakMap(), _UpdateManager__pDefault = new WeakMap(), _UpdateManager__progress = new WeakMap(), _UpdateManager__readline = new WeakMap();
 export class VelopackApp {
     constructor() {
         _VelopackApp_instances.add(this);

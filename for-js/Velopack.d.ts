@@ -118,6 +118,7 @@ export declare class UpdateManager {
     setUrlOrPath(urlOrPath: string): void;
     setAllowDowngrade(allowDowngrade: boolean): void;
     setExplicitChannel(explicitChannel: string): void;
+    setProgressHandler(progress: ProgressHandler | null): void;
     /**
      * This function will return the current installed version of the application
      * or throw, if the application is not installed.
@@ -131,7 +132,7 @@ export declare class UpdateManager {
      * This function will request the update download, and then return immediately.
      * To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
      */
-    downloadUpdateAsync(updateInfo: UpdateInfo, progressHandler?: ProgressHandler | null): Promise<void>;
+    downloadUpdateAsync(updateInfo: UpdateInfo): Promise<void>;
     applyUpdatesAndExit(assetPath: string): void;
     applyUpdatesAndRestart(assetPath: string, restartArgs?: readonly string[] | null): void;
     waitExitThenApplyUpdates(assetPath: string, silent: boolean, restart: boolean, restartArgs?: readonly string[] | null): void;

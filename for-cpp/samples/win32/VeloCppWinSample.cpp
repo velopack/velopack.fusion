@@ -25,6 +25,15 @@ Velopack::UpdateManager manager{};
 std::string updPath = "";
 std::string currentVersion = "";
 
+// Forward declarations of functions included in this code module:
+int					MessageBoxCentered(HWND hWnd, LPCTSTR lpText, LPCTSTR lpCaption, UINT uType);
+ATOM                MyRegisterClass(HINSTANCE hInstance);
+BOOL                InitInstance(HINSTANCE, int);
+LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+std::wstring utf8_to_wstring(std::string const& str);
+std::string wstring_to_utf8(std::wstring const& wstr);
+
 class SampleProgressHandler : public Velopack::ProgressHandler
 {
 public:
@@ -36,31 +45,23 @@ public:
 	void onComplete(std::string assetPath) override 
 	{
 		updPath = assetPath;
-		std::wstring message = L"Downloaded successfully to: " + std::wstring(updPath.begin(), updPath.end());
+		std::wstring message = L"Downloaded successfully to: " + utf8_to_wstring(assetPath);
+		MessageBoxCentered(nullptr, message.c_str(), szTitle, MB_OK | MB_ICONINFORMATION);
 	}
 	void onError(std::string error) override 
 	{
-
+		std::wstring wideWhat = utf8_to_wstring(error);
+		MessageBoxCentered(nullptr, wideWhat.c_str(), szTitle, MB_OK | MB_ICONERROR);
 	}
 };
 
-std::shared_ptr<SampleProgressHandler> progressHandler = std::make_shared<SampleProgressHandler>();
-
-// Forward declarations of functions included in this code module:
-int					MessageBoxCentered(HWND hWnd, LPCTSTR lpText, LPCTSTR lpCaption, UINT uType);
-ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
-LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
+SampleProgressHandler* progressHandler = new SampleProgressHandler();
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
 	_In_ LPWSTR    lpCmdLine,
 	_In_ int       nCmdShow)
 {
-
-
-
 	UNREFERENCED_PARAMETER(hPrevInstance);
 
 	try
@@ -70,7 +71,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		wchar_t** args = CommandLineToArgvW(lpCmdLine, &pNumArgs);
 		Velopack::startup(args, pNumArgs);
 		manager.setUrlOrPath(UPDATE_URL);
-		//manager.setProgressHandler(progressHandler);
+		manager.setProgressHandler(progressHandler);
 		currentVersion = manager.getCurrentVersion();
 	}
 	catch (std::exception& e)
@@ -172,7 +173,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					if (updInfo != nullptr) {
 						// this is a hack to convert ascii to wide string
 						auto version = updInfo->targetFullRelease->version;
-						std::wstring message = L"Update available: " + std::wstring(version.begin(), version.end());
+						std::wstring message = L"Update available: " + utf8_to_wstring(version);
 						MessageBoxCentered(hWnd, message.c_str(), szTitle, MB_OK);
 					}
 					else {
@@ -180,8 +181,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					}
 				}
 				catch (std::exception& e) {
-					std::string what = e.what();
-					std::wstring wideWhat(what.begin(), what.end());
+					std::wstring wideWhat = utf8_to_wstring(e.what());
 					MessageBoxCentered(hWnd, wideWhat.c_str(), szTitle, MB_OK | MB_ICONERROR);
 				}
 			}
@@ -189,11 +189,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				if (updInfo != nullptr) {
 					try {
-						//manager.downloadUpdateAsync(updInfo);
+						auto thr = manager.downloadUpdateAsync(updInfo);
+						thr.join();
 					}
 					catch (std::exception& e) {
-						std::string what = e.what();
-						std::wstring wideWhat(what.begin(), what.end());
+						std::wstring wideWhat = utf8_to_wstring(e.what());
 						MessageBoxCentered(hWnd, wideWhat.c_str(), szTitle, MB_OK | MB_ICONERROR);
 					}
 				}
@@ -218,7 +218,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 		PAINTSTRUCT ps;
 		HDC hdc = BeginPaint(hWnd, &ps);
 		RECT r{ 0, 5, ps.rcPaint.right, ps.rcPaint.bottom };
-		auto ver = std::wstring(currentVersion.begin(), currentVersion.end());
+		auto ver = utf8_to_wstring(currentVersion);
 		std::wstring text = L"Welcome to v" + ver + L" of the\nVelopack C++ Sample App.";
 		DrawText(hdc, text.c_str(), -1, &r, DT_BOTTOM | DT_CENTER);
 		EndPaint(hWnd, &ps);
@@ -235,29 +235,54 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 int MessageBoxCentered(HWND hWnd, LPCTSTR lpText, LPCTSTR lpCaption, UINT uType)
 {
-	// Center message box at its parent window
-	static HHOOK hHookCBT{};
-	hHookCBT = SetWindowsHookEx(WH_CBT,
-		[](int nCode, WPARAM wParam, LPARAM lParam) -> LRESULT
-		{
-			if (nCode == HCBT_CREATEWND)
+	if (hWnd == nullptr)
+	{
+		return MessageBox(hWnd, lpText, lpCaption, uType);
+	}
+	else
+	{
+		// Center message box at its parent window
+		static HHOOK hHookCBT{};
+		hHookCBT = SetWindowsHookEx(WH_CBT,
+			[](int nCode, WPARAM wParam, LPARAM lParam) -> LRESULT
 			{
-				if (((LPCBT_CREATEWND)lParam)->lpcs->lpszClass == (LPWSTR)(ATOM)32770)  // #32770 = dialog box class
+				if (nCode == HCBT_CREATEWND)
 				{
-					RECT rcParent{};
-					GetWindowRect(((LPCBT_CREATEWND)lParam)->lpcs->hwndParent, &rcParent);
-					((LPCBT_CREATEWND)lParam)->lpcs->x = rcParent.left + ((rcParent.right - rcParent.left) - ((LPCBT_CREATEWND)lParam)->lpcs->cx) / 2;
-					((LPCBT_CREATEWND)lParam)->lpcs->y = rcParent.top + ((rcParent.bottom - rcParent.top) - ((LPCBT_CREATEWND)lParam)->lpcs->cy) / 2;
+					if (((LPCBT_CREATEWND)lParam)->lpcs->lpszClass == (LPWSTR)(ATOM)32770)  // #32770 = dialog box class
+					{
+						RECT rcParent{};
+						GetWindowRect(((LPCBT_CREATEWND)lParam)->lpcs->hwndParent, &rcParent);
+						((LPCBT_CREATEWND)lParam)->lpcs->x = rcParent.left + ((rcParent.right - rcParent.left) - ((LPCBT_CREATEWND)lParam)->lpcs->cx) / 2;
+						((LPCBT_CREATEWND)lParam)->lpcs->y = rcParent.top + ((rcParent.bottom - rcParent.top) - ((LPCBT_CREATEWND)lParam)->lpcs->cy) / 2;
+					}
 				}
-			}
 
-			return CallNextHookEx(hHookCBT, nCode, wParam, lParam);
-		},
-		0, GetCurrentThreadId());
+				return CallNextHookEx(hHookCBT, nCode, wParam, lParam);
+			},
+			0, GetCurrentThreadId());
 
-	int iRet{ MessageBox(hWnd, lpText, lpCaption, uType) };
+		int iRet{ MessageBox(hWnd, lpText, lpCaption, uType) };
 
-	UnhookWindowsHookEx(hHookCBT);
+		UnhookWindowsHookEx(hHookCBT);
 
-	return iRet;
+		return iRet;
+	}
+}
+
+std::string wstring_to_utf8(std::wstring const& wstr)
+{
+	if (wstr.empty()) return std::string();
+	int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
+	std::string strTo(size_needed, 0);
+	WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
+	return strTo;
+}
+
+std::wstring utf8_to_wstring(std::string const& str)
+{
+	if (str.empty()) return std::wstring();
+	int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
+	std::wstring strTo(size_needed, 0);
+	MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &strTo[0], size_needed);
+	return strTo;
 }

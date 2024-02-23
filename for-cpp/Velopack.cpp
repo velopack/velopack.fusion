@@ -2145,6 +2145,11 @@ void UpdateManager::setExplicitChannel(std::string explicitChannel)
     this->_explicitChannel = explicitChannel;
 }
 
+void UpdateManager::setProgressHandler(ProgressHandler * progress)
+{
+    this->_progress = progress;
+}
+
 std::string UpdateManager::getCurrentVersion() const
 {
     std::vector<std::string> command;
@@ -2179,7 +2184,7 @@ std::shared_ptr<UpdateInfo> UpdateManager::checkForUpdates() const
     return UpdateInfo::fromJson(output);
 }
 
-std::thread UpdateManager::downloadUpdateAsync(std::shared_ptr<UpdateInfo> updateInfo, ProgressHandler * progressHandler)
+std::thread UpdateManager::downloadUpdateAsync(std::shared_ptr<UpdateInfo> updateInfo)
 {
     if (this->_urlOrPath.empty()) {
         throw std::runtime_error("Please call SetUrlOrPath before trying to download updates.");
@@ -2194,10 +2199,8 @@ std::thread UpdateManager::downloadUpdateAsync(std::shared_ptr<UpdateInfo> updat
     command.push_back("json");
     command.push_back("--name");
     command.push_back(updateInfo->targetFullRelease->fileName);
-    std::shared_ptr<DefaultProgressHandler> def = std::make_shared<DefaultProgressHandler>();
-    std::shared_ptr<ProcessReadLineHandler> handler = std::make_shared<ProcessReadLineHandler>();
-    handler->setProgressHandler(progressHandler == nullptr ? def.get() : progressHandler);
-    return Platform::startProcessAsyncReadLine(&command, handler.get());
+    this->_readline->setProgressHandler(this->_progress == nullptr ? this->_pDefault.get() : this->_progress);
+    return Platform::startProcessAsyncReadLine(&command, this->_readline.get());
 }
 
 void UpdateManager::applyUpdatesAndExit(std::string assetPath) const

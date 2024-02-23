@@ -935,6 +935,9 @@ export class UpdateManager {
   #_allowDowngrade: boolean = false;
   #_explicitChannel: string = "";
   #_urlOrPath: string = "";
+  #_pDefault: ProgressHandler = new DefaultProgressHandler();
+  #_progress: ProgressHandler | null = null;
+  #_readline: ProcessReadLineHandler = new ProcessReadLineHandler();
 
   public setUrlOrPath(urlOrPath: string): void {
     this.#_urlOrPath = urlOrPath;
@@ -946,6 +949,10 @@ export class UpdateManager {
 
   public setExplicitChannel(explicitChannel: string): void {
     this.#_explicitChannel = explicitChannel;
+  }
+
+  public setProgressHandler(progress: ProgressHandler | null): void {
+    this.#_progress = progress;
   }
 
   /**
@@ -993,10 +1000,7 @@ export class UpdateManager {
    * This function will request the update download, and then return immediately.
    * To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
    */
-  public downloadUpdateAsync(
-    updateInfo: UpdateInfo,
-    progressHandler: ProgressHandler | null = null,
-  ): Promise<void> {
+  public downloadUpdateAsync(updateInfo: UpdateInfo): Promise<void> {
     if (this.#_urlOrPath.length == 0) {
       throw new Error(
         "Please call SetUrlOrPath before trying to download updates.",
@@ -1012,10 +1016,10 @@ export class UpdateManager {
     command.push("json");
     command.push("--name");
     command.push(updateInfo.targetFullRelease.fileName);
-    let def: DefaultProgressHandler = new DefaultProgressHandler();
-    let handler: ProcessReadLineHandler = new ProcessReadLineHandler();
-    handler.setProgressHandler(progressHandler == null ? def : progressHandler);
-    return Platform.startProcessAsyncReadLine(command, handler);
+    this.#_readline.setProgressHandler(
+      this.#_progress == null ? this.#_pDefault : this.#_progress,
+    );
+    return Platform.startProcessAsyncReadLine(command, this.#_readline);
   }
 
   public applyUpdatesAndExit(assetPath: string): void {

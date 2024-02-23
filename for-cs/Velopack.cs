@@ -954,6 +954,12 @@ namespace Velopack
 
         string _urlOrPath = "";
 
+        ProgressHandler _pDefault = new DefaultProgressHandler();
+
+        ProgressHandler _progress = null;
+
+        ProcessReadLineHandler _readline = new ProcessReadLineHandler();
+
         public void SetUrlOrPath(string urlOrPath)
         {
             this._urlOrPath = urlOrPath;
@@ -967,6 +973,11 @@ namespace Velopack
         public void SetExplicitChannel(string explicitChannel)
         {
             this._explicitChannel = explicitChannel;
+        }
+
+        public void SetProgressHandler(ProgressHandler progress)
+        {
+            this._progress = progress;
         }
 
         /// <summary>This function will return the current installed version of the application
@@ -1012,7 +1023,7 @@ namespace Velopack
 
         /// <summary>This function will request the update download, and then return immediately.</summary>
         /// <remarks>To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.</remarks>
-        public Task DownloadUpdateAsync(UpdateInfo updateInfo, ProgressHandler progressHandler = null)
+        public Task DownloadUpdateAsync(UpdateInfo updateInfo)
         {
             if (this._urlOrPath.Length == 0)
             {
@@ -1028,10 +1039,8 @@ namespace Velopack
             command.Add("json");
             command.Add("--name");
             command.Add(updateInfo.TargetFullRelease.FileName);
-            DefaultProgressHandler def = new DefaultProgressHandler();
-            ProcessReadLineHandler handler = new ProcessReadLineHandler();
-            handler.SetProgressHandler(progressHandler == null ? def : progressHandler);
-            return Platform.StartProcessAsyncReadLine(command, handler);
+            this._readline.SetProgressHandler(this._progress == null ? this._pDefault : this._progress);
+            return Platform.StartProcessAsyncReadLine(command, this._readline);
         }
 
         public void ApplyUpdatesAndExit(string assetPath)

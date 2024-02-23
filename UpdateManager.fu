@@ -3,12 +3,14 @@ public class UpdateManager
     bool _allowDowngrade = false;
     string() _explicitChannel = "";
     string() _urlOrPath = "";
-    // ProgressHandler# _progress = new DefaultProgressHandler();
+    ProgressHandler# _pDefault = new DefaultProgressHandler();
+    ProgressHandler!? _progress = null;
+    ProcessReadLineHandler# _readline = new ProcessReadLineHandler();
 
     public void SetUrlOrPath!(string() urlOrPath) { _urlOrPath = urlOrPath; }
     public void SetAllowDowngrade!(bool allowDowngrade) { _allowDowngrade = allowDowngrade; }
     public void SetExplicitChannel!(string() explicitChannel) { _explicitChannel = explicitChannel; }
-    // public void SetProgressHandler!(ProgressHandler# progress) { _progress = progress; }
+    public void SetProgressHandler!(ProgressHandler!? progress) { _progress = progress; }
 
     /// This function will return the current installed version of the application
     /// or throw, if the application is not installed.
@@ -59,7 +61,7 @@ public class UpdateManager
 
     /// This function will request the update download, and then return immediately.
     /// To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
-    public FutureResult DownloadUpdateAsync!(UpdateInfo# updateInfo, ProgressHandler!? progressHandler = null) throws Exception
+    public FutureResult DownloadUpdateAsync!(UpdateInfo# updateInfo) throws Exception
     {
         if (_urlOrPath.Length == 0)
         {
@@ -77,10 +79,8 @@ public class UpdateManager
         command.Add("--name");
         command.Add(updateInfo.TargetFullRelease.FileName);
 
-        DefaultProgressHandler# def = new DefaultProgressHandler();
-        ProcessReadLineHandler# handler = new ProcessReadLineHandler();
-        handler.SetProgressHandler(progressHandler == null ? def : progressHandler);
-        return Platform.StartProcessAsyncReadLine(command, handler);
+        _readline.SetProgressHandler(_progress == null ? _pDefault : _progress);
+        return Platform.StartProcessAsyncReadLine(command, _readline);
     }
 
     public void ApplyUpdatesAndExit(string() assetPath) throws Exception
