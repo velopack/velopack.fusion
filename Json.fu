@@ -182,39 +182,12 @@ public class JsonNode
     }
 }
 
-class StringAppendable
-{
-    StringWriter() builder;
-    TextWriter! writer;
-    bool initialised;
-
-    public void Clear!()
-    {
-        builder.Clear();
-    }
-
-    public void WriteChar!(int c)
-    {
-        if (!initialised)
-        {
-            writer = builder;
-            initialised = true;
-        }
-        writer.WriteChar(c);
-    }
-
-    public string() ToString()
-    {
-        return builder.ToString();
-    }
-}
-
 // https://github.com/gering/Tiny-JSON/blob/master/Tiny-JSON/Tiny-JSON/JsonParser.cs
 class JsonParser
 {
     string() text = "";
     int position = 0;
-    StringAppendable() builder;
+    StringStream() builder;
 
     public void Load!(string text)
     {

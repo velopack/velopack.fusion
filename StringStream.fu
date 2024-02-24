@@ -1,0 +1,44 @@
+class StringStream
+{
+    StringWriter() builder;
+    TextWriter! writer;
+    bool initialised;
+
+    public void Clear!()
+    {
+        builder.Clear();
+    }
+
+    public void Write!(string() s)
+    {
+        Init();
+        writer.Write(s);
+    }
+
+    public void WriteLine!(string() s)
+    {
+        Init();
+        Write(s);
+        WriteChar('\n');
+    }
+
+    public void WriteChar!(int c)
+    {
+        Init();
+        writer.WriteChar(c);
+    }
+
+    public string() ToString()
+    {
+        return builder.ToString();
+    }
+
+    void Init!()
+    {
+        if (!initialised)
+        {
+            writer = builder;
+            initialised = true;
+        }
+    }
+}
