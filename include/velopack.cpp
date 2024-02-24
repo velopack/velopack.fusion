@@ -89,45 +89,45 @@ static void nativeStartProcessFireAndForget(const std::vector<std::string> *comm
     nativeStartProcess(command_line, subprocess_option_no_window);
 }
 
-static std::thread nativeStartProcessAsyncReadLine(const std::vector<std::string> *command_line, Velopack::ProcessReadLineHandler *handler)
-{
-    subprocess_s subprocess = nativeStartProcess(command_line, subprocess_option_no_window | subprocess_option_enable_async);
+// static std::thread nativeStartProcessAsyncReadLine(const std::vector<std::string> *command_line, Velopack::ProcessReadLineHandler *handler)
+// {
+//     subprocess_s subprocess = nativeStartProcess(command_line, subprocess_option_no_window | subprocess_option_enable_async);
 
-    std::thread outputThread([subprocess, handler]() mutable
-    {
-        const unsigned BUFFER_SIZE = 1024;
-        char readBuffer[BUFFER_SIZE];
-        std::string accumulatedData;
+//     std::thread outputThread([subprocess, handler]() mutable
+//     {
+//         const unsigned BUFFER_SIZE = 1024;
+//         char readBuffer[BUFFER_SIZE];
+//         std::string accumulatedData;
 
-        // read all stdout from the process one line at a time
-        while (true) {
-            unsigned bytesRead = subprocess_read_stdout(&subprocess, readBuffer, BUFFER_SIZE - 1);
+//         // read all stdout from the process one line at a time
+//         while (true) {
+//             unsigned bytesRead = subprocess_read_stdout(&subprocess, readBuffer, BUFFER_SIZE - 1);
 
-            if (bytesRead == 0) {
-                // bytesRead is 0, indicating the process has completed
-                // Process any remaining data in accumulatedData as the last line if needed
-                if (!accumulatedData.empty()) {
-                    handler->handleProcessOutputLine(accumulatedData);
-                }
-                return;
-            }
+//             if (bytesRead == 0) {
+//                 // bytesRead is 0, indicating the process has completed
+//                 // Process any remaining data in accumulatedData as the last line if needed
+//                 if (!accumulatedData.empty()) {
+//                     handler->handleProcessOutputLine(accumulatedData);
+//                 }
+//                 return;
+//             }
 
-            accumulatedData += std::string(readBuffer, bytesRead);
+//             accumulatedData += std::string(readBuffer, bytesRead);
 
-            // Process accumulated data for lines
-            size_t pos;
-            while ((pos = accumulatedData.find('\n')) != std::string::npos) {
-                std::string line = accumulatedData.substr(0, pos);
-                if (handler->handleProcessOutputLine(line)) {
-                    return; // complete or err
-                }
-                accumulatedData.erase(0, pos + 1);
-            }
-        } 
-    });
+//             // Process accumulated data for lines
+//             size_t pos;
+//             while ((pos = accumulatedData.find('\n')) != std::string::npos) {
+//                 std::string line = accumulatedData.substr(0, pos);
+//                 if (handler->handleProcessOutputLine(line)) {
+//                     return; // complete or err
+//                 }
+//                 accumulatedData.erase(0, pos + 1);
+//             }
+//         } 
+//     });
 
-    return outputThread;
-}
+//     return outputThread;
+// }
 
 static std::string nativeStartProcessBlocking(const std::vector<std::string> *command_line)
 {

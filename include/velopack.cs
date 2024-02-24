@@ -1,6 +1,67 @@
 
 namespace Velopack 
 {
+    public class UpdateManager : UpdateManagerSync
+    {
+        /// <inheritdoc cref="UpdateManagerSync.GetCurrentVersion"/>
+        public Task<string> GetCurrentVersionAsync()
+        {
+            return Task.Run(() => GetCurrentVersion());
+        }
+
+        /// <inheritdoc cref="UpdateManagerSync.CheckForUpdates"/>
+        public Task<UpdateInfo> CheckForUpdatesAsync()
+        {
+            return Task.Run(() => CheckForUpdates());
+        }
+
+        /// <inheritdoc cref="UpdateManagerSync.DownloadUpdates"/>
+        public Task DownloadUpdatesAsync(UpdateInfo updateInfo, Action<int> progress = null)
+        {
+            var command_line = GetDownloadUpdatesCommand(updateInfo);
+            var source = new TaskCompletionSource<bool>();
+            var psi = new ProcessStartInfo()
+            {
+                CreateNoWindow = true,
+                FileName = command_line[0],
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+            };
+
+            foreach (var a in command_line.Skip(1)) 
+            {
+                psi.ArgumentList.Add(a);
+            }
+
+            var process = new Process();
+            process.StartInfo = psi;
+            process.OutputDataReceived += (sender, e) =>
+            {
+                if (e.Data == null) return;
+                try 
+                { 
+                    var msg = ProgressEvent.FromJson(e.Data);
+                    if (msg.Complete) source.TrySetResult(true);
+                    else if (!String.IsNullOrEmpty(msg.Error)) source.TrySetException(new Exception(msg.Error));
+                    else if (msg.Progress > 0) progress?.Invoke(msg.Progress);
+                }
+                catch (Exception) { }
+            };
+
+            process.Start();
+            process.BeginOutputReadLine();
+            process.WaitForExitAsync().ContinueWith(t => Task.Delay(1000)).ContinueWith(t =>
+            {
+                if (t.IsFaulted) source.TrySetException(t.Exception);
+                else if (t.IsCanceled) source.TrySetCanceled();
+                else if (process.ExitCode != 0) source.TrySetException(new Exception($"Process exited with code {process.ExitCode}"));
+                else source.TrySetException(new Exception("No completed output from process"));
+            });
+
+            return source.Task;
+        }
+    }
+
     static class NativeMethods
     {
         public static void NativeExitProcess(int code)
@@ -80,45 +141,7 @@ namespace Velopack
             Process.Start(psi);
         }
 
-        public static Task NativeStartProcessAsyncReadline(List<string> command_line, ProcessReadLineHandler handler)
-        {
-            var source = new TaskCompletionSource<bool>();
-            var psi = new ProcessStartInfo()
-            {
-                CreateNoWindow = true,
-                FileName = command_line[0],
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-            };
-            psi.AppendArgumentListSafe(command_line.Skip(1));
-
-            var process = new Process();
-            process.StartInfo = psi;
-            process.OutputDataReceived += (sender, e) =>
-            {
-                if (e.Data == null) return;
-                try
-                {
-                    handler.HandleProcessOutputLine(e.Data);
-                }
-                catch (Exception)
-                { }
-            };
-
-            process.Start();
-            process.BeginOutputReadLine();
-            process.WaitForExitAsync().ContinueWith(t => Task.Delay(1000)).ContinueWith(t =>
-            {
-                if (t.IsFaulted) source.TrySetException(t.Exception);
-                else if (t.IsCanceled) source.TrySetCanceled();
-                else if (process.ExitCode != 0) source.TrySetException(new Exception($"Process exited with code {process.ExitCode}"));
-                else source.TrySetResult(true);
-            });
-
-            return source.Task;
-        }
-
-        private static void AppendArgumentListSafe(this ProcessStartInfo psi, IEnumerable<string> args)
+        internal static void AppendArgumentListSafe(this ProcessStartInfo psi, IEnumerable<string> args)
         {
             foreach (var a in args) {
                 psi.ArgumentList.Add(a);

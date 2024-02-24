@@ -19,9 +19,6 @@ void BuildJs()
     // patches
     ReplaceAll(outJs, "TextWriter", "StringWriter");
     ReplaceAll(outJs, "RegExpMatchArray", "RegExpMatchArray | null");
-    ReplaceAll(outJs, "export class FutureResult[\\S\\s]*?}\\s*?}", "", patternRegex: true);
-    ReplaceAll(outJs, "return FutureResult.create();", "");
-    ReplaceAll(outJs, "FutureResult", "Promise<void>");
 
     // includes
     PrependFiles(outJs, "disclaimer.txt", "velopack.ts");
@@ -41,11 +38,6 @@ void BuildCpp()
     CleanOutputDir("for-cpp", "*.cpp", "*.hpp");
     var outCpp = FusionBuild("for-cpp/Velopack.cpp", "CPP", includeVeloApp: false);
     var outHpp = Path.ChangeExtension(outCpp, ".hpp");
-
-    // patches
-    ReplaceAll(outCpp, "const FutureResult *", "std::thread");
-    ReplaceAll(outHpp, "const FutureResult *", "std::thread");
-    ReplaceAll(outCpp, "return FutureResult::create().get();", "");
 
     // includes
     PrependFiles(outCpp, "disclaimer.txt", "subprocess.h", "velopack.cpp");
@@ -73,9 +65,6 @@ void BuildCs()
 
     // patches
     ReplaceAll(outCs, "internal", "public");
-    ReplaceAll(outCs, "public class FutureResult[\\S\\s]*?}\\s*?}", "", patternRegex: true);
-    ReplaceAll(outCs, "return FutureResult.Create();", "");
-    ReplaceAll(outCs, "FutureResult", "Task");
 
     // includes
     PrependFiles(outCs, "disclaimer.txt");

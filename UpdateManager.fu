@@ -1,29 +1,22 @@
-public class UpdateManager
+public class UpdateManagerSync
 {
     bool _allowDowngrade = false;
     string() _explicitChannel = "";
     string() _urlOrPath = "";
-    ProgressHandler# _pDefault = new DefaultProgressHandler();
-    ProgressHandler!? _progress = null;
-    ProcessReadLineHandler# _readline = new ProcessReadLineHandler();
 
     public void SetUrlOrPath!(string() urlOrPath) { _urlOrPath = urlOrPath; }
     public void SetAllowDowngrade!(bool allowDowngrade) { _allowDowngrade = allowDowngrade; }
     public void SetExplicitChannel!(string() explicitChannel) { _explicitChannel = explicitChannel; }
-    public void SetProgressHandler!(ProgressHandler!? progress) { _progress = progress; }
 
-    /// This function will return the current installed version of the application
-    /// or throw, if the application is not installed.
-    public string() GetCurrentVersion() throws Exception
+    protected List<string()>() GetCurrentVersionCommand() throws Exception
     {
         List<string()>() command;
         command.Add(Platform.GetUpdateExePath());
         command.Add("get-version");
-        return Platform.StartProcessBlocking(command);
+        return command;
     }
 
-    /// This function will check for updates, and return information about the latest available release.
-    public UpdateInfo#? CheckForUpdates() throws Exception
+    protected List<string()>() GetCheckForUpdatesCommand() throws Exception
     {
         if (_urlOrPath.Length == 0)
         {
@@ -48,20 +41,10 @@ public class UpdateManager
             command.Add("--channel");
             command.Add(_explicitChannel);
         }
-    
-        string() output = Platform.StartProcessBlocking(command);
-
-        if (output.Length == 0 || output == "null")
-        {
-            return null;
-        }
-
-        return UpdateInfo.FromJson(output);
+        return command;
     }
 
-    /// This function will request the update download, and then return immediately.
-    /// To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
-    public FutureResult DownloadUpdateAsync!(UpdateInfo# updateInfo) throws Exception
+    protected List<string()>() GetDownloadUpdatesCommand(UpdateInfo# updateInfo) throws Exception
     {
         if (_urlOrPath.Length == 0)
         {
@@ -78,11 +61,49 @@ public class UpdateManager
         command.Add("json");
         command.Add("--name");
         command.Add(updateInfo.TargetFullRelease.FileName);
-
-        _readline.SetProgressHandler(_progress == null ? _pDefault : _progress);
-        return Platform.StartProcessAsyncReadLine(command, _readline);
+        return command;
     }
 
+    /// Checks for updates, returning null if there are none available. If there are updates available, this method will return an 
+    /// UpdateInfo object containing the latest available release, and any delta updates that can be applied if they are available.
+    public string() GetCurrentVersion() throws Exception
+    {
+        List<string()>() command = GetCurrentVersionCommand();
+        return Platform.StartProcessBlocking(command);
+    }
+
+    /// This function will check for updates, and return information about the latest 
+    /// available release. This function runs synchronously and may take some time to
+    /// complete, depending on the network speed and the number of updates available.
+    public UpdateInfo#? CheckForUpdates() throws Exception
+    {
+        List<string()>() command = GetCheckForUpdatesCommand();
+        string() output = Platform.StartProcessBlocking(command);
+        if (output.Length == 0 || output == "null")
+        {
+            return null;
+        }
+        return UpdateInfo.FromJson(output);
+    }
+
+    /// Downloads the specified updates to the local app packages directory. If the update contains delta packages and ignoreDeltas=false, 
+    /// this method will attempt to unpack and prepare them. If there is no delta update available, or there is an error preparing delta 
+    /// packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
+    /// so may fail if there is already another update operation in progress.
+    public void DownloadUpdates(UpdateInfo# updateInfo) throws Exception
+    {
+        List<string()>() command = GetDownloadUpdatesCommand(updateInfo);
+        string() output = Platform.StartProcessBlocking(command);
+        string() lastLine = output.Substring(output.LastIndexOf("\n"));
+        ProgressEvent# result = ProgressEvent.FromJson(lastLine);
+        if (result.Error.Length > 0) {
+            throw Exception(result.Error);
+        }
+    }
+
+    /// This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified 
+    /// restart arguments. If you need to save state or clean up, you should do that before calling this method. 
+    /// The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
     public void ApplyUpdatesAndExit(string() assetPath) throws Exception
     {
         List<string()>() args;
@@ -90,12 +111,18 @@ public class UpdateManager
         Platform.Exit(0);
     }
 
+    /// This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified 
+    /// restart arguments. If you need to save state or clean up, you should do that before calling this method. 
+    /// The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
     public void ApplyUpdatesAndRestart(string() assetPath, List<string()>? restartArgs = null) throws Exception 
     {
         WaitExitThenApplyUpdates(assetPath, false, true, restartArgs);
         Platform.Exit(0);
     }
 
+    /// This will launch the Velopack updater and tell it to wait for this program to exit gracefully.
+    /// You should then clean up any state and exit your app. The updater will apply updates and then
+    /// optionally restart your app. The updater will only wait for 60 seconds before giving up.
     public void WaitExitThenApplyUpdates(string() assetPath, bool silent, bool restart, List<string()>? restartArgs = null) throws Exception 
     {
         List<string()>() command;

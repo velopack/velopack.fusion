@@ -55,11 +55,6 @@ export declare class JsonNode {
     initNumber(value: number): void;
     initString(value: string): void;
 }
-export declare abstract class ProgressHandler {
-    abstract onProgress(progress: number): void;
-    abstract onComplete(assetPath: string): void;
-    abstract onError(error: string): void;
-}
 export declare enum VelopackAssetType {
     UNKNOWN = 0,
     FULL = 1,
@@ -113,28 +108,49 @@ export declare class ProgressEvent {
     error: string;
     static fromJson(json: string): ProgressEvent;
 }
-export declare class UpdateManager {
+export declare class UpdateManagerSync {
     #private;
     setUrlOrPath(urlOrPath: string): void;
     setAllowDowngrade(allowDowngrade: boolean): void;
     setExplicitChannel(explicitChannel: string): void;
-    setProgressHandler(progress: ProgressHandler | null): void;
+    protected getCurrentVersionCommand(): string[];
+    protected getCheckForUpdatesCommand(): string[];
+    protected getDownloadUpdatesCommand(updateInfo: UpdateInfo): string[];
     /**
-     * This function will return the current installed version of the application
-     * or throw, if the application is not installed.
+     * Checks for updates, returning null if there are none available. If there are updates available, this method will return an
+     * UpdateInfo object containing the latest available release, and any delta updates that can be applied if they are available.
      */
     getCurrentVersion(): string;
     /**
-     * This function will check for updates, and return information about the latest available release.
+     * This function will check for updates, and return information about the latest
+     * available release. This function runs synchronously and may take some time to
+     * complete, depending on the network speed and the number of updates available.
      */
     checkForUpdates(): UpdateInfo | null;
     /**
-     * This function will request the update download, and then return immediately.
-     * To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
+     * Downloads the specified updates to the local app packages directory. If the update contains delta packages and ignoreDeltas=false,
+     * this method will attempt to unpack and prepare them. If there is no delta update available, or there is an error preparing delta
+     * packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
+     * so may fail if there is already another update operation in progress.
      */
-    downloadUpdateAsync(updateInfo: UpdateInfo): Promise<void>;
+    downloadUpdates(updateInfo: UpdateInfo): void;
+    /**
+     * This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified
+     * restart arguments. If you need to save state or clean up, you should do that before calling this method.
+     * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
+     */
     applyUpdatesAndExit(assetPath: string): void;
+    /**
+     * This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified
+     * restart arguments. If you need to save state or clean up, you should do that before calling this method.
+     * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
+     */
     applyUpdatesAndRestart(assetPath: string, restartArgs?: readonly string[] | null): void;
+    /**
+     * This will launch the Velopack updater and tell it to wait for this program to exit gracefully.
+     * You should then clean up any state and exit your app. The updater will apply updates and then
+     * optionally restart your app. The updater will only wait for 60 seconds before giving up.
+     */
     waitExitThenApplyUpdates(assetPath: string, silent: boolean, restart: boolean, restartArgs?: readonly string[] | null): void;
 }
 export declare class VelopackApp {

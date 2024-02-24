@@ -41,7 +41,7 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
     if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
     return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
-var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _StringAppendable_builder, _StringAppendable_writer, _StringAppendable_initialised, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _ProcessReadLineHandler__progress, _UpdateManager__allowDowngrade, _UpdateManager__explicitChannel, _UpdateManager__urlOrPath, _UpdateManager__pDefault, _UpdateManager__progress, _UpdateManager__readline, _VelopackApp_instances, _VelopackApp_handleArgs, _StringWriter_buf;
+var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _StringStream_instances, _StringStream_builder, _StringStream_writer, _StringStream_initialised, _StringStream_init, _UpdateManagerSync__allowDowngrade, _UpdateManagerSync__explicitChannel, _UpdateManagerSync__urlOrPath, _VelopackApp_instances, _VelopackApp_handleArgs, _StringWriter_buf;
 const { spawn, spawnSync } = require("child_process");
 const fs = require("fs");
 function emitLines(stream) {
@@ -270,33 +270,12 @@ export class JsonNode {
     }
 }
 _JsonNode_type = new WeakMap(), _JsonNode_objectValue = new WeakMap(), _JsonNode_arrayValue = new WeakMap(), _JsonNode_stringValue = new WeakMap(), _JsonNode_numberValue = new WeakMap(), _JsonNode_boolValue = new WeakMap();
-class StringAppendable {
-    constructor() {
-        _StringAppendable_builder.set(this, new StringWriter());
-        _StringAppendable_writer.set(this, void 0);
-        _StringAppendable_initialised.set(this, void 0);
-    }
-    clear() {
-        __classPrivateFieldGet(this, _StringAppendable_builder, "f").clear();
-    }
-    writeChar(c) {
-        if (!__classPrivateFieldGet(this, _StringAppendable_initialised, "f")) {
-            __classPrivateFieldSet(this, _StringAppendable_writer, __classPrivateFieldGet(this, _StringAppendable_builder, "f"), "f");
-            __classPrivateFieldSet(this, _StringAppendable_initialised, true, "f");
-        }
-        __classPrivateFieldGet(this, _StringAppendable_writer, "f").write(String.fromCharCode(c));
-    }
-    toString() {
-        return __classPrivateFieldGet(this, _StringAppendable_builder, "f").toString();
-    }
-}
-_StringAppendable_builder = new WeakMap(), _StringAppendable_writer = new WeakMap(), _StringAppendable_initialised = new WeakMap();
 class JsonParser {
     constructor() {
         _JsonParser_instances.add(this);
         _JsonParser_text.set(this, "");
         _JsonParser_position.set(this, 0);
-        _JsonParser_builder.set(this, new StringAppendable());
+        _JsonParser_builder.set(this, new StringStream());
     }
     load(text) {
         __classPrivateFieldSet(this, _JsonParser_text, text, "f");
@@ -597,12 +576,6 @@ class Platform {
         }
         nativeStartProcessFireAndForget(command_line);
     }
-    static startProcessAsyncReadLine(command_line, handler) {
-        if (command_line.length == 0) {
-            throw new Error("Command line is empty");
-        }
-        return nativeStartProcessAsyncReadLine(command_line, handler);
-    }
     /**
      * Returns the path of the current process.
      */
@@ -686,37 +659,39 @@ class Platform {
         nativeExitProcess(code);
     }
 }
-export class ProgressHandler {
-}
-class ProcessReadLineHandler {
+class StringStream {
     constructor() {
-        _ProcessReadLineHandler__progress.set(this, void 0);
+        _StringStream_instances.add(this);
+        _StringStream_builder.set(this, new StringWriter());
+        _StringStream_writer.set(this, void 0);
+        _StringStream_initialised.set(this, void 0);
     }
-    setProgressHandler(progress) {
-        __classPrivateFieldSet(this, _ProcessReadLineHandler__progress, progress, "f");
+    clear() {
+        __classPrivateFieldGet(this, _StringStream_builder, "f").clear();
     }
-    handleProcessOutputLine(line) {
-        let ev = ProgressEvent.fromJson(line);
-        if (ev.complete) {
-            __classPrivateFieldGet(this, _ProcessReadLineHandler__progress, "f").onComplete(ev.file);
-            return true;
-        }
-        else if (ev.error.length > 0) {
-            __classPrivateFieldGet(this, _ProcessReadLineHandler__progress, "f").onError(ev.error);
-            return true;
-        }
-        else {
-            __classPrivateFieldGet(this, _ProcessReadLineHandler__progress, "f").onProgress(ev.progress);
-            return false;
-        }
+    write(s) {
+        __classPrivateFieldGet(this, _StringStream_instances, "m", _StringStream_init).call(this);
+        __classPrivateFieldGet(this, _StringStream_writer, "f").write(s);
+    }
+    writeLine(s) {
+        __classPrivateFieldGet(this, _StringStream_instances, "m", _StringStream_init).call(this);
+        this.write(s);
+        this.writeChar(10);
+    }
+    writeChar(c) {
+        __classPrivateFieldGet(this, _StringStream_instances, "m", _StringStream_init).call(this);
+        __classPrivateFieldGet(this, _StringStream_writer, "f").write(String.fromCharCode(c));
+    }
+    toString() {
+        return __classPrivateFieldGet(this, _StringStream_builder, "f").toString();
     }
 }
-_ProcessReadLineHandler__progress = new WeakMap();
-class DefaultProgressHandler extends ProgressHandler {
-    onProgress(progress) { }
-    onComplete(assetPath) { }
-    onError(error) { }
-}
+_StringStream_builder = new WeakMap(), _StringStream_writer = new WeakMap(), _StringStream_initialised = new WeakMap(), _StringStream_instances = new WeakSet(), _StringStream_init = function _StringStream_init() {
+    if (!__classPrivateFieldGet(this, _StringStream_initialised, "f")) {
+        __classPrivateFieldSet(this, _StringStream_writer, __classPrivateFieldGet(this, _StringStream_builder, "f"), "f");
+        __classPrivateFieldSet(this, _StringStream_initialised, true, "f");
+    }
+};
 export var VelopackAssetType;
 (function (VelopackAssetType) {
     VelopackAssetType[VelopackAssetType["UNKNOWN"] = 0] = "UNKNOWN";
@@ -847,58 +822,78 @@ export class ProgressEvent {
         return progressEvent;
     }
 }
-export class UpdateManager {
+export class UpdateManagerSync {
     constructor() {
-        _UpdateManager__allowDowngrade.set(this, false);
-        _UpdateManager__explicitChannel.set(this, "");
-        _UpdateManager__urlOrPath.set(this, "");
-        _UpdateManager__pDefault.set(this, new DefaultProgressHandler());
-        _UpdateManager__progress.set(this, null);
-        _UpdateManager__readline.set(this, new ProcessReadLineHandler());
+        _UpdateManagerSync__allowDowngrade.set(this, false);
+        _UpdateManagerSync__explicitChannel.set(this, "");
+        _UpdateManagerSync__urlOrPath.set(this, "");
     }
     setUrlOrPath(urlOrPath) {
-        __classPrivateFieldSet(this, _UpdateManager__urlOrPath, urlOrPath, "f");
+        __classPrivateFieldSet(this, _UpdateManagerSync__urlOrPath, urlOrPath, "f");
     }
     setAllowDowngrade(allowDowngrade) {
-        __classPrivateFieldSet(this, _UpdateManager__allowDowngrade, allowDowngrade, "f");
+        __classPrivateFieldSet(this, _UpdateManagerSync__allowDowngrade, allowDowngrade, "f");
     }
     setExplicitChannel(explicitChannel) {
-        __classPrivateFieldSet(this, _UpdateManager__explicitChannel, explicitChannel, "f");
+        __classPrivateFieldSet(this, _UpdateManagerSync__explicitChannel, explicitChannel, "f");
     }
-    setProgressHandler(progress) {
-        __classPrivateFieldSet(this, _UpdateManager__progress, progress, "f");
-    }
-    /**
-     * This function will return the current installed version of the application
-     * or throw, if the application is not installed.
-     */
-    getCurrentVersion() {
+    getCurrentVersionCommand() {
         const command = [];
         command.push(Platform.getUpdateExePath());
         command.push("get-version");
-        return Platform.startProcessBlocking(command);
+        return command;
     }
-    /**
-     * This function will check for updates, and return information about the latest available release.
-     */
-    checkForUpdates() {
-        if (__classPrivateFieldGet(this, _UpdateManager__urlOrPath, "f").length == 0) {
+    getCheckForUpdatesCommand() {
+        if (__classPrivateFieldGet(this, _UpdateManagerSync__urlOrPath, "f").length == 0) {
             throw new Error("Please call SetUrlOrPath before trying to check for updates.");
         }
         const command = [];
         command.push(Platform.getUpdateExePath());
         command.push("check");
         command.push("--url");
-        command.push(__classPrivateFieldGet(this, _UpdateManager__urlOrPath, "f"));
+        command.push(__classPrivateFieldGet(this, _UpdateManagerSync__urlOrPath, "f"));
         command.push("--format");
         command.push("json");
-        if (__classPrivateFieldGet(this, _UpdateManager__allowDowngrade, "f")) {
+        if (__classPrivateFieldGet(this, _UpdateManagerSync__allowDowngrade, "f")) {
             command.push("--downgrade");
         }
-        if (__classPrivateFieldGet(this, _UpdateManager__explicitChannel, "f").length > 0) {
+        if (__classPrivateFieldGet(this, _UpdateManagerSync__explicitChannel, "f").length > 0) {
             command.push("--channel");
-            command.push(__classPrivateFieldGet(this, _UpdateManager__explicitChannel, "f"));
+            command.push(__classPrivateFieldGet(this, _UpdateManagerSync__explicitChannel, "f"));
         }
+        return command;
+    }
+    getDownloadUpdatesCommand(updateInfo) {
+        if (__classPrivateFieldGet(this, _UpdateManagerSync__urlOrPath, "f").length == 0) {
+            throw new Error("Please call SetUrlOrPath before trying to download updates.");
+        }
+        const command = [];
+        command.push(Platform.getUpdateExePath());
+        command.push("download");
+        command.push("--url");
+        command.push(__classPrivateFieldGet(this, _UpdateManagerSync__urlOrPath, "f"));
+        command.push("--clean");
+        command.push("--format");
+        command.push("json");
+        command.push("--name");
+        command.push(updateInfo.targetFullRelease.fileName);
+        return command;
+    }
+    /**
+     * Checks for updates, returning null if there are none available. If there are updates available, this method will return an
+     * UpdateInfo object containing the latest available release, and any delta updates that can be applied if they are available.
+     */
+    getCurrentVersion() {
+        const command = this.getCurrentVersionCommand();
+        return Platform.startProcessBlocking(command);
+    }
+    /**
+     * This function will check for updates, and return information about the latest
+     * available release. This function runs synchronously and may take some time to
+     * complete, depending on the network speed and the number of updates available.
+     */
+    checkForUpdates() {
+        const command = this.getCheckForUpdatesCommand();
         let output = Platform.startProcessBlocking(command);
         if (output.length == 0 || output == "null") {
             return null;
@@ -906,35 +901,44 @@ export class UpdateManager {
         return UpdateInfo.fromJson(output);
     }
     /**
-     * This function will request the update download, and then return immediately.
-     * To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
+     * Downloads the specified updates to the local app packages directory. If the update contains delta packages and ignoreDeltas=false,
+     * this method will attempt to unpack and prepare them. If there is no delta update available, or there is an error preparing delta
+     * packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
+     * so may fail if there is already another update operation in progress.
      */
-    downloadUpdateAsync(updateInfo) {
-        if (__classPrivateFieldGet(this, _UpdateManager__urlOrPath, "f").length == 0) {
-            throw new Error("Please call SetUrlOrPath before trying to download updates.");
+    downloadUpdates(updateInfo) {
+        const command = this.getDownloadUpdatesCommand(updateInfo);
+        let output = Platform.startProcessBlocking(command);
+        let lastLine = output.substring(output.lastIndexOf("\n"));
+        let result = ProgressEvent.fromJson(lastLine);
+        if (result.error.length > 0) {
+            throw new Error(result.error);
         }
-        const command = [];
-        command.push(Platform.getUpdateExePath());
-        command.push("download");
-        command.push("--url");
-        command.push(__classPrivateFieldGet(this, _UpdateManager__urlOrPath, "f"));
-        command.push("--clean");
-        command.push("--format");
-        command.push("json");
-        command.push("--name");
-        command.push(updateInfo.targetFullRelease.fileName);
-        __classPrivateFieldGet(this, _UpdateManager__readline, "f").setProgressHandler(__classPrivateFieldGet(this, _UpdateManager__progress, "f") == null ? __classPrivateFieldGet(this, _UpdateManager__pDefault, "f") : __classPrivateFieldGet(this, _UpdateManager__progress, "f"));
-        return Platform.startProcessAsyncReadLine(command, __classPrivateFieldGet(this, _UpdateManager__readline, "f"));
     }
+    /**
+     * This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified
+     * restart arguments. If you need to save state or clean up, you should do that before calling this method.
+     * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
+     */
     applyUpdatesAndExit(assetPath) {
         const args = [];
         this.waitExitThenApplyUpdates(assetPath, false, false, args);
         Platform.exit(0);
     }
+    /**
+     * This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified
+     * restart arguments. If you need to save state or clean up, you should do that before calling this method.
+     * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
+     */
     applyUpdatesAndRestart(assetPath, restartArgs = null) {
         this.waitExitThenApplyUpdates(assetPath, false, true, restartArgs);
         Platform.exit(0);
     }
+    /**
+     * This will launch the Velopack updater and tell it to wait for this program to exit gracefully.
+     * You should then clean up any state and exit your app. The updater will apply updates and then
+     * optionally restart your app. The updater will only wait for 60 seconds before giving up.
+     */
     waitExitThenApplyUpdates(assetPath, silent, restart, restartArgs = null) {
         const command = [];
         command.push(Platform.getUpdateExePath());
@@ -957,7 +961,7 @@ export class UpdateManager {
         Platform.startProcessFireAndForget(command);
     }
 }
-_UpdateManager__allowDowngrade = new WeakMap(), _UpdateManager__explicitChannel = new WeakMap(), _UpdateManager__urlOrPath = new WeakMap(), _UpdateManager__pDefault = new WeakMap(), _UpdateManager__progress = new WeakMap(), _UpdateManager__readline = new WeakMap();
+_UpdateManagerSync__allowDowngrade = new WeakMap(), _UpdateManagerSync__explicitChannel = new WeakMap(), _UpdateManagerSync__urlOrPath = new WeakMap();
 export class VelopackApp {
     constructor() {
         _VelopackApp_instances.add(this);

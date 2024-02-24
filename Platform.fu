@@ -22,16 +22,6 @@ static class Platform
         native { VMACRO_NativeStartProcessFireAndForget(command_line); }
     }
 
-    public static FutureResult StartProcessAsyncReadLine(List<string()> command_line, ProcessReadLineHandler! handler) throws Exception
-    {
-        if (command_line.Count == 0) {
-            throw Exception("Command line is empty");
-        }
-
-        native { return VMACRO_NativeStartProcessAsyncReadLine(command_line, handler); }
-        return FutureResult.Create();
-    }
-
     /// Returns the path of the current process.
     public static string() GetCurrentProcessPath() throws Exception
     {

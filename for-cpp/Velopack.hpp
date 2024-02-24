@@ -61,7 +61,6 @@ namespace Velopack
 
 namespace Velopack
 {
-class FutureResult;
 
 enum class JsonNodeType
 {
@@ -89,12 +88,9 @@ enum class JsonToken
 };
 class JsonParseException;
 class JsonNode;
-class StringAppendable;
 class JsonParser;
 class Platform;
-class ProgressHandler;
-class ProcessReadLineHandler;
-class DefaultProgressHandler;
+class StringStream;
 
 enum class VelopackAssetType
 {
@@ -105,14 +101,7 @@ enum class VelopackAssetType
 class VelopackAsset;
 class UpdateInfo;
 class ProgressEvent;
-class UpdateManager;
-
-class FutureResult
-{
-public:
-    FutureResult() = default;
-    static std::shared_ptr<FutureResult> create();
-};
+class UpdateManagerSync;
 
 class JsonParseException : public std::runtime_error
 {
@@ -177,17 +166,20 @@ private:
     bool boolValue;
 };
 
-class StringAppendable
+class StringStream
 {
 public:
-    StringAppendable() = default;
+    StringStream() = default;
     void clear();
+    void write(std::string s);
+    void writeLine(std::string s);
     void writeChar(int c);
     std::string toString() const;
 private:
     std::ostringstream builder;
     std::ostream * writer;
     bool initialised;
+    void init();
 };
 
 class JsonParser
@@ -213,7 +205,7 @@ public:
 private:
     std::string text{""};
     int position = 0;
-    StringAppendable builder;
+    StringStream builder;
     JsonToken peekToken();
 };
 
@@ -228,7 +220,6 @@ public:
      * Starts a new process and returns immediately.
      */
     static void startProcessFireAndForget(const std::vector<std::string> * command_line);
-    static std::thread startProcessAsyncReadLine(const std::vector<std::string> * command_line, ProcessReadLineHandler * handler);
     /**
      * Returns the path of the current process.
      */
@@ -249,36 +240,6 @@ public:
     static void exit(int code);
 private:
     Platform() = delete;
-};
-
-class ProgressHandler
-{
-public:
-    virtual ~ProgressHandler() = default;
-    virtual void onProgress(int progress) = 0;
-    virtual void onComplete(std::string assetPath) = 0;
-    virtual void onError(std::string error) = 0;
-protected:
-    ProgressHandler() = default;
-};
-
-class ProcessReadLineHandler
-{
-public:
-    ProcessReadLineHandler() = default;
-    void setProgressHandler(ProgressHandler * progress);
-    bool handleProcessOutputLine(std::string line);
-private:
-    ProgressHandler * _progress;
-};
-
-class DefaultProgressHandler : public ProgressHandler
-{
-public:
-    DefaultProgressHandler() = default;
-    void onProgress(int progress) override;
-    void onComplete(std::string assetPath) override;
-    void onError(std::string error) override;
 };
 
 class VelopackAsset
@@ -344,37 +305,56 @@ public:
     std::string error{""};
 };
 
-class UpdateManager
+class UpdateManagerSync
 {
 public:
-    UpdateManager() = default;
+    UpdateManagerSync() = default;
     void setUrlOrPath(std::string urlOrPath);
     void setAllowDowngrade(bool allowDowngrade);
     void setExplicitChannel(std::string explicitChannel);
-    void setProgressHandler(ProgressHandler * progress);
     /**
-     * This function will return the current installed version of the application
-     * or throw, if the application is not installed.
+     * Checks for updates, returning null if there are none available. If there are updates available, this method will return an 
+     * UpdateInfo object containing the latest available release, and any delta updates that can be applied if they are available.
      */
     std::string getCurrentVersion() const;
     /**
-     * This function will check for updates, and return information about the latest available release.
+     * This function will check for updates, and return information about the latest 
+     * available release. This function runs synchronously and may take some time to
+     * complete, depending on the network speed and the number of updates available.
      */
     std::shared_ptr<UpdateInfo> checkForUpdates() const;
     /**
-     * This function will request the update download, and then return immediately.
-     * To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
+     * Downloads the specified updates to the local app packages directory. If the update contains delta packages and ignoreDeltas=false, 
+     * this method will attempt to unpack and prepare them. If there is no delta update available, or there is an error preparing delta 
+     * packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
+     * so may fail if there is already another update operation in progress.
      */
-    std::thread downloadUpdateAsync(std::shared_ptr<UpdateInfo> updateInfo);
+    void downloadUpdates(std::shared_ptr<UpdateInfo> updateInfo) const;
+    /**
+     * This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified 
+     * restart arguments. If you need to save state or clean up, you should do that before calling this method. 
+     * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
+     */
     void applyUpdatesAndExit(std::string assetPath) const;
+    /**
+     * This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified 
+     * restart arguments. If you need to save state or clean up, you should do that before calling this method. 
+     * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
+     */
     void applyUpdatesAndRestart(std::string assetPath, const std::vector<std::string> * restartArgs = nullptr) const;
+    /**
+     * This will launch the Velopack updater and tell it to wait for this program to exit gracefully.
+     * You should then clean up any state and exit your app. The updater will apply updates and then
+     * optionally restart your app. The updater will only wait for 60 seconds before giving up.
+     */
     void waitExitThenApplyUpdates(std::string assetPath, bool silent, bool restart, const std::vector<std::string> * restartArgs = nullptr) const;
+protected:
+    std::vector<std::string> getCurrentVersionCommand() const;
+    std::vector<std::string> getCheckForUpdatesCommand() const;
+    std::vector<std::string> getDownloadUpdatesCommand(std::shared_ptr<UpdateInfo> updateInfo) const;
 private:
     bool _allowDowngrade = false;
     std::string _explicitChannel{""};
     std::string _urlOrPath{""};
-    std::shared_ptr<ProgressHandler> _pDefault = std::make_shared<DefaultProgressHandler>();
-    ProgressHandler * _progress = nullptr;
-    std::shared_ptr<ProcessReadLineHandler> _readline = std::make_shared<ProcessReadLineHandler>();
 };
 }

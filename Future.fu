@@ -1,9 +1,0 @@
-public class FutureResult
-{
-    public static FutureResult# Create() throws Exception
-    {
-        throw Exception("Not implemented");
-    }
-}
-
-// this class is replaced by a native Task / Promise / etc in the target language. Do not modify.

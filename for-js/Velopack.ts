@@ -310,32 +310,10 @@ export class JsonNode {
   }
 }
 
-class StringAppendable {
-  readonly #builder: StringWriter = new StringWriter();
-  #writer: StringWriter;
-  #initialised: boolean;
-
-  public clear(): void {
-    this.#builder.clear();
-  }
-
-  public writeChar(c: number): void {
-    if (!this.#initialised) {
-      this.#writer = this.#builder;
-      this.#initialised = true;
-    }
-    this.#writer.write(String.fromCharCode(c));
-  }
-
-  public toString(): string {
-    return this.#builder.toString();
-  }
-}
-
 class JsonParser {
   #text: string = "";
   #position: number = 0;
-  readonly #builder: StringAppendable = new StringAppendable();
+  readonly #builder: StringStream = new StringStream();
 
   public load(text: string): void {
     this.#text = text;
@@ -657,16 +635,6 @@ class Platform {
     nativeStartProcessFireAndForget(command_line);
   }
 
-  public static startProcessAsyncReadLine(
-    command_line: readonly string[],
-    handler: ProcessReadLineHandler,
-  ): Promise<void> {
-    if (command_line.length == 0) {
-      throw new Error("Command line is empty");
-    }
-    return nativeStartProcessAsyncReadLine(command_line, handler);
-  }
-
   /**
    * Returns the path of the current process.
    */
@@ -761,42 +729,41 @@ class Platform {
   }
 }
 
-export abstract class ProgressHandler {
-  public abstract onProgress(progress: number): void;
+class StringStream {
+  readonly #builder: StringWriter = new StringWriter();
+  #writer: StringWriter;
+  #initialised: boolean;
 
-  public abstract onComplete(assetPath: string): void;
-
-  public abstract onError(error: string): void;
-}
-
-class ProcessReadLineHandler {
-  #_progress: ProgressHandler;
-
-  public setProgressHandler(progress: ProgressHandler): void {
-    this.#_progress = progress;
+  public clear(): void {
+    this.#builder.clear();
   }
 
-  public handleProcessOutputLine(line: string): boolean {
-    let ev: ProgressEvent = ProgressEvent.fromJson(line);
-    if (ev.complete) {
-      this.#_progress.onComplete(ev.file);
-      return true;
-    } else if (ev.error.length > 0) {
-      this.#_progress.onError(ev.error);
-      return true;
-    } else {
-      this.#_progress.onProgress(ev.progress);
-      return false;
+  public write(s: string): void {
+    this.#init();
+    this.#writer.write(s);
+  }
+
+  public writeLine(s: string): void {
+    this.#init();
+    this.write(s);
+    this.writeChar(10);
+  }
+
+  public writeChar(c: number): void {
+    this.#init();
+    this.#writer.write(String.fromCharCode(c));
+  }
+
+  public toString(): string {
+    return this.#builder.toString();
+  }
+
+  #init(): void {
+    if (!this.#initialised) {
+      this.#writer = this.#builder;
+      this.#initialised = true;
     }
   }
-}
-
-class DefaultProgressHandler extends ProgressHandler {
-  public onProgress(progress: number): void {}
-
-  public onComplete(assetPath: string): void {}
-
-  public onError(error: string): void {}
 }
 
 export enum VelopackAssetType {
@@ -931,13 +898,10 @@ export class ProgressEvent {
   }
 }
 
-export class UpdateManager {
+export class UpdateManagerSync {
   #_allowDowngrade: boolean = false;
   #_explicitChannel: string = "";
   #_urlOrPath: string = "";
-  #_pDefault: ProgressHandler = new DefaultProgressHandler();
-  #_progress: ProgressHandler | null = null;
-  #_readline: ProcessReadLineHandler = new ProcessReadLineHandler();
 
   public setUrlOrPath(urlOrPath: string): void {
     this.#_urlOrPath = urlOrPath;
@@ -951,25 +915,14 @@ export class UpdateManager {
     this.#_explicitChannel = explicitChannel;
   }
 
-  public setProgressHandler(progress: ProgressHandler | null): void {
-    this.#_progress = progress;
-  }
-
-  /**
-   * This function will return the current installed version of the application
-   * or throw, if the application is not installed.
-   */
-  public getCurrentVersion(): string {
+  protected getCurrentVersionCommand(): string[] {
     const command: string[] = [];
     command.push(Platform.getUpdateExePath());
     command.push("get-version");
-    return Platform.startProcessBlocking(command);
+    return command;
   }
 
-  /**
-   * This function will check for updates, and return information about the latest available release.
-   */
-  public checkForUpdates(): UpdateInfo | null {
+  protected getCheckForUpdatesCommand(): string[] {
     if (this.#_urlOrPath.length == 0) {
       throw new Error(
         "Please call SetUrlOrPath before trying to check for updates.",
@@ -989,18 +942,10 @@ export class UpdateManager {
       command.push("--channel");
       command.push(this.#_explicitChannel);
     }
-    let output: string = Platform.startProcessBlocking(command);
-    if (output.length == 0 || output == "null") {
-      return null;
-    }
-    return UpdateInfo.fromJson(output);
+    return command;
   }
 
-  /**
-   * This function will request the update download, and then return immediately.
-   * To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.
-   */
-  public downloadUpdateAsync(updateInfo: UpdateInfo): Promise<void> {
+  protected getDownloadUpdatesCommand(updateInfo: UpdateInfo): string[] {
     if (this.#_urlOrPath.length == 0) {
       throw new Error(
         "Please call SetUrlOrPath before trying to download updates.",
@@ -1016,18 +961,64 @@ export class UpdateManager {
     command.push("json");
     command.push("--name");
     command.push(updateInfo.targetFullRelease.fileName);
-    this.#_readline.setProgressHandler(
-      this.#_progress == null ? this.#_pDefault : this.#_progress,
-    );
-    return Platform.startProcessAsyncReadLine(command, this.#_readline);
+    return command;
   }
 
+  /**
+   * Checks for updates, returning null if there are none available. If there are updates available, this method will return an
+   * UpdateInfo object containing the latest available release, and any delta updates that can be applied if they are available.
+   */
+  public getCurrentVersion(): string {
+    const command: string[] = this.getCurrentVersionCommand();
+    return Platform.startProcessBlocking(command);
+  }
+
+  /**
+   * This function will check for updates, and return information about the latest
+   * available release. This function runs synchronously and may take some time to
+   * complete, depending on the network speed and the number of updates available.
+   */
+  public checkForUpdates(): UpdateInfo | null {
+    const command: string[] = this.getCheckForUpdatesCommand();
+    let output: string = Platform.startProcessBlocking(command);
+    if (output.length == 0 || output == "null") {
+      return null;
+    }
+    return UpdateInfo.fromJson(output);
+  }
+
+  /**
+   * Downloads the specified updates to the local app packages directory. If the update contains delta packages and ignoreDeltas=false,
+   * this method will attempt to unpack and prepare them. If there is no delta update available, or there is an error preparing delta
+   * packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
+   * so may fail if there is already another update operation in progress.
+   */
+  public downloadUpdates(updateInfo: UpdateInfo): void {
+    const command: string[] = this.getDownloadUpdatesCommand(updateInfo);
+    let output: string = Platform.startProcessBlocking(command);
+    let lastLine: string = output.substring(output.lastIndexOf("\n"));
+    let result: ProgressEvent = ProgressEvent.fromJson(lastLine);
+    if (result.error.length > 0) {
+      throw new Error(result.error);
+    }
+  }
+
+  /**
+   * This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified
+   * restart arguments. If you need to save state or clean up, you should do that before calling this method.
+   * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
+   */
   public applyUpdatesAndExit(assetPath: string): void {
     const args: string[] = [];
     this.waitExitThenApplyUpdates(assetPath, false, false, args);
     Platform.exit(0);
   }
 
+  /**
+   * This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified
+   * restart arguments. If you need to save state or clean up, you should do that before calling this method.
+   * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
+   */
   public applyUpdatesAndRestart(
     assetPath: string,
     restartArgs: readonly string[] | null = null,
@@ -1036,6 +1027,11 @@ export class UpdateManager {
     Platform.exit(0);
   }
 
+  /**
+   * This will launch the Velopack updater and tell it to wait for this program to exit gracefully.
+   * You should then clean up any state and exit your app. The updater will apply updates and then
+   * optionally restart your app. The updater will only wait for 60 seconds before giving up.
+   */
   public waitExitThenApplyUpdates(
     assetPath: string,
     silent: boolean,

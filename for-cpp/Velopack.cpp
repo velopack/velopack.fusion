@@ -1322,45 +1322,45 @@ static void nativeStartProcessFireAndForget(const std::vector<std::string> *comm
     nativeStartProcess(command_line, subprocess_option_no_window);
 }
 
-static std::thread nativeStartProcessAsyncReadLine(const std::vector<std::string> *command_line, Velopack::ProcessReadLineHandler *handler)
-{
-    subprocess_s subprocess = nativeStartProcess(command_line, subprocess_option_no_window | subprocess_option_enable_async);
+// static std::thread nativeStartProcessAsyncReadLine(const std::vector<std::string> *command_line, Velopack::ProcessReadLineHandler *handler)
+// {
+//     subprocess_s subprocess = nativeStartProcess(command_line, subprocess_option_no_window | subprocess_option_enable_async);
 
-    std::thread outputThread([subprocess, handler]() mutable
-    {
-        const unsigned BUFFER_SIZE = 1024;
-        char readBuffer[BUFFER_SIZE];
-        std::string accumulatedData;
+//     std::thread outputThread([subprocess, handler]() mutable
+//     {
+//         const unsigned BUFFER_SIZE = 1024;
+//         char readBuffer[BUFFER_SIZE];
+//         std::string accumulatedData;
 
-        // read all stdout from the process one line at a time
-        while (true) {
-            unsigned bytesRead = subprocess_read_stdout(&subprocess, readBuffer, BUFFER_SIZE - 1);
+//         // read all stdout from the process one line at a time
+//         while (true) {
+//             unsigned bytesRead = subprocess_read_stdout(&subprocess, readBuffer, BUFFER_SIZE - 1);
 
-            if (bytesRead == 0) {
-                // bytesRead is 0, indicating the process has completed
-                // Process any remaining data in accumulatedData as the last line if needed
-                if (!accumulatedData.empty()) {
-                    handler->handleProcessOutputLine(accumulatedData);
-                }
-                return;
-            }
+//             if (bytesRead == 0) {
+//                 // bytesRead is 0, indicating the process has completed
+//                 // Process any remaining data in accumulatedData as the last line if needed
+//                 if (!accumulatedData.empty()) {
+//                     handler->handleProcessOutputLine(accumulatedData);
+//                 }
+//                 return;
+//             }
 
-            accumulatedData += std::string(readBuffer, bytesRead);
+//             accumulatedData += std::string(readBuffer, bytesRead);
 
-            // Process accumulated data for lines
-            size_t pos;
-            while ((pos = accumulatedData.find('\n')) != std::string::npos) {
-                std::string line = accumulatedData.substr(0, pos);
-                if (handler->handleProcessOutputLine(line)) {
-                    return; // complete or err
-                }
-                accumulatedData.erase(0, pos + 1);
-            }
-        } 
-    });
+//             // Process accumulated data for lines
+//             size_t pos;
+//             while ((pos = accumulatedData.find('\n')) != std::string::npos) {
+//                 std::string line = accumulatedData.substr(0, pos);
+//                 if (handler->handleProcessOutputLine(line)) {
+//                     return; // complete or err
+//                 }
+//                 accumulatedData.erase(0, pos + 1);
+//             }
+//         } 
+//     });
 
-    return outputThread;
-}
+//     return outputThread;
+// }
 
 static std::string nativeStartProcessBlocking(const std::vector<std::string> *command_line)
 {
@@ -1466,11 +1466,6 @@ static std::string FuString_ToLower(std::string_view s)
 
 namespace Velopack
 {
-
-std::shared_ptr<FutureResult> FutureResult::create()
-{
-    throw std::runtime_error("Not implemented");
-}
 
 JsonNodeType JsonNode::getKind() const
 {
@@ -1591,25 +1586,6 @@ void JsonNode::initString(std::string_view value)
     }
     this->type = JsonNodeType::string;
     this->stringValue = value;
-}
-
-void StringAppendable::clear()
-{
-    this->builder.str(std::string());
-}
-
-void StringAppendable::writeChar(int c)
-{
-    if (!this->initialised) {
-        this->writer = &this->builder;
-        this->initialised = true;
-    }
-    *this->writer << static_cast<char>(c);
-}
-
-std::string StringAppendable::toString() const
-{
-    return std::string(this->builder.str());
 }
 
 void JsonParser::load(std::string_view text)
@@ -1932,14 +1908,6 @@ void Platform::startProcessFireAndForget(const std::vector<std::string> * comman
     }
      nativeStartProcessFireAndForget(command_line); }
 
-std::thread Platform::startProcessAsyncReadLine(const std::vector<std::string> * command_line, ProcessReadLineHandler * handler)
-{
-    if (std::ssize(*command_line) == 0) {
-        throw std::runtime_error("Command line is empty");
-    }
-     return nativeStartProcessAsyncReadLine(command_line, handler); 
-}
-
 std::string Platform::getCurrentProcessPath()
 {
     std::string ret{""};
@@ -2036,38 +2004,41 @@ void Platform::exit(int code)
 {
      nativeExitProcess(code); }
 
-void ProcessReadLineHandler::setProgressHandler(ProgressHandler * progress)
+void StringStream::clear()
 {
-    this->_progress = progress;
+    this->builder.str(std::string());
 }
 
-bool ProcessReadLineHandler::handleProcessOutputLine(std::string line)
+void StringStream::write(std::string s)
 {
-    std::shared_ptr<ProgressEvent> ev = ProgressEvent::fromJson(line);
-    if (ev->complete) {
-        this->_progress->onComplete(ev->file);
-        return true;
+    init();
+    *this->writer << s;
+}
+
+void StringStream::writeLine(std::string s)
+{
+    init();
+    write(s);
+    writeChar('\n');
+}
+
+void StringStream::writeChar(int c)
+{
+    init();
+    *this->writer << static_cast<char>(c);
+}
+
+std::string StringStream::toString() const
+{
+    return std::string(this->builder.str());
+}
+
+void StringStream::init()
+{
+    if (!this->initialised) {
+        this->writer = &this->builder;
+        this->initialised = true;
     }
-    else if (!ev->error.empty()) {
-        this->_progress->onError(ev->error);
-        return true;
-    }
-    else {
-        this->_progress->onProgress(ev->progress);
-        return false;
-    }
-}
-
-void DefaultProgressHandler::onProgress(int progress)
-{
-}
-
-void DefaultProgressHandler::onComplete(std::string assetPath)
-{
-}
-
-void DefaultProgressHandler::onError(std::string error)
-{
 }
 
 std::shared_ptr<VelopackAsset> VelopackAsset::fromJson(std::string_view json)
@@ -2130,35 +2101,30 @@ std::shared_ptr<ProgressEvent> ProgressEvent::fromJson(std::string_view json)
     return progressEvent;
 }
 
-void UpdateManager::setUrlOrPath(std::string urlOrPath)
+void UpdateManagerSync::setUrlOrPath(std::string urlOrPath)
 {
     this->_urlOrPath = urlOrPath;
 }
 
-void UpdateManager::setAllowDowngrade(bool allowDowngrade)
+void UpdateManagerSync::setAllowDowngrade(bool allowDowngrade)
 {
     this->_allowDowngrade = allowDowngrade;
 }
 
-void UpdateManager::setExplicitChannel(std::string explicitChannel)
+void UpdateManagerSync::setExplicitChannel(std::string explicitChannel)
 {
     this->_explicitChannel = explicitChannel;
 }
 
-void UpdateManager::setProgressHandler(ProgressHandler * progress)
-{
-    this->_progress = progress;
-}
-
-std::string UpdateManager::getCurrentVersion() const
+std::vector<std::string> UpdateManagerSync::getCurrentVersionCommand() const
 {
     std::vector<std::string> command;
     command.push_back(Platform::getUpdateExePath());
     command.push_back("get-version");
-    return Platform::startProcessBlocking(&command);
+    return command;
 }
 
-std::shared_ptr<UpdateInfo> UpdateManager::checkForUpdates() const
+std::vector<std::string> UpdateManagerSync::getCheckForUpdatesCommand() const
 {
     if (this->_urlOrPath.empty()) {
         throw std::runtime_error("Please call SetUrlOrPath before trying to check for updates.");
@@ -2177,14 +2143,10 @@ std::shared_ptr<UpdateInfo> UpdateManager::checkForUpdates() const
         command.push_back("--channel");
         command.push_back(this->_explicitChannel);
     }
-    std::string output{Platform::startProcessBlocking(&command)};
-    if (output.empty() || output == "null") {
-        return nullptr;
-    }
-    return UpdateInfo::fromJson(output);
+    return command;
 }
 
-std::thread UpdateManager::downloadUpdateAsync(std::shared_ptr<UpdateInfo> updateInfo)
+std::vector<std::string> UpdateManagerSync::getDownloadUpdatesCommand(std::shared_ptr<UpdateInfo> updateInfo) const
 {
     if (this->_urlOrPath.empty()) {
         throw std::runtime_error("Please call SetUrlOrPath before trying to download updates.");
@@ -2199,24 +2161,50 @@ std::thread UpdateManager::downloadUpdateAsync(std::shared_ptr<UpdateInfo> updat
     command.push_back("json");
     command.push_back("--name");
     command.push_back(updateInfo->targetFullRelease->fileName);
-    this->_readline->setProgressHandler(this->_progress == nullptr ? this->_pDefault.get() : this->_progress);
-    return Platform::startProcessAsyncReadLine(&command, this->_readline.get());
+    return command;
 }
 
-void UpdateManager::applyUpdatesAndExit(std::string assetPath) const
+std::string UpdateManagerSync::getCurrentVersion() const
+{
+    std::vector<std::string> command = getCurrentVersionCommand();
+    return Platform::startProcessBlocking(&command);
+}
+
+std::shared_ptr<UpdateInfo> UpdateManagerSync::checkForUpdates() const
+{
+    std::vector<std::string> command = getCheckForUpdatesCommand();
+    std::string output{Platform::startProcessBlocking(&command)};
+    if (output.empty() || output == "null") {
+        return nullptr;
+    }
+    return UpdateInfo::fromJson(output);
+}
+
+void UpdateManagerSync::downloadUpdates(std::shared_ptr<UpdateInfo> updateInfo) const
+{
+    std::vector<std::string> command = getDownloadUpdatesCommand(updateInfo);
+    std::string output{Platform::startProcessBlocking(&command)};
+    std::string lastLine{output.substr(static_cast<int>(output.rfind('\n')))};
+    std::shared_ptr<ProgressEvent> result = ProgressEvent::fromJson(lastLine);
+    if (!result->error.empty()) {
+        throw std::runtime_error(result->error);
+    }
+}
+
+void UpdateManagerSync::applyUpdatesAndExit(std::string assetPath) const
 {
     std::vector<std::string> args;
     waitExitThenApplyUpdates(assetPath, false, false, &args);
     Platform::exit(0);
 }
 
-void UpdateManager::applyUpdatesAndRestart(std::string assetPath, const std::vector<std::string> * restartArgs) const
+void UpdateManagerSync::applyUpdatesAndRestart(std::string assetPath, const std::vector<std::string> * restartArgs) const
 {
     waitExitThenApplyUpdates(assetPath, false, true, restartArgs);
     Platform::exit(0);
 }
 
-void UpdateManager::waitExitThenApplyUpdates(std::string assetPath, bool silent, bool restart, const std::vector<std::string> * restartArgs) const
+void UpdateManagerSync::waitExitThenApplyUpdates(std::string assetPath, bool silent, bool restart, const std::vector<std::string> * restartArgs) const
 {
     std::vector<std::string> command;
     command.push_back(Platform::getUpdateExePath());

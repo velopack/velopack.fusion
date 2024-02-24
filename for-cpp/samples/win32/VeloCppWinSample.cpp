@@ -21,7 +21,7 @@ HINSTANCE hInst;
 const WCHAR szTitle[] = L"Velopack C++ Sample App";
 const WCHAR szWindowClass[] = L"VeloCppWinSample";
 std::shared_ptr<Velopack::UpdateInfo> updInfo{};
-Velopack::UpdateManager manager{};
+Velopack::UpdateManagerSync manager{};
 std::string updPath = "";
 std::string currentVersion = "";
 
@@ -33,29 +33,6 @@ LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 std::wstring utf8_to_wstring(std::string const& str);
 std::string wstring_to_utf8(std::wstring const& wstr);
-
-class SampleProgressHandler : public Velopack::ProgressHandler
-{
-public:
-	SampleProgressHandler() = default;
-	void onProgress(int progress) override
-	{
-		
-	}
-	void onComplete(std::string assetPath) override 
-	{
-		updPath = assetPath;
-		std::wstring message = L"Downloaded successfully to: " + utf8_to_wstring(assetPath);
-		MessageBoxCentered(nullptr, message.c_str(), szTitle, MB_OK | MB_ICONINFORMATION);
-	}
-	void onError(std::string error) override 
-	{
-		std::wstring wideWhat = utf8_to_wstring(error);
-		MessageBoxCentered(nullptr, wideWhat.c_str(), szTitle, MB_OK | MB_ICONERROR);
-	}
-};
-
-SampleProgressHandler* progressHandler = new SampleProgressHandler();
 
 int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 	_In_opt_ HINSTANCE hPrevInstance,
@@ -71,7 +48,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		wchar_t** args = CommandLineToArgvW(lpCmdLine, &pNumArgs);
 		Velopack::startup(args, pNumArgs);
 		manager.setUrlOrPath(UPDATE_URL);
-		manager.setProgressHandler(progressHandler);
 		currentVersion = manager.getCurrentVersion();
 	}
 	catch (std::exception& e)
@@ -189,8 +165,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				if (updInfo != nullptr) {
 					try {
-						auto thr = manager.downloadUpdateAsync(updInfo);
-						thr.join();
+						manager.downloadUpdates(updInfo);
 					}
 					catch (std::exception& e) {
 						std::wstring wideWhat = utf8_to_wstring(e.what());

@@ -237,36 +237,6 @@ namespace Velopack
         }
     }
 
-    class StringAppendable
-    {
-
-        readonly StringWriter builder = new StringWriter();
-
-        TextWriter writer;
-
-        bool initialised;
-
-        public void Clear()
-        {
-            this.builder.GetStringBuilder().Clear();
-        }
-
-        public void WriteChar(int c)
-        {
-            if (!this.initialised)
-            {
-                this.writer = this.builder;
-                this.initialised = true;
-            }
-            this.writer.Write((char)c);
-        }
-
-        public override string ToString()
-        {
-            return this.builder.ToString();
-        }
-    }
-
     class JsonParser
     {
 
@@ -274,7 +244,7 @@ namespace Velopack
 
         int position = 0;
 
-        readonly StringAppendable builder = new StringAppendable();
+        readonly StringStream builder = new StringStream();
 
         public void Load(string text)
         {
@@ -628,15 +598,6 @@ namespace Velopack
             NativeMethods.NativeStartProcessFireAndForget(command_line);
         }
 
-        public static Task StartProcessAsyncReadLine(List<string> command_line, ProcessReadLineHandler handler)
-        {
-            if (command_line.Count == 0)
-            {
-                throw new Exception("Command line is empty");
-            }
-            return NativeMethods.NativeStartProcessAsyncReadline(command_line, handler);
-        }
-
         /// <summary>Returns the path of the current process.</summary>
         public static string GetCurrentProcessPath()
         {
@@ -747,60 +708,51 @@ namespace Velopack
         }
     }
 
-    public abstract class ProgressHandler
+    class StringStream
     {
 
-        public abstract void OnProgress(int progress);
+        readonly StringWriter builder = new StringWriter();
 
-        public abstract void OnComplete(string assetPath);
+        TextWriter writer;
 
-        public abstract void OnError(string error);
-    }
+        bool initialised;
 
-    class ProcessReadLineHandler
-    {
-
-        ProgressHandler _progress;
-
-        public void SetProgressHandler(ProgressHandler progress)
+        public void Clear()
         {
-            this._progress = progress;
+            this.builder.GetStringBuilder().Clear();
         }
 
-        public bool HandleProcessOutputLine(string line)
+        public void Write(string s)
         {
-            ProgressEvent ev = ProgressEvent.FromJson(line);
-            if (ev.Complete)
+            Init();
+            this.writer.Write(s);
+        }
+
+        public void WriteLine(string s)
+        {
+            Init();
+            Write(s);
+            WriteChar('\n');
+        }
+
+        public void WriteChar(int c)
+        {
+            Init();
+            this.writer.Write((char)c);
+        }
+
+        public override string ToString()
+        {
+            return this.builder.ToString();
+        }
+
+        void Init()
+        {
+            if (!this.initialised)
             {
-                this._progress.OnComplete(ev.File);
-                return true;
+                this.writer = this.builder;
+                this.initialised = true;
             }
-            else if (ev.Error.Length > 0)
-            {
-                this._progress.OnError(ev.Error);
-                return true;
-            }
-            else
-            {
-                this._progress.OnProgress(ev.Progress);
-                return false;
-            }
-        }
-    }
-
-    class DefaultProgressHandler : ProgressHandler
-    {
-
-        public override void OnProgress(int progress)
-        {
-        }
-
-        public override void OnComplete(string assetPath)
-        {
-        }
-
-        public override void OnError(string error)
-        {
         }
     }
 
@@ -945,7 +897,7 @@ namespace Velopack
         }
     }
 
-    public class UpdateManager
+    public class UpdateManagerSync
     {
 
         bool _allowDowngrade = false;
@@ -953,12 +905,6 @@ namespace Velopack
         string _explicitChannel = "";
 
         string _urlOrPath = "";
-
-        ProgressHandler _pDefault = new DefaultProgressHandler();
-
-        ProgressHandler _progress = null;
-
-        ProcessReadLineHandler _readline = new ProcessReadLineHandler();
 
         public void SetUrlOrPath(string urlOrPath)
         {
@@ -975,23 +921,15 @@ namespace Velopack
             this._explicitChannel = explicitChannel;
         }
 
-        public void SetProgressHandler(ProgressHandler progress)
-        {
-            this._progress = progress;
-        }
-
-        /// <summary>This function will return the current installed version of the application
-        /// or throw, if the application is not installed.</summary>
-        public string GetCurrentVersion()
+        protected List<string> GetCurrentVersionCommand()
         {
             List<string> command = new List<string>();
             command.Add(Platform.GetUpdateExePath());
             command.Add("get-version");
-            return Platform.StartProcessBlocking(command);
+            return command;
         }
 
-        /// <summary>This function will check for updates, and return information about the latest available release.</summary>
-        public UpdateInfo CheckForUpdates()
+        protected List<string> GetCheckForUpdatesCommand()
         {
             if (this._urlOrPath.Length == 0)
             {
@@ -1013,17 +951,10 @@ namespace Velopack
                 command.Add("--channel");
                 command.Add(this._explicitChannel);
             }
-            string output = Platform.StartProcessBlocking(command);
-            if (output.Length == 0 || output == "null")
-            {
-                return null;
-            }
-            return UpdateInfo.FromJson(output);
+            return command;
         }
 
-        /// <summary>This function will request the update download, and then return immediately.</summary>
-        /// <remarks>To be informed of progress/completion events, please see UpdateOptions.SetProgressHandler.</remarks>
-        public Task DownloadUpdateAsync(UpdateInfo updateInfo)
+        protected List<string> GetDownloadUpdatesCommand(UpdateInfo updateInfo)
         {
             if (this._urlOrPath.Length == 0)
             {
@@ -1039,10 +970,50 @@ namespace Velopack
             command.Add("json");
             command.Add("--name");
             command.Add(updateInfo.TargetFullRelease.FileName);
-            this._readline.SetProgressHandler(this._progress == null ? this._pDefault : this._progress);
-            return Platform.StartProcessAsyncReadLine(command, this._readline);
+            return command;
         }
 
+        /// <summary>Checks for updates, returning null if there are none available. If there are updates available, this method will return an 
+        /// UpdateInfo object containing the latest available release, and any delta updates that can be applied if they are available.</summary>
+        public string GetCurrentVersion()
+        {
+            List<string> command = GetCurrentVersionCommand();
+            return Platform.StartProcessBlocking(command);
+        }
+
+        /// <summary>This function will check for updates, and return information about the latest 
+        /// available release. This function runs synchronously and may take some time to
+        /// complete, depending on the network speed and the number of updates available.</summary>
+        public UpdateInfo CheckForUpdates()
+        {
+            List<string> command = GetCheckForUpdatesCommand();
+            string output = Platform.StartProcessBlocking(command);
+            if (output.Length == 0 || output == "null")
+            {
+                return null;
+            }
+            return UpdateInfo.FromJson(output);
+        }
+
+        /// <summary>Downloads the specified updates to the local app packages directory. If the update contains delta packages and ignoreDeltas=false, 
+        /// this method will attempt to unpack and prepare them. If there is no delta update available, or there is an error preparing delta 
+        /// packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
+        /// so may fail if there is already another update operation in progress.</summary>
+        public void DownloadUpdates(UpdateInfo updateInfo)
+        {
+            List<string> command = GetDownloadUpdatesCommand(updateInfo);
+            string output = Platform.StartProcessBlocking(command);
+            string lastLine = output.Substring(output.LastIndexOf('\n'));
+            ProgressEvent result = ProgressEvent.FromJson(lastLine);
+            if (result.Error.Length > 0)
+            {
+                throw new Exception(result.Error);
+            }
+        }
+
+        /// <summary>This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified 
+        /// restart arguments. If you need to save state or clean up, you should do that before calling this method. </summary>
+        /// <remarks>The user may be prompted during the update, if the update requires additional frameworks to be installed etc.</remarks>
         public void ApplyUpdatesAndExit(string assetPath)
         {
             List<string> args = new List<string>();
@@ -1050,12 +1021,18 @@ namespace Velopack
             Platform.Exit(0);
         }
 
+        /// <summary>This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified 
+        /// restart arguments. If you need to save state or clean up, you should do that before calling this method. </summary>
+        /// <remarks>The user may be prompted during the update, if the update requires additional frameworks to be installed etc.</remarks>
         public void ApplyUpdatesAndRestart(string assetPath, List<string> restartArgs = null)
         {
             WaitExitThenApplyUpdates(assetPath, false, true, restartArgs);
             Platform.Exit(0);
         }
 
+        /// <summary>This will launch the Velopack updater and tell it to wait for this program to exit gracefully.</summary>
+        /// <remarks>You should then clean up any state and exit your app. The updater will apply updates and then
+        /// optionally restart your app. The updater will only wait for 60 seconds before giving up.</remarks>
         public void WaitExitThenApplyUpdates(string assetPath, bool silent, bool restart, List<string> restartArgs = null)
         {
             List<string> command = new List<string>();
@@ -1127,6 +1104,67 @@ namespace Velopack
 
 namespace Velopack
 {
+    public class UpdateManager : UpdateManagerSync
+    {
+        /// <inheritdoc cref="UpdateManagerSync.GetCurrentVersion"/>
+        public Task<string> GetCurrentVersionAsync()
+        {
+            return Task.Run(() => GetCurrentVersion());
+        }
+
+        /// <inheritdoc cref="UpdateManagerSync.CheckForUpdates"/>
+        public Task<UpdateInfo> CheckForUpdatesAsync()
+        {
+            return Task.Run(() => CheckForUpdates());
+        }
+
+        /// <inheritdoc cref="UpdateManagerSync.DownloadUpdates"/>
+        public Task DownloadUpdatesAsync(UpdateInfo updateInfo, Action<int> progress = null)
+        {
+            var command_line = GetDownloadUpdatesCommand(updateInfo);
+            var source = new TaskCompletionSource<bool>();
+            var psi = new ProcessStartInfo()
+            {
+                CreateNoWindow = true,
+                FileName = command_line[0],
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+            };
+
+            foreach (var a in command_line.Skip(1))
+            {
+                psi.ArgumentList.Add(a);
+            }
+
+            var process = new Process();
+            process.StartInfo = psi;
+            process.OutputDataReceived += (sender, e) =>
+            {
+                if (e.Data == null) return;
+                try
+                {
+                    var msg = ProgressEvent.FromJson(e.Data);
+                    if (msg.Complete) source.TrySetResult(true);
+                    else if (!String.IsNullOrEmpty(msg.Error)) source.TrySetException(new Exception(msg.Error));
+                    else if (msg.Progress > 0) progress?.Invoke(msg.Progress);
+                }
+                catch (Exception) { }
+            };
+
+            process.Start();
+            process.BeginOutputReadLine();
+            process.WaitForExitAsync().ContinueWith(t => Task.Delay(1000)).ContinueWith(t =>
+            {
+                if (t.IsFaulted) source.TrySetException(t.Exception);
+                else if (t.IsCanceled) source.TrySetCanceled();
+                else if (process.ExitCode != 0) source.TrySetException(new Exception($"Process exited with code {process.ExitCode}"));
+                else source.TrySetException(new Exception("No completed output from process"));
+            });
+
+            return source.Task;
+        }
+    }
+
     static class NativeMethods
     {
         public static void NativeExitProcess(int code)
@@ -1213,45 +1251,7 @@ namespace Velopack
             Process.Start(psi);
         }
 
-        public static Task NativeStartProcessAsyncReadline(List<string> command_line, ProcessReadLineHandler handler)
-        {
-            var source = new TaskCompletionSource<bool>();
-            var psi = new ProcessStartInfo()
-            {
-                CreateNoWindow = true,
-                FileName = command_line[0],
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-            };
-            psi.AppendArgumentListSafe(command_line.Skip(1));
-
-            var process = new Process();
-            process.StartInfo = psi;
-            process.OutputDataReceived += (sender, e) =>
-            {
-                if (e.Data == null) return;
-                try
-                {
-                    handler.HandleProcessOutputLine(e.Data);
-                }
-                catch (Exception)
-                { }
-            };
-
-            process.Start();
-            process.BeginOutputReadLine();
-            process.WaitForExitAsync().ContinueWith(t => Task.Delay(1000)).ContinueWith(t =>
-            {
-                if (t.IsFaulted) source.TrySetException(t.Exception);
-                else if (t.IsCanceled) source.TrySetCanceled();
-                else if (process.ExitCode != 0) source.TrySetException(new Exception($"Process exited with code {process.ExitCode}"));
-                else source.TrySetResult(true);
-            });
-
-            return source.Task;
-        }
-
-        private static void AppendArgumentListSafe(this ProcessStartInfo psi, IEnumerable<string> args)
+        internal static void AppendArgumentListSafe(this ProcessStartInfo psi, IEnumerable<string> args)
         {
             foreach (var a in args)
             {
