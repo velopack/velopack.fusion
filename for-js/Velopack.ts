@@ -82,9 +82,40 @@ function nativeStartProcessBlocking(command_line: readonly string[]): string {
   return child.stdout;
 }
 
+function nativeStartProcessAsync(
+  command_line: readonly string[],
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const process = spawnSync(command_line[0], command_line.slice(1), {
+      encoding: "utf8",
+    });
+
+    let output = "";
+    process.stdout.on("data", (data) => {
+      output += data.toString();
+    });
+
+    process.stderr.on("data", (data) => {
+      console.error(`stderr: ${data}`);
+    });
+
+    process.on("close", (code) => {
+      if (code === 0) {
+        resolve(output);
+      } else {
+        reject(new Error(`Process exited with code: ${code}`));
+      }
+    });
+
+    process.on("error", (err) => {
+      reject(err);
+    });
+  });
+}
+
 function nativeStartProcessAsyncReadLine(
   command_line: readonly string[],
-  handler,
+  handler: Function,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const child = spawn(command_line[0], command_line.slice(1), {
@@ -97,7 +128,7 @@ function nativeStartProcessAsyncReadLine(
     child.stdout.resume();
     child.stdout.setEncoding("utf8");
     child.stdout.on("line", (data) => {
-      handler.handleProcessOutputLine(data);
+      handler(data);
     });
 
     // Handling the process exit
@@ -1104,5 +1135,58 @@ class StringWriter {
 
   toString() {
     return this.#buf;
+  }
+}
+
+type ProgressFn = (arg: number) => void;
+
+export class UpdateManager extends UpdateManagerSync {
+  /**
+   * Checks for updates, returning null if there are none available. If there are updates available, this method will return an
+   * UpdateInfo object containing the latest available release, and any delta updates that can be applied if they are available.
+   */
+  public getCurrentVersionAsync(): Promise<string> {
+    const command: string[] = this.getCurrentVersionCommand();
+    return nativeStartProcessAsync(command);
+  }
+
+  /**
+   * This function will check for updates, and return information about the latest
+   * available release. This function runs synchronously and may take some time to
+   * complete, depending on the network speed and the number of updates available.
+   */
+  public async checkForUpdatesAsync(): Promise<UpdateInfo | null> {
+    const command: string[] = this.getCheckForUpdatesCommand();
+    let output: string = await nativeStartProcessAsync(command);
+    if (output.length == 0 || output == "null") {
+      return null;
+    }
+    return UpdateInfo.fromJson(output);
+  }
+
+  /**
+   * Downloads the specified updates to the local app packages directory. If the update contains delta packages and ignoreDeltas=false,
+   * this method will attempt to unpack and prepare them. If there is no delta update available, or there is an error preparing delta
+   * packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
+   * so may fail if there is already another update operation in progress.
+   */
+  public async downloadUpdatesAsync(
+    updateInfo: UpdateInfo,
+    progress: ProgressFn,
+  ): Promise<void> {
+    const command: string[] = this.getDownloadUpdatesCommand(updateInfo);
+    let error: string = "";
+    await nativeStartProcessAsyncReadLine(command, (data: string) => {
+      let msg: ProgressEvent = ProgressEvent.fromJson(data);
+      if (msg.progress > 0) {
+        progress(msg.progress);
+      }
+      if (msg.error) {
+        error = msg.error;
+      }
+    });
+    if (error.length > 0) {
+      throw new Error(error);
+    }
   }
 }

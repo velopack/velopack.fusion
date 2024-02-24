@@ -45,7 +45,34 @@ function nativeStartProcessBlocking(command_line: readonly string[]): string {
     return child.stdout;
 }
 
-function nativeStartProcessAsyncReadLine(command_line: readonly string[], handler): Promise<void> {
+function nativeStartProcessAsync(command_line: readonly string[]): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const process = spawnSync(command_line[0], command_line.slice(1), { encoding: "utf8" });
+
+        let output = '';
+        process.stdout.on('data', (data) => {
+            output += data.toString();
+        });
+
+        process.stderr.on('data', (data) => {
+            console.error(`stderr: ${data}`);
+        });
+
+        process.on('close', (code) => {
+            if (code === 0) {
+                resolve(output);
+            } else {
+                reject(new Error(`Process exited with code: ${code}`));
+            }
+        });
+
+        process.on('error', (err) => {
+            reject(err);
+        });
+    });
+}
+
+function nativeStartProcessAsyncReadLine(command_line: readonly string[], handler: Function): Promise<void> {
     return new Promise((resolve, reject) => {
         const child = spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
 
@@ -55,7 +82,7 @@ function nativeStartProcessAsyncReadLine(command_line: readonly string[], handle
         child.stdout.resume();
         child.stdout.setEncoding("utf8");
         child.stdout.on("line", (data) => {
-            handler.handleProcessOutputLine(data);
+            handler(data);
         });
 
         // Handling the process exit
@@ -73,3 +100,4 @@ function nativeStartProcessAsyncReadLine(command_line: readonly string[], handle
         });
     });
 }
+

@@ -21,7 +21,8 @@ void BuildJs()
     ReplaceAll(outJs, "RegExpMatchArray", "RegExpMatchArray | null");
 
     // includes
-    PrependFiles(outJs, "disclaimer.txt", "velopack.ts");
+    PrependFiles(outJs, "disclaimer.txt", "ts_begin.ts");
+    AppendFiles(outJs, "ts_end.ts");
 
     // final touches
     if (!Directory.Exists(Path.Combine(projectDir, "for-js", "node_modules")))

@@ -158,3 +158,25 @@ export declare class VelopackApp {
     static build(): VelopackApp;
     run(): void;
 }
+type ProgressFn = (arg: number) => void;
+export declare class UpdateManager extends UpdateManagerSync {
+    /**
+     * Checks for updates, returning null if there are none available. If there are updates available, this method will return an
+     * UpdateInfo object containing the latest available release, and any delta updates that can be applied if they are available.
+     */
+    getCurrentVersionAsync(): Promise<string>;
+    /**
+     * This function will check for updates, and return information about the latest
+     * available release. This function runs synchronously and may take some time to
+     * complete, depending on the network speed and the number of updates available.
+     */
+    checkForUpdatesAsync(): Promise<UpdateInfo | null>;
+    /**
+     * Downloads the specified updates to the local app packages directory. If the update contains delta packages and ignoreDeltas=false,
+     * this method will attempt to unpack and prepare them. If there is no delta update available, or there is an error preparing delta
+     * packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
+     * so may fail if there is already another update operation in progress.
+     */
+    downloadUpdatesAsync(updateInfo: UpdateInfo, progress: ProgressFn): Promise<void>;
+}
+export {};
