@@ -34,9 +34,7 @@
 #ifndef VELOPACK_H_INCLUDED
 #define VELOPACK_H_INCLUDED
 
-#include <string>
-#include <vector>
-#include <thread>
+#include <cstddef>
 
 namespace Velopack
 {
