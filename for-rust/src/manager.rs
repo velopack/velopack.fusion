@@ -93,11 +93,11 @@ impl<'a> IntoIterator for RestartArgs<'a> {
 }
 
 impl UpdateManager {
-    pub fn new<S: AsRef<str>>(url_or_path: S, options: UpdateOptions) -> Result<UpdateManager> {
+    pub fn new<S: AsRef<str>>(url_or_path: S, options: Option<UpdateOptions>) -> Result<UpdateManager> {
         Ok(UpdateManager {
             paths: locator::auto_locate()?,
-            allow_version_downgrade: options.AllowVersionDowngrade,
-            explicit_channel: options.ExplicitChannel,
+            allow_version_downgrade: options.as_ref().map(|f| f.AllowVersionDowngrade).unwrap_or(false),
+            explicit_channel: options.as_ref().map(|f| f.ExplicitChannel.clone()).unwrap_or(None),
             url_or_path: url_or_path.as_ref().to_string(),
         })
     }
