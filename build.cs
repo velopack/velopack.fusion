@@ -2,12 +2,19 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using NuGet.Versioning;
 using Spectre.Console;
 
 string projectDir = GetMsbuildParameter("RootProjectDir");
 string vswherePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Visual Studio", "Installer", "vswhere.exe");
 string msbuildPath = RunProcess(vswherePath, "-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe", projectDir);
 
+// update package versions
+var myVersion = GetNbgvVersion();
+ReplaceAll("for-js/package.json", @"""version"":\s?""([\d\w\.]+)"",", $@"""version"": ""{myVersion}"",", true);
+ReplaceAll("for-rust/Cargo.toml", @"^version\s?=\s?""([\d\w\.]+)""$", $@"version = ""{myVersion}""", true);
+
+// build libraries
 var macros = LoadNativeMacros();
 RunAll(BuildRust, BuildJs, BuildCpp, BuildCs);
 
@@ -347,6 +354,23 @@ string RunProcess(string processPath, string arguments, string workDir, bool thr
     }
 
     return final;
+}
+
+string GetNbgvVersion()
+{
+    if (ThisAssembly.IsPublicRelease)
+    {
+        return NuGetVersion.Parse(ThisAssembly.AssemblyInformationalVersion).ToNormalizedString();
+    }
+    else
+    {
+        var v = NuGetVersion.Parse(ThisAssembly.AssemblyInformationalVersion);
+        if (v.HasMetadata)
+        {
+            v = NuGetVersion.Parse(v.ToNormalizedString() + "-g" + v.Metadata);
+        }
+        return v.ToFullString();
+    }
 }
 
 string FindExecutableInPath(string executable)
