@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::path::PathBuf;
 
 use crate::{
-    bundle::{self, Manifest},
+    manifest::{self, Manifest},
     util,
 };
 
@@ -33,7 +33,7 @@ pub fn auto_locate() -> Result<VelopackLocator> {
 fn read_current_manifest(nuspec_path: &PathBuf) -> Result<Manifest> {
     if nuspec_path.exists() {
         if let Ok(nuspec) = util::retry_io(|| std::fs::read_to_string(&nuspec_path)) {
-            return Ok(bundle::read_manifest_from_string(&nuspec)?);
+            return Ok(manifest::read_manifest_from_string(&nuspec)?);
         }
     }
     bail!("Unable to read nuspec file in current directory.")

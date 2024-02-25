@@ -9,7 +9,7 @@ use std::{
 };
 
 use crate::{
-    bundle::Manifest,
+    manifest::Manifest,
     download,
     locator::{self, VelopackLocator},
     util,

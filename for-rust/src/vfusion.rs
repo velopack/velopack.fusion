@@ -98,7 +98,7 @@ fn check(matches: &ArgMatches) -> Result<()> {
     info!("    Channel: {:?}", channel);
 
     let options = UpdateOptions { AllowVersionDowngrade: allow_downgrade, ExplicitChannel: channel.map(|s| s.to_owned()) };
-    let um = UpdateManager::new(url, options)?;
+    let um = UpdateManager::new(url, Some(options))?;
     let updates = um.check_for_updates()?;
 
     if let Some(info) = updates {
@@ -119,7 +119,7 @@ fn download(matches: &ArgMatches) -> Result<()> {
     info!("    Channel: {:?}", channel);
 
     let options = UpdateOptions { AllowVersionDowngrade: allow_downgrade, ExplicitChannel: channel.map(|s| s.to_owned()) };
-    let um = UpdateManager::new(url, options)?;
+    let um = UpdateManager::new(url, Some(options))?;
     let updates = um.check_for_updates()?;
 
     if updates.is_none() {
