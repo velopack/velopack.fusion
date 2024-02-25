@@ -40,18 +40,20 @@
 //! 3. Add auto-updates somewhere to your app:
 //! ```rust
 //! use velopack::*;
+//! use anyhow::Result;
 //!
-//! fn update_my_app() {
-//!     let um = UpdateManager::new("https://the.place/you-host/updates", None);
-//!     let updates: Option<UpdateInfo> = um.check_for_updates();
+//! fn update_my_app() -> Result<()> {
+//!     let um = UpdateManager::new("https://the.place/you-host/updates", None)?;
+//!     let updates: Option<UpdateInfo> = um.check_for_updates()?;
 //!     if updates.is_none() {
-//!         return; // no updates available
+//!         return Ok(()); // no updates available
 //!     }
 //!     let updates = updates.unwrap();
 //!     um.download_updates(&updates, |progress| { 
 //!         println!("Download progress: {}%", progress);
-//!     });
-//!     um.apply_updates_and_restart(&updates, RestartArgs::None);
+//!     })?;
+//!     um.apply_updates_and_restart(&updates, RestartArgs::None)?;
+//!     Ok(())
 //! }
 //! ```
 //!
