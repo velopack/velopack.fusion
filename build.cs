@@ -367,6 +367,7 @@ string RunProcess(string processPath, string arguments, string workDir, bool thr
     return final;
 }
 
+#pragma warning disable CS0162 // Unreachable code detected
 string GetNbgvVersion()
 {
     if (ThisAssembly.IsPublicRelease)
@@ -383,6 +384,7 @@ string GetNbgvVersion()
         return v.ToFullString();
     }
 }
+#pragma warning restore CS0162 // Unreachable code detected
 
 string FindExecutableInPath(string executable)
 {
