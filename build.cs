@@ -9,7 +9,7 @@ using Spectre.Console;
 
 string projectDir = GetMsbuildParameter("RootProjectDir");
 string vswherePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Visual Studio", "Installer", "vswhere.exe");
-string msbuildPath = RunProcess(vswherePath, "-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe", projectDir);
+string msbuildPath = GetProcessOutput(vswherePath, "-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe", projectDir);
 
 var setVersionArg = new Option<bool>("--set-version", "-v");
 var rootCommand = new Command("build") {
@@ -29,17 +29,17 @@ if (parseResult.GetValueForOption(setVersionArg))
 var macros = LoadNativeMacros();
 RunAll(BuildRust, BuildJs, BuildCpp, BuildCs);
 
-void BuildRust()
+void BuildRust(StringBuilder sb)
 {
-    RunProcess("cargo", "check", Path.Combine(projectDir, "for-rust"));
-    RunProcess("cargo", "check --features cli", Path.Combine(projectDir, "for-rust"));
-    RunProcess("cargo", "test --features cli", Path.Combine(projectDir, "for-rust"));
+    RunProcess(sb, "cargo", "check", Path.Combine(projectDir, "for-rust"));
+    RunProcess(sb, "cargo", "check --features cli", Path.Combine(projectDir, "for-rust"));
+    RunProcess(sb, "cargo", "test --features cli", Path.Combine(projectDir, "for-rust"));
 }
 
-void BuildJs()
+void BuildJs(StringBuilder sb)
 {
     CleanOutputDir("for-js", "*.js", "*.ts");
-    var outJs = FusionBuild("for-js/Velopack.ts", "JS");
+    var outJs = FusionBuild(sb, "for-js/Velopack.ts", "JS");
 
     // patches
     ReplaceAll(outJs, "TextWriter", "StringWriter");
@@ -52,17 +52,17 @@ void BuildJs()
     // final touches
     if (!Directory.Exists(Path.Combine(projectDir, "for-js", "node_modules")))
     {
-        RunProcess("npm", "install", Path.Combine(projectDir, "for-js"));
+        RunProcess(sb, "npm", "install", Path.Combine(projectDir, "for-js"));
     }
-    RunProcess("npm", "run format", Path.Combine(projectDir, "for-js"));
+    RunProcess(sb, "npm", "run format", Path.Combine(projectDir, "for-js"));
     FixLineEndingAndTabs(outJs);
-    RunProcess("npm", "run build", Path.Combine(projectDir, "for-js"));
+    RunProcess(sb, "npm", "run build", Path.Combine(projectDir, "for-js"));
 }
 
-void BuildCpp()
+void BuildCpp(StringBuilder sb)
 {
     CleanOutputDir("for-cpp", "*.cpp", "*.hpp");
-    var outCpp = FusionBuild("for-cpp/Velopack.cpp", "CPP", includeVeloApp: false);
+    var outCpp = FusionBuild(sb, "for-cpp/Velopack.cpp", "CPP", includeVeloApp: false);
     var outHpp = Path.ChangeExtension(outCpp, ".hpp");
 
     // includes
@@ -72,13 +72,13 @@ void BuildCpp()
     // final touches
     FixLineEndingAndTabs(outCpp);
     FixLineEndingAndTabs(outHpp);
-    RunProcess(msbuildPath, "for-cpp/samples/win32/VeloCppWinSample.sln /t:Build /p:Configuration=Release", projectDir);
+    RunProcess(sb, msbuildPath, "for-cpp/samples/win32/VeloCppWinSample.sln /t:Build /p:Configuration=Release", projectDir);
 }
 
-void BuildCs()
+void BuildCs(StringBuilder sb)
 {
     CleanOutputDir("for-cs", "*.cs");
-    var outCs = FusionBuild("for-cs/Velopack.cs", "CS");
+    var outCs = FusionBuild(sb, "for-cs/Velopack.cs", "CS");
 
     // usings
     PrependTextIfNot(outCs, "using System;", x => x.Contains("using System;"));
@@ -97,9 +97,9 @@ void BuildCs()
     AppendFiles(outCs, "velopack.cs");
 
     // final touches
-    RunProcess("dotnet", "format CsTests.csproj", Path.Combine(projectDir, "for-cs", "test"));
+    RunProcess(sb, "dotnet", "format CsTests.csproj", Path.Combine(projectDir, "for-cs", "test"));
     FixLineEndingAndTabs(outCs);
-    RunProcess("dotnet", "test", Path.Combine(projectDir, "for-cs", "test"));
+    RunProcess(sb, "dotnet", "test", Path.Combine(projectDir, "for-cs", "test"));
 }
 
 void ReplaceNativeMacros(string outputFile, string defineLang)
@@ -167,30 +167,44 @@ Dictionary<string, List<string>> LoadNativeMacros()
     return macros;
 }
 
-void RunAll(params Action[] actions)
+void RunAll(params Action<StringBuilder>[] actions)
 {
-    int errors = 0;
-    foreach (var action in actions)
+    Dictionary<string, string> errors = new();
+    Parallel.ForEach(actions, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, action =>
     {
+        var sb = new StringBuilder();
+        var name = action.Method.Name;
+        name = name.Substring(name.IndexOf("__") + 2);
+        name = name.Substring(0, name.IndexOf("|"));
         try
         {
-            Console.WriteLine();
-            Log("Running: " + action.Method.Name);
-            action();
-            Log("Completed: " + action.Method.Name);
-            Console.WriteLine();
+            Stopwatch sw = new Stopwatch();
+            Log("Running: " + name);
+            sw.Start();
+            action(sb);
+            sw.Stop();
+            Log($"Completed: {name} in {sw.ElapsedMilliseconds}ms");
         }
         catch (Exception ex)
         {
-            Error($"{action.Method.Name} Failed.");
-            Error(ex.ToString());
-            errors++;
+            Error($"{name} Failed.");
+            sb.AppendLine(ex.ToString());
+            errors[name] = sb.ToString();
         }
-    }
+    });
 
-    if (errors > 0)
+    if (errors.Any())
     {
-        Error($"{actions.Length - errors}/{actions.Length} completed, and {errors} errors occurred.");
+        foreach (var err in errors)
+        {
+            Error(err.Key + " failed with: " + Environment.NewLine);
+            Console.WriteLine(err.Value);
+        }
+
+        Console.WriteLine();
+        Console.WriteLine();
+
+        Error($"{actions.Length - errors.Count}/{actions.Length} completed, and {errors.Count} errors occurred.");
         Environment.Exit(1);
     }
     else
@@ -199,7 +213,7 @@ void RunAll(params Action[] actions)
     }
 }
 
-string FusionBuild(string outputFile, string defineLang, bool includeVeloApp = true)
+string FusionBuild(StringBuilder sb, string outputFile, string defineLang, bool includeVeloApp = true)
 {
     var fusionPath = Path.GetFullPath(Path.Combine(projectDir, "fut.exe"));
     var sourceFiles = Directory.EnumerateFiles(projectDir, "*.fu", SearchOption.TopDirectoryOnly)
@@ -211,8 +225,8 @@ string FusionBuild(string outputFile, string defineLang, bool includeVeloApp = t
 
     var fusionArgs = $"-o {outputFile} -D {defineLang} -n Velopack {String.Join(" ", sourceFiles)}";
 
-    Console.WriteLine("fut.exe " + fusionArgs);
-    RunProcess(fusionPath, fusionArgs, projectDir);
+    sb.AppendLine("fut.exe " + fusionArgs);
+    RunProcess(sb, fusionPath, fusionArgs, projectDir);
 
     var finalOutput = Path.Combine(projectDir, outputFile);
     if (!File.Exists(finalOutput))
@@ -323,7 +337,7 @@ string GetMsbuildParameter(string paramName)
         .Single().Value);
 }
 
-string RunProcess(string processPath, string arguments, string workDir, bool throwNonZeroExit = true)
+void RunProcess(StringBuilder sb, string processPath, string arguments, string workDir, bool throwNonZeroExit = true)
 {
     var psi = new ProcessStartInfo()
     {
@@ -336,17 +350,15 @@ string RunProcess(string processPath, string arguments, string workDir, bool thr
         UseShellExecute = false,
     };
 
-    var output = new StringBuilder();
-
     var process = new Process();
     process.StartInfo = psi;
     process.ErrorDataReceived += (sender, e) =>
     {
-        if (e.Data != null) output.AppendLine(e.Data);
+        if (e.Data != null) sb.AppendLine(e.Data);
     };
     process.OutputDataReceived += (sender, e) =>
     {
-        if (e.Data != null) output.AppendLine(e.Data);
+        if (e.Data != null) sb.AppendLine(e.Data);
     };
 
     process.Start();
@@ -354,17 +366,49 @@ string RunProcess(string processPath, string arguments, string workDir, bool thr
     process.BeginOutputReadLine();
     process.WaitForExit();
 
-    var final = output.ToString().Trim();
+    if (process.ExitCode != 0)
+    {
+        throw new Exception($"Process exited with code {process.ExitCode}");
+    }
+}
 
-    if (final.Length > 0)
-        Console.WriteLine(final);
+string GetProcessOutput(string processPath, string arguments, string workDir, bool throwNonZeroExit = true)
+{
+    var psi = new ProcessStartInfo()
+    {
+        CreateNoWindow = true,
+        FileName = FindExecutableInPath(processPath),
+        Arguments = arguments,
+        WorkingDirectory = workDir,
+        RedirectStandardError = true,
+        RedirectStandardOutput = true,
+        UseShellExecute = false,
+    };
+
+    StringBuilder sb = new();
+
+    var process = new Process();
+    process.StartInfo = psi;
+    process.ErrorDataReceived += (sender, e) =>
+    {
+        if (e.Data != null) sb.AppendLine(e.Data);
+    };
+    process.OutputDataReceived += (sender, e) =>
+    {
+        if (e.Data != null) sb.AppendLine(e.Data);
+    };
+
+    process.Start();
+    process.BeginErrorReadLine();
+    process.BeginOutputReadLine();
+    process.WaitForExit();
 
     if (process.ExitCode != 0)
     {
         throw new Exception($"Process exited with code {process.ExitCode}");
     }
 
-    return final;
+    return sb.ToString().Trim();
 }
 
 #pragma warning disable CS0162 // Unreachable code detected
