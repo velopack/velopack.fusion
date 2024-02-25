@@ -4,6 +4,7 @@ obj
 .vs
 releases
 publish
+target
 debug
 release
 node_modules

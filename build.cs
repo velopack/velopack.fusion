@@ -9,7 +9,14 @@ string vswherePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialF
 string msbuildPath = RunProcess(vswherePath, "-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe", projectDir);
 
 var macros = LoadNativeMacros();
-RunAll(BuildJs, BuildCpp, BuildCs);
+RunAll(BuildRust, BuildJs, BuildCpp, BuildCs);
+
+void BuildRust()
+{
+    RunProcess("cargo", "check", Path.Combine(projectDir, "for-rust"));
+    RunProcess("cargo", "check --features cli", Path.Combine(projectDir, "for-rust"));
+    RunProcess("cargo", "test --features cli", Path.Combine(projectDir, "for-rust"));
+}
 
 void BuildJs()
 {
@@ -165,12 +172,12 @@ void RunAll(params Action[] actions)
 
     if (errors > 0)
     {
-        Error($"{errors} errors occurred.");
+        Error($"{actions.Length - errors}/{actions.Length} completed, and {errors} errors occurred.");
         Environment.Exit(1);
     }
     else
     {
-        AnsiConsole.MarkupLine($"[green]Build completed successfully with no errors.[/]");
+        AnsiConsole.MarkupLine($"[green]{actions.Length}/{actions.Length} completed successfully with no errors.[/]");
     }
 }
 
