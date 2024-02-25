@@ -1,3 +1,4 @@
+#![windows_subsystem = "windows"]
 use anyhow::Result;
 use iced::alignment::{self, Alignment};
 use iced::font::{self, Font};
@@ -43,6 +44,7 @@ pub enum GUIState {
 }
 
 fn main() -> Result<()> {
+    VelopackApp::build().run();
     let mut set = iced::Settings::default();
     set.window.size = iced::Size { width: 400.0, height: 200.0 };
     GUI::run(set)?;
@@ -107,7 +109,8 @@ impl Application for GUI {
                 iced::Command::none()
             }
             Message::Restart => {
-                // Implement restarting logic
+                let update_info = self.update_info.clone().unwrap(); // Ensure you handle this safely in your actual code
+                self.update_manager.as_ref().unwrap().apply_updates_and_restart(update_info, RestartArgs::None).unwrap();
                 iced::Command::none()
             }
         }
