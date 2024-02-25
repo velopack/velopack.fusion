@@ -1,0 +1,1 @@
+## The documentation for this crate is [available here on docs.rs](https://docs.rs/velopack/latest/velopack/).

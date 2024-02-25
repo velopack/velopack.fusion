@@ -23,7 +23,7 @@
 //! 1. Add Velopack to your `Cargo.toml`:
 //! ```toml
 //! [dependencies]
-//! velopack = { version = "0.0", features = ["async"] } # Replace with actual version
+//! velopack = { version = "0.0", features = ["async"] } # Replace with actual version and desired features
 //! ```
 //!
 //! 2. Add the following code to your `main()` function:
@@ -70,10 +70,13 @@
 //!
 //! Read the Velopack documentation at [https://velopack.io/docs](https://velopack.io/docs) for more information.
 
+#![warn(missing_docs)]
+
 mod manifest;
 mod download;
 mod util;
 
+/// Locator provides some utility functions for locating the current app important paths (eg. path to packages, update binary, and so forth).
 pub mod locator;
 
 mod app;
