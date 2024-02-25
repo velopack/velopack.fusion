@@ -3,12 +3,12 @@ name = "velopack"
 version = "0.0.2"
 edition = "2021"
 license = "MIT"
-authors = ["Caelan <git@caesay.com>"]
+authors = ["Caelan Sayler <git@caesay.com>"]
 description = "Quick and easy installer and automatic updates for cross-platform applications"
 readme = "readme.md"
+exclude = ["/samples"]
 homepage = "https://velopack.io"
 repository = "https://github.com/velopack/velopack.fusion"
-exclude = ["/samples"]
 keywords = ["update", "install", "velopack", "squirrel", "automatic-updates"]
 categories = ["development-tools"]
 
