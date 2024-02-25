@@ -102,8 +102,8 @@ impl UpdateManager {
         })
     }
 
-    pub fn current_version(&self) -> Result<Version> {
-        Ok(self.paths.manifest.version.clone())
+    pub fn current_version(&self) -> Result<String> {
+        Ok(self.paths.manifest.version.to_string())
     }
 
     pub fn check_for_updates(&self) -> Result<Option<UpdateInfo>> {
@@ -184,7 +184,7 @@ impl UpdateManager {
     }
 
     #[cfg(feature = "async")]
-    pub fn download_updates_async<A>(&self, update: &UpdateInfo, progress: Option<Sender<i16>>) -> JoinHandle<Result<()>> {
+    pub fn download_updates_async(&self, update: &UpdateInfo, progress: Option<Sender<i16>>) -> JoinHandle<Result<()>> {
         let self_clone = self.clone();
         let update_clone = update.clone();
         if let Some(p) = progress {
