@@ -1,18 +1,9 @@
 #![windows_subsystem = "windows"]
 use anyhow::Result;
-use iced::alignment::{self, Alignment};
-use iced::font::{self, Font};
-use iced::futures::FutureExt;
-use iced::keyboard;
-use iced::theme::{self, Theme};
-use iced::widget::{self, button, checkbox, column, container, keyed_column, row, scrollable, text, text_input, Button, Column, Text};
-use iced::window;
-use iced::{Application, Element};
-use iced::{Color, Command, Length, Settings, Size, Subscription};
+use iced::theme::Theme;
+use iced::widget::{Button, Column, Text};
+use iced::{Command, Application};
 
-use once_cell::sync::Lazy;
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 use velopack::*;
 
 #[derive(Debug, Clone)]
