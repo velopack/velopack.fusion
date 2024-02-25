@@ -1,7 +1,7 @@
 {
   "name": "velopack",
   "version": "0.0.2",
-  "description": "Quick and easy installer and automatic updates for cross-platform applications",
+  "description": "Installer and automatic updates for cross-platform desktop applications",
   "main": "Velopack.js",
   "types": "Velopack.d.ts",
   "scripts": {
