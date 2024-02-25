@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use std::{
     fs,
     path::{Path, PathBuf},
+    process::exit,
+    process::Command as Process,
 };
 
 use crate::{
@@ -12,6 +14,9 @@ use crate::{
     locator::{self, VelopackLocator},
     util,
 };
+
+#[cfg(target_os = "windows")]
+use std::os::windows::process::CommandExt;
 
 #[cfg(feature = "async")]
 use async_std::channel::Sender;
@@ -47,6 +52,12 @@ pub struct UpdateInfo {
     pub IsDowngrade: bool,
 }
 
+impl AsRef<VelopackAsset> for UpdateInfo {
+    fn as_ref(&self) -> &VelopackAsset {
+        &self.TargetFullRelease
+    }
+}
+
 #[derive(Clone)]
 #[allow(non_snake_case)]
 pub struct UpdateOptions {
@@ -60,6 +71,25 @@ pub struct UpdateManager {
     explicit_channel: Option<String>,
     url_or_path: String,
     paths: VelopackLocator,
+}
+
+pub enum RestartArgs<'a> {
+    None,
+    Some(Vec<&'a str>),
+    SomeOwned(Vec<String>),
+}
+
+impl<'a> IntoIterator for RestartArgs<'a> {
+    type Item = String;
+    type IntoIter = std::vec::IntoIter<String>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            RestartArgs::None => Vec::new().into_iter(),
+            RestartArgs::Some(args) => args.into_iter().map(|s| s.to_string()).collect::<Vec<String>>().into_iter(),
+            RestartArgs::SomeOwned(args) => args.into_iter().collect::<Vec<String>>().into_iter(),
+        }
+    }
 }
 
 impl UpdateManager {
@@ -166,6 +196,68 @@ impl UpdateManager {
         } else {
             async_std::task::spawn_blocking(move || self_clone.download_updates(&update_clone, |_| {}))
         }
+    }
+
+    pub fn apply_updates_and_restart<T: AsRef<VelopackAsset>>(&self, to_apply: T, restart_args: RestartArgs) -> Result<()> {
+        self.wait_exit_then_apply_updates(to_apply, false, true, restart_args)?;
+        exit(0);
+    }
+
+    pub fn apply_updates_and_exit<T: AsRef<VelopackAsset>>(&self, to_apply: T) -> Result<()> {
+        self.wait_exit_then_apply_updates(to_apply, false, false, RestartArgs::None)?;
+        exit(0);
+    }
+
+    pub fn wait_exit_then_apply_updates<T>(&self, to_apply: T, silent: bool, restart: bool, restart_args: RestartArgs) -> Result<()>
+    where
+        T: AsRef<VelopackAsset>,
+    {
+        let to_apply = to_apply.as_ref();
+        let pkg_path = self.paths.packages_dir.join(&to_apply.FileName);
+        let pkg_path_str = pkg_path.to_string_lossy();
+
+        let mut args = Vec::new();
+        args.push("apply".to_string());
+        args.push("--wait".to_string());
+        args.push("--package".to_string());
+        args.push(pkg_path_str.into_owned());
+
+        if silent {
+            args.push("--silent".to_string());
+        }
+        if restart {
+            args.push("--restart".to_string());
+        }
+
+        match restart_args {
+            RestartArgs::None => {}
+            RestartArgs::Some(ref ra) => {
+                args.push("--".to_string());
+                for arg in ra {
+                    args.push(arg.to_string());
+                }
+            }
+            RestartArgs::SomeOwned(ref ra) => {
+                args.push("--".to_string());
+                for arg in ra {
+                    args.push(arg.clone());
+                }
+            }
+        }
+
+        let mut p = Process::new(&self.paths.update_exe_path);
+        p.args(&args);
+        p.current_dir(&self.paths.root_app_dir);
+
+        #[cfg(target_os = "windows")]
+        {
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            p.creation_flags(CREATE_NO_WINDOW);
+        }
+
+        info!("About to run Update.exe: {} {:?}", self.paths.update_exe_path.to_string_lossy(), args);
+        p.spawn()?;
+        Ok(())
     }
 }
 
