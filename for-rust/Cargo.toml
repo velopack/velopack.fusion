@@ -1,6 +1,6 @@
 [package]
 name = "velopack"
-version = "0.0.2"
+version = "0.0.0-local"
 edition = "2021"
 license = "MIT"
 authors = ["Caelan Sayler <git@caesay.com>"]

@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="System.CommandLine" Version="2.0.0-*" />
     <PackageReference Include="NuGet.Versioning" Version="6.9.1" />
     <PackageReference Include="Serilog.Sinks.Spectre" Version="0.4.1" />
     <PackageReference Include="Nerdbank.GitVersioning" Version="3.6.*">

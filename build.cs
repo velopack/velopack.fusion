@@ -1,3 +1,5 @@
+using System.CommandLine;
+using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
@@ -9,10 +11,19 @@ string projectDir = GetMsbuildParameter("RootProjectDir");
 string vswherePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Visual Studio", "Installer", "vswhere.exe");
 string msbuildPath = RunProcess(vswherePath, "-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe", projectDir);
 
-// update package versions
-var myVersion = GetNbgvVersion();
-ReplaceAll("for-js/package.json", @"""version"":\s?""([\d\w\.]+)"",", $@"""version"": ""{myVersion}"",", true);
-ReplaceAll("for-rust/Cargo.toml", @"^version\s?=\s?""([\d\w\.]+)""$", $@"version = ""{myVersion}""", true);
+var setVersionArg = new Option<bool>("--set-version", "-v");
+var rootCommand = new Command("build") {
+    setVersionArg,
+};
+ParseResult parseResult = rootCommand.Parse(args);
+
+if (parseResult.GetValueForOption(setVersionArg))
+{
+    var newVersion = GetNbgvVersion();
+    ReplaceAll(Path.Combine(projectDir, "for-js/package.json"), @"""version"":\s?""([\d\w\.-]+)"",", $@"""version"": ""{newVersion}"",", true);
+    ReplaceAll(Path.Combine(projectDir, "for-rust/Cargo.toml"), @"^version\s?=\s?""([\d\w\.-]+)""$", $@"version = ""{newVersion}""", true);
+    return;
+}
 
 // build libraries
 var macros = LoadNativeMacros();
