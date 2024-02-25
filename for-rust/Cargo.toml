@@ -14,6 +14,7 @@ categories = ["development-tools"]
 
 [features]
 cli = ["clap", "simplelog", "file-rotate"]
+async = ["async-std"]
 
 [lib]
 name = "velopack"
@@ -59,3 +60,6 @@ serde_json = { version = "1.0" }
 clap = { version = "4.4", optional = true }
 simplelog = { version = "0.12", optional = true }
 file-rotate = { version = "0.7", optional = true }
+
+# async
+async-std = { version = "1.5", optional = true }

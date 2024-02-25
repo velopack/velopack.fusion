@@ -6,6 +6,7 @@ use crate::{
     util,
 };
 
+#[derive(Clone)]
 pub struct VelopackLocator {
     pub root_app_dir: PathBuf,
     pub update_exe_path: PathBuf,

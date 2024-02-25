@@ -13,6 +13,11 @@ use crate::{
     util,
 };
 
+#[cfg(feature = "async")]
+use async_std::channel::Sender;
+#[cfg(feature = "async")]
+use async_std::task::JoinHandle;
+
 #[allow(non_snake_case)]
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 #[serde(default)]
@@ -42,12 +47,14 @@ pub struct UpdateInfo {
     pub IsDowngrade: bool,
 }
 
+#[derive(Clone)]
 #[allow(non_snake_case)]
 pub struct UpdateOptions {
     pub AllowVersionDowngrade: bool,
     pub ExplicitChannel: Option<String>,
 }
 
+#[derive(Clone)]
 pub struct UpdateManager {
     allow_version_downgrade: bool,
     explicit_channel: Option<String>,
@@ -63,6 +70,10 @@ impl UpdateManager {
             explicit_channel: options.ExplicitChannel,
             url_or_path: url_or_path.as_ref().to_string(),
         })
+    }
+
+    pub fn current_version(&self) -> Result<Version> {
+        Ok(self.paths.manifest.version.clone())
     }
 
     pub fn check_for_updates(&self) -> Result<Option<UpdateInfo>> {
@@ -81,6 +92,12 @@ impl UpdateManager {
             check_dir(&self.paths.manifest, buf, allow_downgrade, channel)
         };
         result
+    }
+
+    #[cfg(feature = "async")]
+    pub fn check_for_updates_async(&self) -> JoinHandle<Result<Option<UpdateInfo>>> {
+        let self_clone = self.clone();
+        async_std::task::spawn_blocking(move || self_clone.check_for_updates())
     }
 
     pub fn download_updates<A>(&self, update: &UpdateInfo, mut progress: A) -> Result<()>
@@ -121,6 +138,7 @@ impl UpdateManager {
                 bail!("Local file does not exist: {}", source_file.to_string_lossy());
             }
 
+            progress(50);
             fs::copy(&source_file, &target_file)?;
         }
 
@@ -133,6 +151,21 @@ impl UpdateManager {
 
         progress(100);
         Ok(())
+    }
+
+    #[cfg(feature = "async")]
+    pub fn download_updates_async<A>(&self, update: &UpdateInfo, progress: Option<Sender<i16>>) -> JoinHandle<Result<()>> {
+        let self_clone = self.clone();
+        let update_clone = update.clone();
+        if let Some(p) = progress {
+            async_std::task::spawn_blocking(move || {
+                self_clone.download_updates(&update_clone, move |x| {
+                    let _ = p.try_send(x);
+                })
+            })
+        } else {
+            async_std::task::spawn_blocking(move || self_clone.download_updates(&update_clone, |_| {}))
+        }
     }
 }
 
