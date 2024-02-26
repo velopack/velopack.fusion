@@ -8,8 +8,6 @@ using NuGet.Versioning;
 using Spectre.Console;
 
 string projectDir = GetMsbuildParameter("RootProjectDir");
-string vswherePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Visual Studio", "Installer", "vswhere.exe");
-string msbuildPath = GetProcessOutput(vswherePath, "-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe", projectDir);
 
 var setVersionArg = new Option<bool>("--set-version", "-v");
 var rootCommand = new Command("build") {
@@ -27,6 +25,8 @@ if (parseResult.GetValueForOption(setVersionArg))
 }
 
 // build libraries
+string vswherePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Visual Studio", "Installer", "vswhere.exe");
+string msbuildPath = GetProcessOutput(vswherePath, "-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe", projectDir);
 var macros = LoadNativeMacros();
 RunAll(BuildRust, BuildJs, BuildCpp, BuildCs);
 
