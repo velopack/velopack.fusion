@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Xunit;
 
 namespace CsTests
@@ -24,7 +25,7 @@ namespace CsTests
         {
             var dir = Fixtures.GetFixturesDir();
             var json = File.ReadAllText(Path.Combine(dir, fileName));
-            Assert.Throws<Velopack.JsonParseException>(() => Velopack.JsonNode.Parse(json));
+            Assert.Throws<Exception>(() => Velopack.JsonNode.Parse(json));
 
         }
 

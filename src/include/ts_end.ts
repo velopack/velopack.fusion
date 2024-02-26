@@ -1,5 +1,8 @@
-type ProgressFn = (arg: number) => void;
-
+/**
+ * This class is used to check for updates, download updates, and apply updates. 
+ * It provides the asynchronous functions of the UpdateManager class.
+ * @extends UpdateManagerSync
+ */
 export class UpdateManager extends UpdateManagerSync {
     /**
      * Checks for updates, returning null if there are none available. If there are updates available, this method will return an
@@ -30,7 +33,7 @@ export class UpdateManager extends UpdateManagerSync {
      * packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
      * so may fail if there is already another update operation in progress.
      */
-    public async downloadUpdatesAsync(updateInfo: UpdateInfo, progress: ProgressFn): Promise<void> {
+    public async downloadUpdatesAsync(updateInfo: UpdateInfo, progress: (arg: number) => void): Promise<void> {
         const command: string[] = this.getDownloadUpdatesCommand(updateInfo);
         await nativeStartProcessAsyncReadLine(command, (data: string) => {
             const p = parseInt(data);

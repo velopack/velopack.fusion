@@ -5,6 +5,7 @@ public enum VelopackAssetType
     Delta
 }
 
+/// An individual Velopack asset, could refer to an asset on-disk or in a remote package feed.
 public class VelopackAsset 
 {
     /// The name or Id of the package containing this release.
@@ -31,13 +32,15 @@ public class VelopackAsset
     /// The release notes in HTML format, transformed from Markdown when packaging the release.
     internal string() NotesHTML = "";
 
-    public static VelopackAsset# FromJson(string json) throws Exception, JsonParseException
+    /// Parses a JSON string into a VelopackAsset object.
+    public static VelopackAsset# FromJson(string json) throws Exception
     {
         JsonNode# node = JsonNode.Parse(json);
         return FromNode(node);
     }
 
-    public static VelopackAsset# FromNode(JsonNode# node) throws Exception, JsonParseException
+    /// Parses a JSON node into a VelopackAsset object.
+    public static VelopackAsset# FromNode(JsonNode# node) throws Exception
     {
         VelopackAsset# asset = new VelopackAsset();
         foreach((string k, JsonNode# v) in node.AsObject()) 
@@ -75,11 +78,19 @@ public class VelopackAsset
     }
 }
 
+/// Holds information about the current version and pending updates, such as how many there are, and access to release notes.
 public class UpdateInfo 
 {
+    /// The available version that we are updating to.
     internal VelopackAsset# TargetFullRelease;
+
+    /// True if the update is a version downgrade or lateral move (such as when switching channels to the same version number).
+    /// In this case, only full updates are allowed, and any local packages on disk newer than the downloaded version will be
+    /// deleted.
     internal bool IsDowngrade = false;
-    public static UpdateInfo# FromJson(string json) throws Exception, JsonParseException
+
+    /// Parses a JSON string into an UpdateInfo object.
+    public static UpdateInfo# FromJson(string json) throws Exception
     {
         JsonNode# node = JsonNode.Parse(json);
         UpdateInfo#? updateInfo = new UpdateInfo();
@@ -96,38 +107,5 @@ public class UpdateInfo
             }
         }
         return updateInfo;
-    }
-}
-
-public class ProgressEvent
-{
-    internal string() File = "";
-    internal bool Complete = false;
-    internal int Progress = 0;
-    internal string() Error = "";
-
-    public static ProgressEvent# FromJson(string json) throws Exception, JsonParseException
-    {
-        JsonNode# node = JsonNode.Parse(json);
-        ProgressEvent# progressEvent = new ProgressEvent();
-        foreach((string k, JsonNode# v) in node.AsObject()) 
-        {
-            switch (k.ToLower()) 
-            {
-                case "file":
-                    progressEvent.File = v.AsString();
-                    break;
-                case "complete":
-                    progressEvent.Complete = v.AsBool();
-                    break;
-                case "progress":
-                    progressEvent.Progress = Math.Truncate(v.AsNumber());
-                    break;
-                case "error":
-                    progressEvent.Error = v.AsString();
-                    break;
-            }
-        }
-        return progressEvent;
     }
 }

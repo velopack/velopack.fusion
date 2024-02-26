@@ -70,13 +70,6 @@ namespace Velopack
         Null
     }
 
-    public class JsonParseException : Exception
-    {
-        public JsonParseException() { }
-        public JsonParseException(String message) : base(message) { }
-        public JsonParseException(String message, Exception innerException) : base(message, innerException) { }
-    }
-
     public class JsonNode
     {
 
@@ -174,7 +167,7 @@ namespace Velopack
         {
             if (this.Type != JsonNodeType.Null)
             {
-                throw new JsonParseException("Cannot call InitBool on JsonNode which is not null.");
+                throw new Exception("Cannot call InitBool on JsonNode which is not null.");
             }
             this.Type = JsonNodeType.Bool;
             this.BoolValue = value;
@@ -184,7 +177,7 @@ namespace Velopack
         {
             if (this.Type != JsonNodeType.Null)
             {
-                throw new JsonParseException("Cannot call InitArray on JsonNode which is not null.");
+                throw new Exception("Cannot call InitArray on JsonNode which is not null.");
             }
             this.Type = JsonNodeType.Array;
         }
@@ -193,7 +186,7 @@ namespace Velopack
         {
             if (this.Type != JsonNodeType.Array)
             {
-                throw new JsonParseException("Cannot call AddArrayChild on JsonNode which is not an array.");
+                throw new Exception("Cannot call AddArrayChild on JsonNode which is not an array.");
             }
             this.ArrayValue.Add(child);
         }
@@ -202,7 +195,7 @@ namespace Velopack
         {
             if (this.Type != JsonNodeType.Null)
             {
-                throw new JsonParseException("Cannot call InitObject on JsonNode which is not null.");
+                throw new Exception("Cannot call InitObject on JsonNode which is not null.");
             }
             this.Type = JsonNodeType.Object;
         }
@@ -211,7 +204,7 @@ namespace Velopack
         {
             if (this.Type != JsonNodeType.Object)
             {
-                throw new JsonParseException("Cannot call AddObjectChild on JsonNode which is not an object.");
+                throw new Exception("Cannot call AddObjectChild on JsonNode which is not an object.");
             }
             this.ObjectValue[key] = child;
         }
@@ -220,7 +213,7 @@ namespace Velopack
         {
             if (this.Type != JsonNodeType.Null)
             {
-                throw new JsonParseException("Cannot call InitNumber on JsonNode which is not null.");
+                throw new Exception("Cannot call InitNumber on JsonNode which is not null.");
             }
             this.Type = JsonNodeType.Number;
             this.NumberValue = value;
@@ -230,7 +223,7 @@ namespace Velopack
         {
             if (this.Type != JsonNodeType.Null)
             {
-                throw new JsonParseException("Cannot call InitString on JsonNode which is not null.");
+                throw new Exception("Cannot call InitString on JsonNode which is not null.");
             }
             this.Type = JsonNodeType.String;
             this.StringValue = value;
@@ -261,7 +254,7 @@ namespace Velopack
         {
             if (this.position + n > this.text.Length)
             {
-                throw new JsonParseException("Unexpected end of input");
+                throw new Exception("Unexpected end of input");
             }
             string result = this.text.Substring(this.position, n);
             this.position += n;
@@ -408,7 +401,7 @@ namespace Velopack
             }
             else
             {
-                throw new JsonParseException("Invalid boolean");
+                throw new Exception("Invalid boolean");
             }
         }
 
@@ -421,7 +414,7 @@ namespace Velopack
                 node.InitNumber(d);
                 return node;
             }
-            throw new JsonParseException("Invalid number");
+            throw new Exception("Invalid number");
         }
 
         public JsonNode ParseString()
@@ -432,7 +425,7 @@ namespace Velopack
             {
                 if (EndReached())
                 {
-                    throw new JsonParseException("Unterminated string");
+                    throw new Exception("Unterminated string");
                 }
                 int c = Read();
                 switch (c)
@@ -444,7 +437,7 @@ namespace Velopack
                     case '\\':
                         if (EndReached())
                         {
-                            throw new JsonParseException("Unterminated string");
+                            throw new Exception("Unterminated string");
                         }
                         c = Read();
                         switch (c)
@@ -477,7 +470,7 @@ namespace Velopack
                                 }
                                 else
                                 {
-                                    throw new JsonParseException("Invalid unicode escape");
+                                    throw new Exception("Invalid unicode escape");
                                 }
                                 break;
                         }
@@ -499,7 +492,7 @@ namespace Velopack
                 switch (PeekToken())
                 {
                     case JsonToken.None:
-                        throw new JsonParseException("Unterminated object");
+                        throw new Exception("Unterminated object");
                     case JsonToken.Comma:
                         Read();
                         continue;
@@ -509,7 +502,7 @@ namespace Velopack
                     default:
                         JsonNode name = ParseString();
                         if (PeekToken() != JsonToken.Colon)
-                            throw new JsonParseException("Expected colon");
+                            throw new Exception("Expected colon");
                         Read();
                         node.AddObjectChild(name.AsString(), ParseValue());
                         break;
@@ -528,11 +521,11 @@ namespace Velopack
                 switch (PeekToken())
                 {
                     case JsonToken.None:
-                        throw new JsonParseException("Unterminated array");
+                        throw new Exception("Unterminated array");
                     case JsonToken.Comma:
                         if (!expectComma)
                         {
-                            throw new JsonParseException("Unexpected comma in array");
+                            throw new Exception("Unexpected comma in array");
                         }
                         expectComma = false;
                         Read();
@@ -543,7 +536,7 @@ namespace Velopack
                     default:
                         if (expectComma)
                         {
-                            throw new JsonParseException("Expected comma");
+                            throw new Exception("Expected comma");
                         }
                         expectComma = true;
                         node.AddArrayChild(ParseValue());
@@ -569,7 +562,7 @@ namespace Velopack
                 case JsonToken.SquareOpen:
                     return ParseArray();
                 default:
-                    throw new JsonParseException("Invalid token");
+                    throw new Exception("Invalid token");
             }
         }
     }
@@ -806,6 +799,7 @@ namespace Velopack
         Delta
     }
 
+    /// <summary>An individual Velopack asset, could refer to an asset on-disk or in a remote package feed.</summary>
     public class VelopackAsset
     {
 
@@ -833,12 +827,14 @@ namespace Velopack
         /// <summary>The release notes in HTML format, transformed from Markdown when packaging the release.</summary>
         public string NotesHTML = "";
 
+        /// <summary>Parses a JSON string into a VelopackAsset object.</summary>
         public static VelopackAsset FromJson(string json)
         {
             JsonNode node = JsonNode.Parse(json);
             return FromNode(node);
         }
 
+        /// <summary>Parses a JSON node into a VelopackAsset object.</summary>
         public static VelopackAsset FromNode(JsonNode node)
         {
             VelopackAsset asset = new VelopackAsset();
@@ -876,13 +872,19 @@ namespace Velopack
         }
     }
 
+    /// <summary>Holds information about the current version and pending updates, such as how many there are, and access to release notes.</summary>
     public class UpdateInfo
     {
 
+        /// <summary>The available version that we are updating to.</summary>
         public VelopackAsset TargetFullRelease;
 
+        /// <summary>True if the update is a version downgrade or lateral move (such as when switching channels to the same version number).</summary>
+        /// <remarks>In this case, only full updates are allowed, and any local packages on disk newer than the downloaded version will be
+        /// deleted.</remarks>
         public bool IsDowngrade = false;
 
+        /// <summary>Parses a JSON string into an UpdateInfo object.</summary>
         public static UpdateInfo FromJson(string json)
         {
             JsonNode node = JsonNode.Parse(json);
@@ -900,43 +902,6 @@ namespace Velopack
                 }
             }
             return updateInfo;
-        }
-    }
-
-    public class ProgressEvent
-    {
-
-        public string File = "";
-
-        public bool Complete = false;
-
-        public int Progress = 0;
-
-        public string Error = "";
-
-        public static ProgressEvent FromJson(string json)
-        {
-            JsonNode node = JsonNode.Parse(json);
-            ProgressEvent progressEvent = new ProgressEvent();
-            foreach ((string k, JsonNode v) in node.AsObject())
-            {
-                switch (k.ToLower())
-                {
-                    case "file":
-                        progressEvent.File = v.AsString();
-                        break;
-                    case "complete":
-                        progressEvent.Complete = v.AsBool();
-                        break;
-                    case "progress":
-                        progressEvent.Progress = (int)v.AsNumber();
-                        break;
-                    case "error":
-                        progressEvent.Error = v.AsString();
-                        break;
-                }
-            }
-            return progressEvent;
         }
     }
 
@@ -958,14 +923,21 @@ namespace Velopack
             this._urlOrPath = urlOrPath;
         }
 
-        /// <summary>Set whether to allow downgrades to an earlier version. If this is false, the app will only update to a newer version.</summary>
+        /// <summary>Allows UpdateManager to update to a version that's lower than the current version (i.e. downgrading).</summary>
+        /// <remarks>This could happen if a release has bugs and was retracted from the release feed, or if you're using
+        /// ExplicitChannel to switch channels to another channel where the latest version on that
+        /// channel is lower than the current version.</remarks>
         public void SetAllowDowngrade(bool allowDowngrade)
         {
             this._allowDowngrade = allowDowngrade;
         }
 
-        /// <summary>Set the explicit channel to use when checking for updates. If this is not set, the default channel will be used.</summary>
-        /// <remarks>You usually should not set this, unless you are intending for the user to switch to a different channel.</remarks>
+        /// <summary>This option should usually be left null. Overrides the default channel used to fetch updates.</summary>
+        /// <remarks>The default channel will be whatever channel was specified on the command line when building this release.
+        /// For example, if the current release was packaged with '--channel beta', then the default channel will be 'beta'.
+        /// This allows users to automatically receive updates from the same channel they installed from. This options
+        /// allows you to explicitly switch channels, for example if the user wished to switch back to the 'stable' channel
+        /// without having to reinstall the application.</remarks>
         public void SetExplicitChannel(string explicitChannel)
         {
             this._explicitChannel = explicitChannel;
@@ -1114,24 +1086,23 @@ namespace Velopack
         }
     }
 
+    /// <summary>The main VelopackApp struct. This is the main entry point for your app.</summary>
     public class VelopackApp
     {
 
+        /// <summary>Create a new VelopackApp instance.</summary>
         public static VelopackApp Build()
         {
             VelopackApp app = new VelopackApp();
             return app;
         }
 
+        /// <summary>Runs the Velopack startup logic. This should be the first thing to run in your app.</summary>
+        /// <remarks>In some circumstances it may terminate/restart the process to perform tasks.</remarks>
         public void Run()
         {
             List<string> args = new List<string>();
-            args = Environment.GetCommandLineArgs().ToList(); HandleArgs(args);
-        }
-
-        void HandleArgs(List<string> args)
-        {
-            for (int i = 0; i < args.Count; i++)
+            args = Environment.GetCommandLineArgs().ToList(); for (int i = 0; i < args.Count; i++)
             {
                 string val = Platform.StrTrim(args[i]).ToLower();
                 if (val == "--veloapp-install")

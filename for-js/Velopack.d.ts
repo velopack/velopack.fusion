@@ -6,9 +6,6 @@ export declare enum JsonNodeType {
     NUMBER = 4,
     STRING = 5
 }
-export declare class JsonParseException extends Error {
-    name: string;
-}
 export declare class JsonNode {
     #private;
     /**
@@ -60,6 +57,9 @@ export declare enum VelopackAssetType {
     FULL = 1,
     DELTA = 2
 }
+/**
+ * An individual Velopack asset, could refer to an asset on-disk or in a remote package feed.
+ */
 export declare class VelopackAsset {
     /**
      * The name or Id of the package containing this release.
@@ -93,20 +93,33 @@ export declare class VelopackAsset {
      * The release notes in HTML format, transformed from Markdown when packaging the release.
      */
     notesHTML: string;
+    /**
+     * Parses a JSON string into a VelopackAsset object.
+     */
     static fromJson(json: string): VelopackAsset;
+    /**
+     * Parses a JSON node into a VelopackAsset object.
+     */
     static fromNode(node: JsonNode): VelopackAsset;
 }
+/**
+ * Holds information about the current version and pending updates, such as how many there are, and access to release notes.
+ */
 export declare class UpdateInfo {
+    /**
+     * The available version that we are updating to.
+     */
     targetFullRelease: VelopackAsset;
+    /**
+     * True if the update is a version downgrade or lateral move (such as when switching channels to the same version number).
+     * In this case, only full updates are allowed, and any local packages on disk newer than the downloaded version will be
+     * deleted.
+     */
     isDowngrade: boolean;
+    /**
+     * Parses a JSON string into an UpdateInfo object.
+     */
     static fromJson(json: string): UpdateInfo;
-}
-export declare class ProgressEvent {
-    file: string;
-    complete: boolean;
-    progress: number;
-    error: string;
-    static fromJson(json: string): ProgressEvent;
 }
 /**
  * This class is used to check for updates, download updates, and apply updates. It is a synchronous version of the UpdateManager class.
@@ -120,12 +133,19 @@ export declare class UpdateManagerSync {
      */
     setUrlOrPath(urlOrPath: string): void;
     /**
-     * Set whether to allow downgrades to an earlier version. If this is false, the app will only update to a newer version.
+     * Allows UpdateManager to update to a version that's lower than the current version (i.e. downgrading).
+     * This could happen if a release has bugs and was retracted from the release feed, or if you're using
+     * ExplicitChannel to switch channels to another channel where the latest version on that
+     * channel is lower than the current version.
      */
     setAllowDowngrade(allowDowngrade: boolean): void;
     /**
-     * Set the explicit channel to use when checking for updates. If this is not set, the default channel will be used.
-     * You usually should not set this, unless you are intending for the user to switch to a different channel.
+     * This option should usually be left null. Overrides the default channel used to fetch updates.
+     * The default channel will be whatever channel was specified on the command line when building this release.
+     * For example, if the current release was packaged with '--channel beta', then the default channel will be 'beta'.
+     * This allows users to automatically receive updates from the same channel they installed from. This options
+     * allows you to explicitly switch channels, for example if the user wished to switch back to the 'stable' channel
+     * without having to reinstall the application.
      */
     setExplicitChannel(explicitChannel: string): void;
     protected getCurrentVersionCommand(): string[];
@@ -173,12 +193,25 @@ export declare class UpdateManagerSync {
      */
     waitExitThenApplyUpdates(assetPath: string, silent: boolean, restart: boolean, restartArgs?: readonly string[] | null): void;
 }
+/**
+ * The main VelopackApp struct. This is the main entry point for your app.
+ */
 export declare class VelopackApp {
-    #private;
+    /**
+     * Create a new VelopackApp instance.
+     */
     static build(): VelopackApp;
+    /**
+     * Runs the Velopack startup logic. This should be the first thing to run in your app.
+     * In some circumstances it may terminate/restart the process to perform tasks.
+     */
     run(): void;
 }
-type ProgressFn = (arg: number) => void;
+/**
+ * This class is used to check for updates, download updates, and apply updates.
+ * It provides the asynchronous functions of the UpdateManager class.
+ * @extends UpdateManagerSync
+ */
 export declare class UpdateManager extends UpdateManagerSync {
     /**
      * Checks for updates, returning null if there are none available. If there are updates available, this method will return an
@@ -197,6 +230,5 @@ export declare class UpdateManager extends UpdateManagerSync {
      * packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
      * so may fail if there is already another update operation in progress.
      */
-    downloadUpdatesAsync(updateInfo: UpdateInfo, progress: ProgressFn): Promise<void>;
+    downloadUpdatesAsync(updateInfo: UpdateInfo, progress: (arg: number) => void): Promise<void>;
 }
-export {};

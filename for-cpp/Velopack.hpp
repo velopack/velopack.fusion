@@ -51,7 +51,6 @@ namespace Velopack
 #include <iostream>
 #include <memory>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -84,7 +83,6 @@ enum class JsonToken
     bool_,
     null
 };
-class JsonParseException;
 class JsonNode;
 class JsonParser;
 class Platform;
@@ -98,14 +96,7 @@ enum class VelopackAssetType
 };
 class VelopackAsset;
 class UpdateInfo;
-class ProgressEvent;
 class UpdateManagerSync;
-
-class JsonParseException : public std::runtime_error
-{
-public:
-    using std::runtime_error::runtime_error;
-};
 
 class JsonNode
 {
@@ -244,11 +235,20 @@ private:
     static std::string impl_GetUpdateExePath();
 };
 
+/**
+ * An individual Velopack asset, could refer to an asset on-disk or in a remote package feed.
+ */
 class VelopackAsset
 {
 public:
     VelopackAsset() = default;
+    /**
+     * Parses a JSON string into a VelopackAsset object.
+     */
     static std::shared_ptr<VelopackAsset> fromJson(std::string_view json);
+    /**
+     * Parses a JSON node into a VelopackAsset object.
+     */
     static std::shared_ptr<VelopackAsset> fromNode(std::shared_ptr<JsonNode> node);
 public:
     /**
@@ -285,26 +285,28 @@ public:
     std::string notesHTML{""};
 };
 
+/**
+ * Holds information about the current version and pending updates, such as how many there are, and access to release notes.
+ */
 class UpdateInfo
 {
 public:
     UpdateInfo() = default;
+    /**
+     * Parses a JSON string into an UpdateInfo object.
+     */
     static std::shared_ptr<UpdateInfo> fromJson(std::string_view json);
 public:
+    /**
+     * The available version that we are updating to.
+     */
     std::shared_ptr<VelopackAsset> targetFullRelease;
+    /**
+     * True if the update is a version downgrade or lateral move (such as when switching channels to the same version number).
+     * In this case, only full updates are allowed, and any local packages on disk newer than the downloaded version will be
+     * deleted.
+     */
     bool isDowngrade = false;
-};
-
-class ProgressEvent
-{
-public:
-    ProgressEvent() = default;
-    static std::shared_ptr<ProgressEvent> fromJson(std::string_view json);
-public:
-    std::string file{""};
-    bool complete = false;
-    int progress = 0;
-    std::string error{""};
 };
 
 /**
@@ -321,12 +323,19 @@ public:
      */
     void setUrlOrPath(std::string urlOrPath);
     /**
-     * Set whether to allow downgrades to an earlier version. If this is false, the app will only update to a newer version.
+     * Allows UpdateManager to update to a version that's lower than the current version (i.e. downgrading).
+     * This could happen if a release has bugs and was retracted from the release feed, or if you're using
+     * ExplicitChannel to switch channels to another channel where the latest version on that
+     * channel is lower than the current version.
      */
     void setAllowDowngrade(bool allowDowngrade);
     /**
-     * Set the explicit channel to use when checking for updates. If this is not set, the default channel will be used.
-     * You usually should not set this, unless you are intending for the user to switch to a different channel.
+     * This option should usually be left null. Overrides the default channel used to fetch updates.
+     * The default channel will be whatever channel was specified on the command line when building this release.
+     * For example, if the current release was packaged with '--channel beta', then the default channel will be 'beta'.
+     * This allows users to automatically receive updates from the same channel they installed from. This options
+     * allows you to explicitly switch channels, for example if the user wished to switch back to the 'stable' channel
+     * without having to reinstall the application.
      */
     void setExplicitChannel(std::string explicitChannel);
     /**

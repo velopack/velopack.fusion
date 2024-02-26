@@ -1436,6 +1436,7 @@ namespace Velopack
 #include <algorithm>
 #include <cstdlib>
 #include <regex>
+#include <stdexcept>
 #include "Velopack.hpp"
 
 #ifdef _WIN32
@@ -1541,7 +1542,7 @@ std::shared_ptr<JsonNode> JsonNode::parse(std::string_view text)
 void JsonNode::initBool(bool value)
 {
     if (this->type != JsonNodeType::null) {
-        throw JsonParseException("Cannot call InitBool on JsonNode which is not null.");
+        throw std::runtime_error("Cannot call InitBool on JsonNode which is not null.");
     }
     this->type = JsonNodeType::bool_;
     this->boolValue = value;
@@ -1550,7 +1551,7 @@ void JsonNode::initBool(bool value)
 void JsonNode::initArray()
 {
     if (this->type != JsonNodeType::null) {
-        throw JsonParseException("Cannot call InitArray on JsonNode which is not null.");
+        throw std::runtime_error("Cannot call InitArray on JsonNode which is not null.");
     }
     this->type = JsonNodeType::array;
 }
@@ -1558,7 +1559,7 @@ void JsonNode::initArray()
 void JsonNode::addArrayChild(std::shared_ptr<JsonNode> child)
 {
     if (this->type != JsonNodeType::array) {
-        throw JsonParseException("Cannot call AddArrayChild on JsonNode which is not an array.");
+        throw std::runtime_error("Cannot call AddArrayChild on JsonNode which is not an array.");
     }
     this->arrayValue.push_back(child);
 }
@@ -1566,7 +1567,7 @@ void JsonNode::addArrayChild(std::shared_ptr<JsonNode> child)
 void JsonNode::initObject()
 {
     if (this->type != JsonNodeType::null) {
-        throw JsonParseException("Cannot call InitObject on JsonNode which is not null.");
+        throw std::runtime_error("Cannot call InitObject on JsonNode which is not null.");
     }
     this->type = JsonNodeType::object;
 }
@@ -1574,7 +1575,7 @@ void JsonNode::initObject()
 void JsonNode::addObjectChild(std::string_view key, std::shared_ptr<JsonNode> child)
 {
     if (this->type != JsonNodeType::object) {
-        throw JsonParseException("Cannot call AddObjectChild on JsonNode which is not an object.");
+        throw std::runtime_error("Cannot call AddObjectChild on JsonNode which is not an object.");
     }
     this->objectValue[std::string(key)] = child;
 }
@@ -1582,7 +1583,7 @@ void JsonNode::addObjectChild(std::string_view key, std::shared_ptr<JsonNode> ch
 void JsonNode::initNumber(double value)
 {
     if (this->type != JsonNodeType::null) {
-        throw JsonParseException("Cannot call InitNumber on JsonNode which is not null.");
+        throw std::runtime_error("Cannot call InitNumber on JsonNode which is not null.");
     }
     this->type = JsonNodeType::number;
     this->numberValue = value;
@@ -1591,7 +1592,7 @@ void JsonNode::initNumber(double value)
 void JsonNode::initString(std::string_view value)
 {
     if (this->type != JsonNodeType::null) {
-        throw JsonParseException("Cannot call InitString on JsonNode which is not null.");
+        throw std::runtime_error("Cannot call InitString on JsonNode which is not null.");
     }
     this->type = JsonNodeType::string;
     this->stringValue = value;
@@ -1611,7 +1612,7 @@ bool JsonParser::endReached() const
 std::string JsonParser::readN(int n)
 {
     if (this->position + n > std::ssize(this->text)) {
-        throw JsonParseException("Unexpected end of input");
+        throw std::runtime_error("Unexpected end of input");
     }
     std::string result{this->text.substr(this->position, n)};
     this->position += n;
@@ -1745,7 +1746,7 @@ std::shared_ptr<JsonNode> JsonParser::parseBool()
         return node;
     }
     else {
-        throw JsonParseException("Invalid boolean");
+        throw std::runtime_error("Invalid boolean");
     }
 }
 
@@ -1757,7 +1758,7 @@ std::shared_ptr<JsonNode> JsonParser::parseNumber()
         node->initNumber(d);
         return node;
     }
-    throw JsonParseException("Invalid number");
+    throw std::runtime_error("Invalid number");
 }
 
 std::shared_ptr<JsonNode> JsonParser::parseString()
@@ -1766,7 +1767,7 @@ std::shared_ptr<JsonNode> JsonParser::parseString()
     read();
     while (true) {
         if (endReached()) {
-            throw JsonParseException("Unterminated string");
+            throw std::runtime_error("Unterminated string");
         }
         int c = read();
         switch (c) {
@@ -1778,7 +1779,7 @@ std::shared_ptr<JsonNode> JsonParser::parseString()
             }
         case '\\':
             if (endReached()) {
-                throw JsonParseException("Unterminated string");
+                throw std::runtime_error("Unterminated string");
             }
             c = read();
             switch (c) {
@@ -1809,7 +1810,7 @@ std::shared_ptr<JsonNode> JsonParser::parseString()
                         this->builder.writeChar(i);
                     }
                     else {
-                        throw JsonParseException("Invalid unicode escape");
+                        throw std::runtime_error("Invalid unicode escape");
                     }
                     break;
                 }
@@ -1830,7 +1831,7 @@ std::shared_ptr<JsonNode> JsonParser::parseObject()
     while (true) {
         switch (peekToken()) {
         case JsonToken::none:
-            throw JsonParseException("Unterminated object");
+            throw std::runtime_error("Unterminated object");
         case JsonToken::comma:
             read();
             continue;
@@ -1841,7 +1842,7 @@ std::shared_ptr<JsonNode> JsonParser::parseObject()
             {
                 std::shared_ptr<JsonNode> name = parseString();
                 if (peekToken() != JsonToken::colon)
-                    throw JsonParseException("Expected colon");
+                    throw std::runtime_error("Expected colon");
                 read();
                 node->addObjectChild(name->asString(), parseValue());
                 break;
@@ -1859,10 +1860,10 @@ std::shared_ptr<JsonNode> JsonParser::parseArray()
     while (true) {
         switch (peekToken()) {
         case JsonToken::none:
-            throw JsonParseException("Unterminated array");
+            throw std::runtime_error("Unterminated array");
         case JsonToken::comma:
             if (!expectComma) {
-                throw JsonParseException("Unexpected comma in array");
+                throw std::runtime_error("Unexpected comma in array");
             }
             expectComma = false;
             read();
@@ -1872,7 +1873,7 @@ std::shared_ptr<JsonNode> JsonParser::parseArray()
             return node;
         default:
             if (expectComma) {
-                throw JsonParseException("Expected comma");
+                throw std::runtime_error("Expected comma");
             }
             expectComma = true;
             node->addArrayChild(parseValue());
@@ -1897,7 +1898,7 @@ std::shared_ptr<JsonNode> JsonParser::parseValue()
     case JsonToken::squareOpen:
         return parseArray();
     default:
-        throw JsonParseException("Invalid token");
+        throw std::runtime_error("Invalid token");
     }
 }
 
@@ -2129,23 +2130,6 @@ std::shared_ptr<UpdateInfo> UpdateInfo::fromJson(std::string_view json)
             updateInfo->isDowngrade = v->asBool();
     }
     return updateInfo;
-}
-
-std::shared_ptr<ProgressEvent> ProgressEvent::fromJson(std::string_view json)
-{
-    std::shared_ptr<JsonNode> node = JsonNode::parse(json);
-    std::shared_ptr<ProgressEvent> progressEvent = std::make_shared<ProgressEvent>();
-    for (const auto &[k, v] : *node->asObject()) {
-        if (FuString_ToLower(k) == "file")
-            progressEvent->file = v->asString();
-        else if (FuString_ToLower(k) == "complete")
-            progressEvent->complete = v->asBool();
-        else if (FuString_ToLower(k) == "progress")
-            progressEvent->progress = static_cast<int>(v->asNumber());
-        else if (FuString_ToLower(k) == "error")
-            progressEvent->error = v->asString();
-    }
-    return progressEvent;
 }
 
 void UpdateManagerSync::setUrlOrPath(std::string urlOrPath)

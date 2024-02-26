@@ -23,9 +23,6 @@ enum JsonToken
     Null
 }
 
-public class JsonParseException : Exception 
-{ }
-
 public class JsonNode
 {
     JsonNodeType Type = JsonNodeType.Null;
@@ -108,74 +105,74 @@ public class JsonNode
         return StringValue;
     }
 
-    public static JsonNode# Parse(string text) throws Exception, JsonParseException
+    public static JsonNode# Parse(string text) throws Exception
     {
         JsonParser# parser = new JsonParser();
         parser.Load(text);
         return parser.ParseValue();
     }
 
-    internal void InitBool!(bool value) throws JsonParseException
+    internal void InitBool!(bool value) throws Exception
     {
         if (Type != JsonNodeType.Null)
         {
-            throw JsonParseException("Cannot call InitBool on JsonNode which is not null.");
+            throw Exception("Cannot call InitBool on JsonNode which is not null.");
         }
         Type = JsonNodeType.Bool;
         BoolValue = value;
     }
 
-    internal void InitArray!() throws JsonParseException
+    internal void InitArray!() throws Exception
     {
         if (Type != JsonNodeType.Null)
         {
-            throw JsonParseException("Cannot call InitArray on JsonNode which is not null.");
+            throw Exception("Cannot call InitArray on JsonNode which is not null.");
         }
         Type = JsonNodeType.Array;
     }
 
-    internal void AddArrayChild!(JsonNode# child) throws JsonParseException
+    internal void AddArrayChild!(JsonNode# child) throws Exception
     {
         if (Type != JsonNodeType.Array)
         {
-            throw JsonParseException("Cannot call AddArrayChild on JsonNode which is not an array.");
+            throw Exception("Cannot call AddArrayChild on JsonNode which is not an array.");
         }
         ArrayValue.Add(child);
     }
 
-    internal void InitObject!() throws JsonParseException
+    internal void InitObject!() throws Exception
     {
         if (Type != JsonNodeType.Null)
         {
-            throw JsonParseException("Cannot call InitObject on JsonNode which is not null.");
+            throw Exception("Cannot call InitObject on JsonNode which is not null.");
         }
         Type = JsonNodeType.Object;
     }
 
-    internal void AddObjectChild!(string key, JsonNode# child) throws JsonParseException
+    internal void AddObjectChild!(string key, JsonNode# child) throws Exception
     {
         if (Type != JsonNodeType.Object)
         {
-            throw JsonParseException("Cannot call AddObjectChild on JsonNode which is not an object.");
+            throw Exception("Cannot call AddObjectChild on JsonNode which is not an object.");
         }
         ObjectValue[key] = child;
     }
 
-    internal void InitNumber!(double value) throws JsonParseException
+    internal void InitNumber!(double value) throws Exception
     {
         if (Type != JsonNodeType.Null)
         {
-            throw JsonParseException("Cannot call InitNumber on JsonNode which is not null.");
+            throw Exception("Cannot call InitNumber on JsonNode which is not null.");
         }
         Type = JsonNodeType.Number;
         NumberValue = value;
     }
 
-    internal void InitString!(string value) throws JsonParseException
+    internal void InitString!(string value) throws Exception
     {
         if (Type != JsonNodeType.Null)
         {
-            throw JsonParseException("Cannot call InitString on JsonNode which is not null.");
+            throw Exception("Cannot call InitString on JsonNode which is not null.");
         }
         Type = JsonNodeType.String;
         StringValue = value;
@@ -200,11 +197,11 @@ class JsonParser
         return position >= text.Length;
     }
 
-    public string() ReadN!(int n) throws JsonParseException
+    public string() ReadN!(int n) throws Exception
     {
         if (position + n > text.Length)
         {
-            throw JsonParseException("Unexpected end of input");
+            throw Exception("Unexpected end of input");
         }
         string() result = text.Substring(position, n);
         position += n;
@@ -320,14 +317,14 @@ class JsonParser
         return builder.ToString();
     }
 
-    public JsonNode# ParseNull!() throws JsonParseException 
+    public JsonNode# ParseNull!() throws Exception 
     {
         ReadWord();
         JsonNode# node = new JsonNode();
         return node;
     }
 
-    public JsonNode# ParseBool!() throws JsonParseException 
+    public JsonNode# ParseBool!() throws Exception 
     {
         string() boolValue = ReadWord();
         if (boolValue == "true") {
@@ -339,11 +336,11 @@ class JsonParser
             node.InitBool(false);
             return node;
         } else {
-            throw JsonParseException("Invalid boolean");
+            throw Exception("Invalid boolean");
         }
     }
 
-    public JsonNode# ParseNumber!() throws JsonParseException 
+    public JsonNode# ParseNumber!() throws Exception 
     {
         double d;
         if (d.TryParse(ReadWord())) {
@@ -352,17 +349,17 @@ class JsonParser
             return node;
         }
 
-        throw JsonParseException("Invalid number");
+        throw Exception("Invalid number");
     }
 
-    public JsonNode# ParseString!() throws JsonParseException
+    public JsonNode# ParseString!() throws Exception
     {
         builder.Clear();
         Read(); // ditch opening quote
       
         while (true) {
             if (EndReached()) {
-                throw JsonParseException("Unterminated string");
+                throw Exception("Unterminated string");
             }
             int c = Read();
             switch (c) {
@@ -372,7 +369,7 @@ class JsonParser
                     return node;
                 case '\\':
                     if (EndReached()) {
-                        throw JsonParseException("Unterminated string");
+                        throw Exception("Unterminated string");
                     }
                     
                     c = Read();
@@ -402,7 +399,7 @@ class JsonParser
                             if (i.TryParse(ReadN(4), 16)) {
                                 builder.WriteChar(i);
                             } else {
-                                throw JsonParseException("Invalid unicode escape");
+                                throw Exception("Invalid unicode escape");
                             }
                             break;
                     }
@@ -414,7 +411,7 @@ class JsonParser
         }
     }
 
-    public JsonNode# ParseObject!() throws Exception, JsonParseException
+    public JsonNode# ParseObject!() throws Exception
     {
         Read(); // ditch opening brace
         JsonNode# node = new JsonNode();
@@ -423,7 +420,7 @@ class JsonParser
         while (true) {
             switch (PeekToken()) {
             case JsonToken.None:
-                throw JsonParseException("Unterminated object");
+                throw Exception("Unterminated object");
             case JsonToken.Comma:
                 Read(); // ditch comma
                 continue;
@@ -433,7 +430,7 @@ class JsonParser
             default:
                 JsonNode# name = ParseString();
 
-                if (PeekToken() != JsonToken.Colon) throw JsonParseException("Expected colon");
+                if (PeekToken() != JsonToken.Colon) throw Exception("Expected colon");
                 Read(); // ditch the colon
 
                 node.AddObjectChild(name.AsString(), ParseValue());
@@ -442,7 +439,7 @@ class JsonParser
         }
     }
 
-    public JsonNode# ParseArray!() throws Exception, JsonParseException
+    public JsonNode# ParseArray!() throws Exception
     {
         Read(); // ditch opening brace
         JsonNode# node = new JsonNode();
@@ -452,10 +449,10 @@ class JsonParser
         while (true) {
             switch (PeekToken()) {
             case JsonToken.None:
-                throw JsonParseException("Unterminated array");		
+                throw Exception("Unterminated array");		
             case JsonToken.Comma:
                 if (!expectComma) {
-                    throw JsonParseException("Unexpected comma in array");
+                    throw Exception("Unexpected comma in array");
                 }
                 expectComma = false;
                 Read(); // ditch comma
@@ -465,7 +462,7 @@ class JsonParser
                 return node;
             default:
                 if (expectComma) {
-                    throw JsonParseException("Expected comma");
+                    throw Exception("Expected comma");
                 }
                 expectComma = true;
                 node.AddArrayChild(ParseValue());
@@ -474,7 +471,7 @@ class JsonParser
         }
     }
 
-    public JsonNode# ParseValue!() throws Exception, JsonParseException
+    public JsonNode# ParseValue!() throws Exception
     {
         switch (PeekToken()) {
         case JsonToken.String:		
@@ -490,7 +487,7 @@ class JsonParser
         case JsonToken.SquareOpen:	
             return ParseArray();
         default:
-            throw JsonParseException("Invalid token");
+            throw Exception("Invalid token");
         }
     }
 }

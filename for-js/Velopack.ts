@@ -175,10 +175,6 @@ enum JsonToken {
   NULL,
 }
 
-export class JsonParseException extends Error {
-  name = "JsonParseException";
-}
-
 export class JsonNode {
   #type: JsonNodeType = JsonNodeType.NULL;
   readonly #objectValue: Record<string, JsonNode> = {};
@@ -281,9 +277,7 @@ export class JsonNode {
 
   initBool(value: boolean): void {
     if (this.#type != JsonNodeType.NULL) {
-      throw new JsonParseException(
-        "Cannot call InitBool on JsonNode which is not null.",
-      );
+      throw new Error("Cannot call InitBool on JsonNode which is not null.");
     }
     this.#type = JsonNodeType.BOOL;
     this.#boolValue = value;
@@ -291,16 +285,14 @@ export class JsonNode {
 
   initArray(): void {
     if (this.#type != JsonNodeType.NULL) {
-      throw new JsonParseException(
-        "Cannot call InitArray on JsonNode which is not null.",
-      );
+      throw new Error("Cannot call InitArray on JsonNode which is not null.");
     }
     this.#type = JsonNodeType.ARRAY;
   }
 
   addArrayChild(child: JsonNode): void {
     if (this.#type != JsonNodeType.ARRAY) {
-      throw new JsonParseException(
+      throw new Error(
         "Cannot call AddArrayChild on JsonNode which is not an array.",
       );
     }
@@ -309,16 +301,14 @@ export class JsonNode {
 
   initObject(): void {
     if (this.#type != JsonNodeType.NULL) {
-      throw new JsonParseException(
-        "Cannot call InitObject on JsonNode which is not null.",
-      );
+      throw new Error("Cannot call InitObject on JsonNode which is not null.");
     }
     this.#type = JsonNodeType.OBJECT;
   }
 
   addObjectChild(key: string, child: JsonNode): void {
     if (this.#type != JsonNodeType.OBJECT) {
-      throw new JsonParseException(
+      throw new Error(
         "Cannot call AddObjectChild on JsonNode which is not an object.",
       );
     }
@@ -327,9 +317,7 @@ export class JsonNode {
 
   initNumber(value: number): void {
     if (this.#type != JsonNodeType.NULL) {
-      throw new JsonParseException(
-        "Cannot call InitNumber on JsonNode which is not null.",
-      );
+      throw new Error("Cannot call InitNumber on JsonNode which is not null.");
     }
     this.#type = JsonNodeType.NUMBER;
     this.#numberValue = value;
@@ -337,9 +325,7 @@ export class JsonNode {
 
   initString(value: string): void {
     if (this.#type != JsonNodeType.NULL) {
-      throw new JsonParseException(
-        "Cannot call InitString on JsonNode which is not null.",
-      );
+      throw new Error("Cannot call InitString on JsonNode which is not null.");
     }
     this.#type = JsonNodeType.STRING;
     this.#stringValue = value;
@@ -362,7 +348,7 @@ class JsonParser {
 
   public readN(n: number): string {
     if (this.#position + n > this.#text.length) {
-      throw new JsonParseException("Unexpected end of input");
+      throw new Error("Unexpected end of input");
     }
     let result: string = this.#text.substring(
       this.#position,
@@ -499,7 +485,7 @@ class JsonParser {
       node.initBool(false);
       return node;
     } else {
-      throw new JsonParseException("Invalid boolean");
+      throw new Error("Invalid boolean");
     }
   }
 
@@ -510,7 +496,7 @@ class JsonParser {
       node.initNumber(d);
       return node;
     }
-    throw new JsonParseException("Invalid number");
+    throw new Error("Invalid number");
   }
 
   public parseString(): JsonNode {
@@ -518,7 +504,7 @@ class JsonParser {
     this.read();
     while (true) {
       if (this.endReached()) {
-        throw new JsonParseException("Unterminated string");
+        throw new Error("Unterminated string");
       }
       let c: number = this.read();
       switch (c) {
@@ -528,7 +514,7 @@ class JsonParser {
           return node;
         case 92:
           if (this.endReached()) {
-            throw new JsonParseException("Unterminated string");
+            throw new Error("Unterminated string");
           }
           c = this.read();
           switch (c) {
@@ -557,7 +543,7 @@ class JsonParser {
               if (!isNaN((i = parseInt(this.readN(4), 16)))) {
                 this.#builder.writeChar(i);
               } else {
-                throw new JsonParseException("Invalid unicode escape");
+                throw new Error("Invalid unicode escape");
               }
               break;
           }
@@ -576,7 +562,7 @@ class JsonParser {
     while (true) {
       switch (this.#peekToken()) {
         case JsonToken.NONE:
-          throw new JsonParseException("Unterminated object");
+          throw new Error("Unterminated object");
         case JsonToken.COMMA:
           this.read();
           continue;
@@ -586,7 +572,7 @@ class JsonParser {
         default:
           let name: JsonNode = this.parseString();
           if (this.#peekToken() != JsonToken.COLON)
-            throw new JsonParseException("Expected colon");
+            throw new Error("Expected colon");
           this.read();
           node.addObjectChild(name.asString(), this.parseValue());
           break;
@@ -602,10 +588,10 @@ class JsonParser {
     while (true) {
       switch (this.#peekToken()) {
         case JsonToken.NONE:
-          throw new JsonParseException("Unterminated array");
+          throw new Error("Unterminated array");
         case JsonToken.COMMA:
           if (!expectComma) {
-            throw new JsonParseException("Unexpected comma in array");
+            throw new Error("Unexpected comma in array");
           }
           expectComma = false;
           this.read();
@@ -615,7 +601,7 @@ class JsonParser {
           return node;
         default:
           if (expectComma) {
-            throw new JsonParseException("Expected comma");
+            throw new Error("Expected comma");
           }
           expectComma = true;
           node.addArrayChild(this.parseValue());
@@ -639,7 +625,7 @@ class JsonParser {
       case JsonToken.SQUARE_OPEN:
         return this.parseArray();
       default:
-        throw new JsonParseException("Invalid token");
+        throw new Error("Invalid token");
     }
   }
 }
@@ -842,6 +828,9 @@ export enum VelopackAssetType {
   DELTA,
 }
 
+/**
+ * An individual Velopack asset, could refer to an asset on-disk or in a remote package feed.
+ */
 export class VelopackAsset {
   /**
    * The name or Id of the package containing this release.
@@ -876,11 +865,17 @@ export class VelopackAsset {
    */
   notesHTML: string = "";
 
+  /**
+   * Parses a JSON string into a VelopackAsset object.
+   */
   public static fromJson(json: string): VelopackAsset {
     let node: JsonNode = JsonNode.parse(json);
     return VelopackAsset.fromNode(node);
   }
 
+  /**
+   * Parses a JSON node into a VelopackAsset object.
+   */
   public static fromNode(node: JsonNode): VelopackAsset {
     let asset: VelopackAsset = new VelopackAsset();
     for (const [k, v] of Object.entries(node.asObject())) {
@@ -918,10 +913,24 @@ export class VelopackAsset {
   }
 }
 
+/**
+ * Holds information about the current version and pending updates, such as how many there are, and access to release notes.
+ */
 export class UpdateInfo {
+  /**
+   * The available version that we are updating to.
+   */
   targetFullRelease: VelopackAsset;
+  /**
+   * True if the update is a version downgrade or lateral move (such as when switching channels to the same version number).
+   * In this case, only full updates are allowed, and any local packages on disk newer than the downloaded version will be
+   * deleted.
+   */
   isDowngrade: boolean = false;
 
+  /**
+   * Parses a JSON string into an UpdateInfo object.
+   */
   public static fromJson(json: string): UpdateInfo {
     let node: JsonNode = JsonNode.parse(json);
     let updateInfo: UpdateInfo | null = new UpdateInfo();
@@ -936,35 +945,6 @@ export class UpdateInfo {
       }
     }
     return updateInfo;
-  }
-}
-
-export class ProgressEvent {
-  file: string = "";
-  complete: boolean = false;
-  progress: number = 0;
-  error: string = "";
-
-  public static fromJson(json: string): ProgressEvent {
-    let node: JsonNode = JsonNode.parse(json);
-    let progressEvent: ProgressEvent = new ProgressEvent();
-    for (const [k, v] of Object.entries(node.asObject())) {
-      switch (k.toLowerCase()) {
-        case "file":
-          progressEvent.file = v.asString();
-          break;
-        case "complete":
-          progressEvent.complete = v.asBool();
-          break;
-        case "progress":
-          progressEvent.progress = Math.trunc(v.asNumber());
-          break;
-        case "error":
-          progressEvent.error = v.asString();
-          break;
-      }
-    }
-    return progressEvent;
   }
 }
 
@@ -986,15 +966,22 @@ export class UpdateManagerSync {
   }
 
   /**
-   * Set whether to allow downgrades to an earlier version. If this is false, the app will only update to a newer version.
+   * Allows UpdateManager to update to a version that's lower than the current version (i.e. downgrading).
+   * This could happen if a release has bugs and was retracted from the release feed, or if you're using
+   * ExplicitChannel to switch channels to another channel where the latest version on that
+   * channel is lower than the current version.
    */
   public setAllowDowngrade(allowDowngrade: boolean): void {
     this.#_allowDowngrade = allowDowngrade;
   }
 
   /**
-   * Set the explicit channel to use when checking for updates. If this is not set, the default channel will be used.
-   * You usually should not set this, unless you are intending for the user to switch to a different channel.
+   * This option should usually be left null. Overrides the default channel used to fetch updates.
+   * The default channel will be whatever channel was specified on the command line when building this release.
+   * For example, if the current release was packaged with '--channel beta', then the default channel will be 'beta'.
+   * This allows users to automatically receive updates from the same channel they installed from. This options
+   * allows you to explicitly switch channels, for example if the user wished to switch back to the 'stable' channel
+   * without having to reinstall the application.
    */
   public setExplicitChannel(explicitChannel: string): void {
     this.#_explicitChannel = explicitChannel;
@@ -1148,19 +1135,25 @@ export class UpdateManagerSync {
   }
 }
 
+/**
+ * The main VelopackApp struct. This is the main entry point for your app.
+ */
 export class VelopackApp {
+  /**
+   * Create a new VelopackApp instance.
+   */
   public static build(): VelopackApp {
     const app: VelopackApp = new VelopackApp();
     return app;
   }
 
+  /**
+   * Runs the Velopack startup logic. This should be the first thing to run in your app.
+   * In some circumstances it may terminate/restart the process to perform tasks.
+   */
   public run(): void {
     const args: string[] = [];
     Array.prototype.push.apply(args, process.argv);
-    this.#handleArgs(args);
-  }
-
-  #handleArgs(args: readonly string[]): void {
     for (let i: number = 0; i < args.length; i++) {
       let val: string = Platform.strTrim(args[i]).toLowerCase();
       if (val == "--veloapp-install") {
@@ -1195,8 +1188,11 @@ class StringWriter {
   }
 }
 
-type ProgressFn = (arg: number) => void;
-
+/**
+ * This class is used to check for updates, download updates, and apply updates.
+ * It provides the asynchronous functions of the UpdateManager class.
+ * @extends UpdateManagerSync
+ */
 export class UpdateManager extends UpdateManagerSync {
   /**
    * Checks for updates, returning null if there are none available. If there are updates available, this method will return an
@@ -1229,7 +1225,7 @@ export class UpdateManager extends UpdateManagerSync {
    */
   public async downloadUpdatesAsync(
     updateInfo: UpdateInfo,
-    progress: ProgressFn,
+    progress: (arg: number) => void,
   ): Promise<void> {
     const command: string[] = this.getDownloadUpdatesCommand(updateInfo);
     await nativeStartProcessAsyncReadLine(command, (data: string) => {

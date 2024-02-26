@@ -1,12 +1,15 @@
-
+/// The main VelopackApp struct. This is the main entry point for your app.
 public class VelopackApp
 {
+    /// Create a new VelopackApp instance.
     public static VelopackApp() Build()
     {
         VelopackApp() app;
         return app;
     }
 
+    /// Runs the Velopack startup logic. This should be the first thing to run in your app.
+    /// In some circumstances it may terminate/restart the process to perform tasks.
     public void Run()
     {
         List<string()>() args;
@@ -17,12 +20,8 @@ public class VelopackApp
 #else
         throw Exception("Unsupported platform");
 #endif
-        HandleArgs(args);
-    }
 
-    void HandleArgs(List<string()> args)
-    {
-        for (int i = 0; i < args.Count; i++) {
+     for (int i = 0; i < args.Count; i++) {
             string() val = Platform.StrTrim(args[i]).ToLower();
             if (val == "--veloapp-install") {
                 Platform.Exit(0);

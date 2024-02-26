@@ -41,7 +41,7 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
     if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
     return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
-var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _a, _Platform_impl_GetFusionExePath, _Platform_impl_GetUpdateExePath, _StringStream_instances, _StringStream_builder, _StringStream_writer, _StringStream_initialised, _StringStream_init, _UpdateManagerSync__allowDowngrade, _UpdateManagerSync__explicitChannel, _UpdateManagerSync__urlOrPath, _VelopackApp_instances, _VelopackApp_handleArgs, _StringWriter_buf;
+var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _a, _Platform_impl_GetFusionExePath, _Platform_impl_GetUpdateExePath, _StringStream_instances, _StringStream_builder, _StringStream_writer, _StringStream_initialised, _StringStream_init, _UpdateManagerSync__allowDowngrade, _UpdateManagerSync__explicitChannel, _UpdateManagerSync__urlOrPath, _StringWriter_buf;
 const { spawn, spawnSync } = require("child_process");
 const fs = require("fs");
 function emitLines(stream) {
@@ -161,12 +161,6 @@ var JsonToken;
     JsonToken[JsonToken["BOOL"] = 9] = "BOOL";
     JsonToken[JsonToken["NULL"] = 10] = "NULL";
 })(JsonToken || (JsonToken = {}));
-export class JsonParseException extends Error {
-    constructor() {
-        super(...arguments);
-        this.name = "JsonParseException";
-    }
-}
 export class JsonNode {
     constructor() {
         _JsonNode_type.set(this, JsonNodeType.NULL);
@@ -253,45 +247,45 @@ export class JsonNode {
     }
     initBool(value) {
         if (__classPrivateFieldGet(this, _JsonNode_type, "f") != JsonNodeType.NULL) {
-            throw new JsonParseException("Cannot call InitBool on JsonNode which is not null.");
+            throw new Error("Cannot call InitBool on JsonNode which is not null.");
         }
         __classPrivateFieldSet(this, _JsonNode_type, JsonNodeType.BOOL, "f");
         __classPrivateFieldSet(this, _JsonNode_boolValue, value, "f");
     }
     initArray() {
         if (__classPrivateFieldGet(this, _JsonNode_type, "f") != JsonNodeType.NULL) {
-            throw new JsonParseException("Cannot call InitArray on JsonNode which is not null.");
+            throw new Error("Cannot call InitArray on JsonNode which is not null.");
         }
         __classPrivateFieldSet(this, _JsonNode_type, JsonNodeType.ARRAY, "f");
     }
     addArrayChild(child) {
         if (__classPrivateFieldGet(this, _JsonNode_type, "f") != JsonNodeType.ARRAY) {
-            throw new JsonParseException("Cannot call AddArrayChild on JsonNode which is not an array.");
+            throw new Error("Cannot call AddArrayChild on JsonNode which is not an array.");
         }
         __classPrivateFieldGet(this, _JsonNode_arrayValue, "f").push(child);
     }
     initObject() {
         if (__classPrivateFieldGet(this, _JsonNode_type, "f") != JsonNodeType.NULL) {
-            throw new JsonParseException("Cannot call InitObject on JsonNode which is not null.");
+            throw new Error("Cannot call InitObject on JsonNode which is not null.");
         }
         __classPrivateFieldSet(this, _JsonNode_type, JsonNodeType.OBJECT, "f");
     }
     addObjectChild(key, child) {
         if (__classPrivateFieldGet(this, _JsonNode_type, "f") != JsonNodeType.OBJECT) {
-            throw new JsonParseException("Cannot call AddObjectChild on JsonNode which is not an object.");
+            throw new Error("Cannot call AddObjectChild on JsonNode which is not an object.");
         }
         __classPrivateFieldGet(this, _JsonNode_objectValue, "f")[key] = child;
     }
     initNumber(value) {
         if (__classPrivateFieldGet(this, _JsonNode_type, "f") != JsonNodeType.NULL) {
-            throw new JsonParseException("Cannot call InitNumber on JsonNode which is not null.");
+            throw new Error("Cannot call InitNumber on JsonNode which is not null.");
         }
         __classPrivateFieldSet(this, _JsonNode_type, JsonNodeType.NUMBER, "f");
         __classPrivateFieldSet(this, _JsonNode_numberValue, value, "f");
     }
     initString(value) {
         if (__classPrivateFieldGet(this, _JsonNode_type, "f") != JsonNodeType.NULL) {
-            throw new JsonParseException("Cannot call InitString on JsonNode which is not null.");
+            throw new Error("Cannot call InitString on JsonNode which is not null.");
         }
         __classPrivateFieldSet(this, _JsonNode_type, JsonNodeType.STRING, "f");
         __classPrivateFieldSet(this, _JsonNode_stringValue, value, "f");
@@ -314,7 +308,7 @@ class JsonParser {
     }
     readN(n) {
         if (__classPrivateFieldGet(this, _JsonParser_position, "f") + n > __classPrivateFieldGet(this, _JsonParser_text, "f").length) {
-            throw new JsonParseException("Unexpected end of input");
+            throw new Error("Unexpected end of input");
         }
         let result = __classPrivateFieldGet(this, _JsonParser_text, "f").substring(__classPrivateFieldGet(this, _JsonParser_position, "f"), __classPrivateFieldGet(this, _JsonParser_position, "f") + n);
         __classPrivateFieldSet(this, _JsonParser_position, __classPrivateFieldGet(this, _JsonParser_position, "f") + n, "f");
@@ -384,7 +378,7 @@ class JsonParser {
             return node;
         }
         else {
-            throw new JsonParseException("Invalid boolean");
+            throw new Error("Invalid boolean");
         }
     }
     parseNumber() {
@@ -394,14 +388,14 @@ class JsonParser {
             node.initNumber(d);
             return node;
         }
-        throw new JsonParseException("Invalid number");
+        throw new Error("Invalid number");
     }
     parseString() {
         __classPrivateFieldGet(this, _JsonParser_builder, "f").clear();
         this.read();
         while (true) {
             if (this.endReached()) {
-                throw new JsonParseException("Unterminated string");
+                throw new Error("Unterminated string");
             }
             let c = this.read();
             switch (c) {
@@ -411,7 +405,7 @@ class JsonParser {
                     return node;
                 case 92:
                     if (this.endReached()) {
-                        throw new JsonParseException("Unterminated string");
+                        throw new Error("Unterminated string");
                     }
                     c = this.read();
                     switch (c) {
@@ -441,7 +435,7 @@ class JsonParser {
                                 __classPrivateFieldGet(this, _JsonParser_builder, "f").writeChar(i);
                             }
                             else {
-                                throw new JsonParseException("Invalid unicode escape");
+                                throw new Error("Invalid unicode escape");
                             }
                             break;
                     }
@@ -459,7 +453,7 @@ class JsonParser {
         while (true) {
             switch (__classPrivateFieldGet(this, _JsonParser_instances, "m", _JsonParser_peekToken).call(this)) {
                 case JsonToken.NONE:
-                    throw new JsonParseException("Unterminated object");
+                    throw new Error("Unterminated object");
                 case JsonToken.COMMA:
                     this.read();
                     continue;
@@ -469,7 +463,7 @@ class JsonParser {
                 default:
                     let name = this.parseString();
                     if (__classPrivateFieldGet(this, _JsonParser_instances, "m", _JsonParser_peekToken).call(this) != JsonToken.COLON)
-                        throw new JsonParseException("Expected colon");
+                        throw new Error("Expected colon");
                     this.read();
                     node.addObjectChild(name.asString(), this.parseValue());
                     break;
@@ -484,10 +478,10 @@ class JsonParser {
         while (true) {
             switch (__classPrivateFieldGet(this, _JsonParser_instances, "m", _JsonParser_peekToken).call(this)) {
                 case JsonToken.NONE:
-                    throw new JsonParseException("Unterminated array");
+                    throw new Error("Unterminated array");
                 case JsonToken.COMMA:
                     if (!expectComma) {
-                        throw new JsonParseException("Unexpected comma in array");
+                        throw new Error("Unexpected comma in array");
                     }
                     expectComma = false;
                     this.read();
@@ -497,7 +491,7 @@ class JsonParser {
                     return node;
                 default:
                     if (expectComma) {
-                        throw new JsonParseException("Expected comma");
+                        throw new Error("Expected comma");
                     }
                     expectComma = true;
                     node.addArrayChild(this.parseValue());
@@ -520,7 +514,7 @@ class JsonParser {
             case JsonToken.SQUARE_OPEN:
                 return this.parseArray();
             default:
-                throw new JsonParseException("Invalid token");
+                throw new Error("Invalid token");
         }
     }
 }
@@ -756,6 +750,9 @@ export var VelopackAssetType;
     VelopackAssetType[VelopackAssetType["FULL"] = 1] = "FULL";
     VelopackAssetType[VelopackAssetType["DELTA"] = 2] = "DELTA";
 })(VelopackAssetType || (VelopackAssetType = {}));
+/**
+ * An individual Velopack asset, could refer to an asset on-disk or in a remote package feed.
+ */
 export class VelopackAsset {
     constructor() {
         /**
@@ -791,10 +788,16 @@ export class VelopackAsset {
          */
         this.notesHTML = "";
     }
+    /**
+     * Parses a JSON string into a VelopackAsset object.
+     */
     static fromJson(json) {
         let node = JsonNode.parse(json);
         return VelopackAsset.fromNode(node);
     }
+    /**
+     * Parses a JSON node into a VelopackAsset object.
+     */
     static fromNode(node) {
         let asset = new VelopackAsset();
         for (const [k, v] of Object.entries(node.asObject())) {
@@ -831,10 +834,21 @@ export class VelopackAsset {
         return asset;
     }
 }
+/**
+ * Holds information about the current version and pending updates, such as how many there are, and access to release notes.
+ */
 export class UpdateInfo {
     constructor() {
+        /**
+         * True if the update is a version downgrade or lateral move (such as when switching channels to the same version number).
+         * In this case, only full updates are allowed, and any local packages on disk newer than the downloaded version will be
+         * deleted.
+         */
         this.isDowngrade = false;
     }
+    /**
+     * Parses a JSON string into an UpdateInfo object.
+     */
     static fromJson(json) {
         let node = JsonNode.parse(json);
         let updateInfo = new UpdateInfo();
@@ -849,35 +863,6 @@ export class UpdateInfo {
             }
         }
         return updateInfo;
-    }
-}
-export class ProgressEvent {
-    constructor() {
-        this.file = "";
-        this.complete = false;
-        this.progress = 0;
-        this.error = "";
-    }
-    static fromJson(json) {
-        let node = JsonNode.parse(json);
-        let progressEvent = new ProgressEvent();
-        for (const [k, v] of Object.entries(node.asObject())) {
-            switch (k.toLowerCase()) {
-                case "file":
-                    progressEvent.file = v.asString();
-                    break;
-                case "complete":
-                    progressEvent.complete = v.asBool();
-                    break;
-                case "progress":
-                    progressEvent.progress = Math.trunc(v.asNumber());
-                    break;
-                case "error":
-                    progressEvent.error = v.asString();
-                    break;
-            }
-        }
-        return progressEvent;
     }
 }
 /**
@@ -898,14 +883,21 @@ export class UpdateManagerSync {
         __classPrivateFieldSet(this, _UpdateManagerSync__urlOrPath, urlOrPath, "f");
     }
     /**
-     * Set whether to allow downgrades to an earlier version. If this is false, the app will only update to a newer version.
+     * Allows UpdateManager to update to a version that's lower than the current version (i.e. downgrading).
+     * This could happen if a release has bugs and was retracted from the release feed, or if you're using
+     * ExplicitChannel to switch channels to another channel where the latest version on that
+     * channel is lower than the current version.
      */
     setAllowDowngrade(allowDowngrade) {
         __classPrivateFieldSet(this, _UpdateManagerSync__allowDowngrade, allowDowngrade, "f");
     }
     /**
-     * Set the explicit channel to use when checking for updates. If this is not set, the default channel will be used.
-     * You usually should not set this, unless you are intending for the user to switch to a different channel.
+     * This option should usually be left null. Overrides the default channel used to fetch updates.
+     * The default channel will be whatever channel was specified on the command line when building this release.
+     * For example, if the current release was packaged with '--channel beta', then the default channel will be 'beta'.
+     * This allows users to automatically receive updates from the same channel they installed from. This options
+     * allows you to explicitly switch channels, for example if the user wished to switch back to the 'stable' channel
+     * without having to reinstall the application.
      */
     setExplicitChannel(explicitChannel) {
         __classPrivateFieldSet(this, _UpdateManagerSync__explicitChannel, explicitChannel, "f");
@@ -1037,37 +1029,41 @@ export class UpdateManagerSync {
     }
 }
 _UpdateManagerSync__allowDowngrade = new WeakMap(), _UpdateManagerSync__explicitChannel = new WeakMap(), _UpdateManagerSync__urlOrPath = new WeakMap();
+/**
+ * The main VelopackApp struct. This is the main entry point for your app.
+ */
 export class VelopackApp {
-    constructor() {
-        _VelopackApp_instances.add(this);
-    }
+    /**
+     * Create a new VelopackApp instance.
+     */
     static build() {
         const app = new VelopackApp();
         return app;
     }
+    /**
+     * Runs the Velopack startup logic. This should be the first thing to run in your app.
+     * In some circumstances it may terminate/restart the process to perform tasks.
+     */
     run() {
         const args = [];
         Array.prototype.push.apply(args, process.argv);
-        __classPrivateFieldGet(this, _VelopackApp_instances, "m", _VelopackApp_handleArgs).call(this, args);
+        for (let i = 0; i < args.length; i++) {
+            let val = Platform.strTrim(args[i]).toLowerCase();
+            if (val == "--veloapp-install") {
+                Platform.exit(0);
+            }
+            if (val == "--veloapp-updated") {
+                Platform.exit(0);
+            }
+            if (val == "--veloapp-obsolete") {
+                Platform.exit(0);
+            }
+            if (val == "--veloapp-uninstall") {
+                Platform.exit(0);
+            }
+        }
     }
 }
-_VelopackApp_instances = new WeakSet(), _VelopackApp_handleArgs = function _VelopackApp_handleArgs(args) {
-    for (let i = 0; i < args.length; i++) {
-        let val = Platform.strTrim(args[i]).toLowerCase();
-        if (val == "--veloapp-install") {
-            Platform.exit(0);
-        }
-        if (val == "--veloapp-updated") {
-            Platform.exit(0);
-        }
-        if (val == "--veloapp-obsolete") {
-            Platform.exit(0);
-        }
-        if (val == "--veloapp-uninstall") {
-            Platform.exit(0);
-        }
-    }
-};
 class StringWriter {
     constructor() {
         _StringWriter_buf.set(this, "");
@@ -1083,6 +1079,11 @@ class StringWriter {
     }
 }
 _StringWriter_buf = new WeakMap();
+/**
+ * This class is used to check for updates, download updates, and apply updates.
+ * It provides the asynchronous functions of the UpdateManager class.
+ * @extends UpdateManagerSync
+ */
 export class UpdateManager extends UpdateManagerSync {
     /**
      * Checks for updates, returning null if there are none available. If there are updates available, this method will return an
