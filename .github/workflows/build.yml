@@ -39,7 +39,7 @@ jobs:
         shell: pwsh
         run: |
           rustup target add i686-pc-windows-msvc
-          Add-Content -Path $env:GITHUB_ENV -Value "EXTRA_RUST_FLAGS=--target i686-pc-windows-msvc --features windows"
+          Add-Content -Path $env:GITHUB_ENV -Value "EXTRA_RUST_FLAGS=--target i686-pc-windows-msvc"
         if: ${{ matrix.os == 'windows-latest' }}
 
       - name: Set Rust Flags (Linux)
@@ -48,7 +48,7 @@ jobs:
 
       - name: Build Rust
         working-directory: for-rust
-        run: cargo build --release ${{ env.EXTRA_RUST_FLAGS }}
+        run: cargo build --features cli --release ${{ env.EXTRA_RUST_FLAGS }}
 
       - name: Collect Rust Binaries (Windows)
         working-directory: for-rust/target
