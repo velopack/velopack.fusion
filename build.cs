@@ -138,7 +138,7 @@ Dictionary<string, List<string>> LoadNativeMacros()
     macros["CS"] = new List<string>();
     macros["JS"] = new List<string>();
 
-    var includeDir = Path.Combine(projectDir, "include");
+    var includeDir = Path.Combine(projectDir, "src", "include");
 
     foreach (var f in Directory.EnumerateFiles(includeDir, "*.cs"))
     {
@@ -185,7 +185,7 @@ void RunAll(params Action<StringBuilder>[] actions)
             sw.Start();
             action(sb);
             sw.Stop();
-            Log($"Completed: {name} in {sw.Elapsed.TotalSeconds}s");
+            Log($"Completed: {name} in {Math.Round(sw.Elapsed.TotalSeconds, 2)}s");
         }
         catch (Exception ex)
         {
@@ -218,12 +218,12 @@ void RunAll(params Action<StringBuilder>[] actions)
 string FusionBuild(StringBuilder sb, string outputFile, string defineLang, bool includeVeloApp = true)
 {
     var fusionPath = Path.GetFullPath(Path.Combine(projectDir, "fut.exe"));
-    var sourceFiles = Directory.EnumerateFiles(projectDir, "*.fu", SearchOption.TopDirectoryOnly)
-        .Select(x => Path.GetFileName(x))
+    var sourceFiles = Directory.EnumerateFiles(Path.Combine(projectDir, "src"), "*.fu", SearchOption.TopDirectoryOnly)
+        .Select(x => Path.Join("src", Path.GetFileName(x)))
         .ToList();
 
     if (!includeVeloApp)
-        sourceFiles.Remove("VelopackApp.fu");
+        sourceFiles.RemoveAll((s) => s.EndsWith("VelopackApp.fu"));
 
     var fusionArgs = $"-o {outputFile} -D {defineLang} -n Velopack {String.Join(" ", sourceFiles)}";
 
@@ -279,7 +279,7 @@ void PrependTextIfNot(string finalFile, string prependText, Func<string, bool> p
 
 void PrependFiles(string finalFile, params string[] includeFiles)
 {
-    var includeFilesContent = includeFiles.Select(x => File.ReadAllText(Path.Join(projectDir, "include", x))).ToList();
+    var includeFilesContent = includeFiles.Select(x => File.ReadAllText(Path.Join(projectDir, "src", "include", x))).ToList();
     var original = File.ReadAllText(finalFile);
 
     using var fs = File.Create(finalFile);
@@ -298,7 +298,7 @@ void PrependFiles(string finalFile, params string[] includeFiles)
 
 void AppendFiles(string finalFile, params string[] includeFiles)
 {
-    var includeFilesContent = includeFiles.Select(x => File.ReadAllText(Path.Join(projectDir, "include", x))).ToList();
+    var includeFilesContent = includeFiles.Select(x => File.ReadAllText(Path.Join(projectDir, "src", "include", x))).ToList();
     var original = File.ReadAllText(finalFile);
 
     using var fs = File.Create(finalFile);
