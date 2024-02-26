@@ -681,7 +681,44 @@ class Platform {
     return ret;
   }
 
+  public static isInstalled(): boolean {
+    return (
+      Platform.fileExists(Platform.#impl_GetFusionExePath()) &&
+      Platform.fileExists(Platform.#impl_GetUpdateExePath())
+    );
+  }
+
+  public static getFusionExePath(): string {
+    let path: string = Platform.#impl_GetFusionExePath();
+    if (!Platform.fileExists(path)) {
+      throw new Error("Is the app installed? Fusion is not at: " + path);
+    }
+    return path;
+  }
+
   public static getUpdateExePath(): string {
+    let path: string = Platform.#impl_GetUpdateExePath();
+    if (!Platform.fileExists(path)) {
+      throw new Error("Is the app installed? Update is not at: " + path);
+    }
+    return path;
+  }
+
+  static #impl_GetFusionExePath(): string {
+    let exePath: string = Platform.getCurrentProcessPath();
+    if (Platform.isWindows()) {
+      exePath = Platform.pathJoin(Platform.pathParent(exePath), "Vfusion.exe");
+    } else if (Platform.isLinux()) {
+      exePath = Platform.pathJoin(Platform.pathParent(exePath), "VfusionNix");
+    } else if (Platform.isOsx()) {
+      exePath = Platform.pathJoin(Platform.pathParent(exePath), "VfusionMac");
+    } else {
+      throw new Error("Unsupported OS");
+    }
+    return exePath;
+  }
+
+  static #impl_GetUpdateExePath(): string {
     let exePath: string = Platform.getCurrentProcessPath();
     if (Platform.isWindows()) {
       exePath = Platform.pathJoin(
@@ -693,10 +730,7 @@ class Platform {
     } else if (Platform.isOsx()) {
       exePath = Platform.pathJoin(Platform.pathParent(exePath), "UpdateMac");
     } else {
-      throw new Error("Unsupported platform");
-    }
-    if (!Platform.fileExists(exePath)) {
-      throw new Error("Update executable not found: " + exePath);
+      throw new Error("Unsupported OS");
     }
     return exePath;
   }
@@ -929,19 +963,34 @@ export class ProgressEvent {
   }
 }
 
+/**
+ * This class is used to check for updates, download updates, and apply updates. It is a synchronous version of the UpdateManager class.
+ * This class is not recommended for use in GUI applications, as it will block the main thread, so you may want to use the async
+ * UpdateManager class instead, if it is supported for your programming language.
+ */
 export class UpdateManagerSync {
   #_allowDowngrade: boolean = false;
   #_explicitChannel: string = "";
   #_urlOrPath: string = "";
 
+  /**
+   * Set the URL or local file path to the update server. This is required before calling CheckForUpdates or DownloadUpdates.
+   */
   public setUrlOrPath(urlOrPath: string): void {
     this.#_urlOrPath = urlOrPath;
   }
 
+  /**
+   * Set whether to allow downgrades to an earlier version. If this is false, the app will only update to a newer version.
+   */
   public setAllowDowngrade(allowDowngrade: boolean): void {
     this.#_allowDowngrade = allowDowngrade;
   }
 
+  /**
+   * Set the explicit channel to use when checking for updates. If this is not set, the default channel will be used.
+   * You usually should not set this, unless you are intending for the user to switch to a different channel.
+   */
   public setExplicitChannel(explicitChannel: string): void {
     this.#_explicitChannel = explicitChannel;
   }
@@ -993,6 +1042,14 @@ export class UpdateManagerSync {
     command.push("--name");
     command.push(updateInfo.targetFullRelease.fileName);
     return command;
+  }
+
+  /**
+   * Returns true if the current app is installed, false otherwise. If the app is not installed, other functions in
+   * UpdateManager may throw exceptions, so you may want to check this before calling other functions.
+   */
+  public isInstalled(): boolean {
+    return Platform.isInstalled();
   }
 
   /**

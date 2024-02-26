@@ -223,6 +223,8 @@ public:
      */
     static std::string getCurrentProcessPath();
     static bool fileExists(std::string path);
+    static bool isInstalled();
+    static std::string getFusionExePath();
     static std::string getUpdateExePath();
     static std::string strTrim(std::string str);
     static std::string pathParent(std::string str);
@@ -238,6 +240,8 @@ public:
     static void exit(int code);
 private:
     Platform() = delete;
+    static std::string impl_GetFusionExePath();
+    static std::string impl_GetUpdateExePath();
 };
 
 class VelopackAsset
@@ -303,13 +307,33 @@ public:
     std::string error{""};
 };
 
+/**
+ * This class is used to check for updates, download updates, and apply updates. It is a synchronous version of the UpdateManager class.
+ * This class is not recommended for use in GUI applications, as it will block the main thread, so you may want to use the async 
+ * UpdateManager class instead, if it is supported for your programming language.
+ */
 class UpdateManagerSync
 {
 public:
     UpdateManagerSync() = default;
+    /**
+     * Set the URL or local file path to the update server. This is required before calling CheckForUpdates or DownloadUpdates.
+     */
     void setUrlOrPath(std::string urlOrPath);
+    /**
+     * Set whether to allow downgrades to an earlier version. If this is false, the app will only update to a newer version.
+     */
     void setAllowDowngrade(bool allowDowngrade);
+    /**
+     * Set the explicit channel to use when checking for updates. If this is not set, the default channel will be used.
+     * You usually should not set this, unless you are intending for the user to switch to a different channel.
+     */
     void setExplicitChannel(std::string explicitChannel);
+    /**
+     * Returns true if the current app is installed, false otherwise. If the app is not installed, other functions in 
+     * UpdateManager may throw exceptions, so you may want to check this before calling other functions.
+     */
+    bool isInstalled() const;
     /**
      * Checks for updates, returning null if there are none available. If there are updates available, this method will return an 
      * UpdateInfo object containing the latest available release, and any delta updates that can be applied if they are available.

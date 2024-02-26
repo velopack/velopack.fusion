@@ -1,11 +1,20 @@
+/// This class is used to check for updates, download updates, and apply updates. It is a synchronous version of the UpdateManager class.
+/// This class is not recommended for use in GUI applications, as it will block the main thread, so you may want to use the async 
+/// UpdateManager class instead, if it is supported for your programming language.
 public class UpdateManagerSync
 {
     bool _allowDowngrade = false;
     string() _explicitChannel = "";
     string() _urlOrPath = "";
 
+    /// Set the URL or local file path to the update server. This is required before calling CheckForUpdates or DownloadUpdates.
     public void SetUrlOrPath!(string() urlOrPath) { _urlOrPath = urlOrPath; }
+
+    /// Set whether to allow downgrades to an earlier version. If this is false, the app will only update to a newer version.
     public void SetAllowDowngrade!(bool allowDowngrade) { _allowDowngrade = allowDowngrade; }
+
+    /// Set the explicit channel to use when checking for updates. If this is not set, the default channel will be used.
+    /// You usually should not set this, unless you are intending for the user to switch to a different channel.
     public void SetExplicitChannel!(string() explicitChannel) { _explicitChannel = explicitChannel; }
 
     protected List<string()>() GetCurrentVersionCommand() throws Exception
@@ -62,6 +71,13 @@ public class UpdateManagerSync
         command.Add("--name");
         command.Add(updateInfo.TargetFullRelease.FileName);
         return command;
+    }
+
+    /// Returns true if the current app is installed, false otherwise. If the app is not installed, other functions in 
+    /// UpdateManager may throw exceptions, so you may want to check this before calling other functions.
+    public bool IsInstalled()
+    {
+        return Platform.IsInstalled();
     }
 
     /// Checks for updates, returning null if there are none available. If there are updates available, this method will return an 

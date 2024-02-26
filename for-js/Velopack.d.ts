@@ -108,14 +108,34 @@ export declare class ProgressEvent {
     error: string;
     static fromJson(json: string): ProgressEvent;
 }
+/**
+ * This class is used to check for updates, download updates, and apply updates. It is a synchronous version of the UpdateManager class.
+ * This class is not recommended for use in GUI applications, as it will block the main thread, so you may want to use the async
+ * UpdateManager class instead, if it is supported for your programming language.
+ */
 export declare class UpdateManagerSync {
     #private;
+    /**
+     * Set the URL or local file path to the update server. This is required before calling CheckForUpdates or DownloadUpdates.
+     */
     setUrlOrPath(urlOrPath: string): void;
+    /**
+     * Set whether to allow downgrades to an earlier version. If this is false, the app will only update to a newer version.
+     */
     setAllowDowngrade(allowDowngrade: boolean): void;
+    /**
+     * Set the explicit channel to use when checking for updates. If this is not set, the default channel will be used.
+     * You usually should not set this, unless you are intending for the user to switch to a different channel.
+     */
     setExplicitChannel(explicitChannel: string): void;
     protected getCurrentVersionCommand(): string[];
     protected getCheckForUpdatesCommand(): string[];
     protected getDownloadUpdatesCommand(updateInfo: UpdateInfo): string[];
+    /**
+     * Returns true if the current app is installed, false otherwise. If the app is not installed, other functions in
+     * UpdateManager may throw exceptions, so you may want to check this before calling other functions.
+     */
+    isInstalled(): boolean;
     /**
      * Checks for updates, returning null if there are none available. If there are updates available, this method will return an
      * UpdateInfo object containing the latest available release, and any delta updates that can be applied if they are available.

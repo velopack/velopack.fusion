@@ -1920,7 +1920,48 @@ bool Platform::fileExists(std::string path)
      ret = nativeDoesFileExist(path); return ret;
 }
 
+bool Platform::isInstalled()
+{
+    return fileExists(impl_GetFusionExePath()) && fileExists(impl_GetUpdateExePath());
+}
+
+std::string Platform::getFusionExePath()
+{
+    std::string path{impl_GetFusionExePath()};
+    if (!fileExists(path)) {
+        throw std::runtime_error("Is the app installed? Fusion is not at: " + path);
+    }
+    return path;
+}
+
 std::string Platform::getUpdateExePath()
+{
+    std::string path{impl_GetUpdateExePath()};
+    if (!fileExists(path)) {
+        throw std::runtime_error("Is the app installed? Update is not at: " + path);
+    }
+    return path;
+}
+
+std::string Platform::impl_GetFusionExePath()
+{
+    std::string exePath{getCurrentProcessPath()};
+    if (isWindows()) {
+        exePath = pathJoin(pathParent(exePath), "Vfusion.exe");
+    }
+    else if (isLinux()) {
+        exePath = pathJoin(pathParent(exePath), "VfusionNix");
+    }
+    else if (isOsx()) {
+        exePath = pathJoin(pathParent(exePath), "VfusionMac");
+    }
+    else {
+        std::abort(); // "Unsupported OS"
+    }
+    return exePath;
+}
+
+std::string Platform::impl_GetUpdateExePath()
 {
     std::string exePath{getCurrentProcessPath()};
     if (isWindows()) {
@@ -1933,10 +1974,7 @@ std::string Platform::getUpdateExePath()
         exePath = pathJoin(pathParent(exePath), "UpdateMac");
     }
     else {
-        throw std::runtime_error("Unsupported platform");
-    }
-    if (!fileExists(exePath)) {
-        throw std::runtime_error("Update executable not found: " + exePath);
+        std::abort(); // "Unsupported OS"
     }
     return exePath;
 }
@@ -2162,6 +2200,11 @@ std::vector<std::string> UpdateManagerSync::getDownloadUpdatesCommand(std::share
     command.push_back("--name");
     command.push_back(updateInfo->targetFullRelease->fileName);
     return command;
+}
+
+bool UpdateManagerSync::isInstalled() const
+{
+    return Platform::isInstalled();
 }
 
 std::string UpdateManagerSync::getCurrentVersion() const

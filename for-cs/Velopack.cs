@@ -611,7 +611,54 @@ namespace Velopack
             ret = NativeMethods.NativeDoesFileExist(path); return ret;
         }
 
+        public static bool IsInstalled()
+        {
+            return FileExists(Impl_GetFusionExePath()) && FileExists(Impl_GetUpdateExePath());
+        }
+
+        public static string GetFusionExePath()
+        {
+            string path = Impl_GetFusionExePath();
+            if (!FileExists(path))
+            {
+                throw new Exception("Is the app installed? Fusion is not at: " + path);
+            }
+            return path;
+        }
+
         public static string GetUpdateExePath()
+        {
+            string path = Impl_GetUpdateExePath();
+            if (!FileExists(path))
+            {
+                throw new Exception("Is the app installed? Update is not at: " + path);
+            }
+            return path;
+        }
+
+        static string Impl_GetFusionExePath()
+        {
+            string exePath = GetCurrentProcessPath();
+            if (IsWindows())
+            {
+                exePath = PathJoin(PathParent(exePath), "Vfusion.exe");
+            }
+            else if (IsLinux())
+            {
+                exePath = PathJoin(PathParent(exePath), "VfusionNix");
+            }
+            else if (IsOsx())
+            {
+                exePath = PathJoin(PathParent(exePath), "VfusionMac");
+            }
+            else
+            {
+                throw new NotImplementedException("Unsupported OS");
+            }
+            return exePath;
+        }
+
+        static string Impl_GetUpdateExePath()
         {
             string exePath = GetCurrentProcessPath();
             if (IsWindows())
@@ -628,11 +675,7 @@ namespace Velopack
             }
             else
             {
-                throw new Exception("Unsupported platform");
-            }
-            if (!FileExists(exePath))
-            {
-                throw new Exception("Update executable not found: " + exePath);
+                throw new NotImplementedException("Unsupported OS");
             }
             return exePath;
         }
@@ -897,6 +940,9 @@ namespace Velopack
         }
     }
 
+    /// <summary>This class is used to check for updates, download updates, and apply updates. It is a synchronous version of the UpdateManager class.</summary>
+    /// <remarks>This class is not recommended for use in GUI applications, as it will block the main thread, so you may want to use the async 
+    /// UpdateManager class instead, if it is supported for your programming language.</remarks>
     public class UpdateManagerSync
     {
 
@@ -906,16 +952,20 @@ namespace Velopack
 
         string _urlOrPath = "";
 
+        /// <summary>Set the URL or local file path to the update server. This is required before calling CheckForUpdates or DownloadUpdates.</summary>
         public void SetUrlOrPath(string urlOrPath)
         {
             this._urlOrPath = urlOrPath;
         }
 
+        /// <summary>Set whether to allow downgrades to an earlier version. If this is false, the app will only update to a newer version.</summary>
         public void SetAllowDowngrade(bool allowDowngrade)
         {
             this._allowDowngrade = allowDowngrade;
         }
 
+        /// <summary>Set the explicit channel to use when checking for updates. If this is not set, the default channel will be used.</summary>
+        /// <remarks>You usually should not set this, unless you are intending for the user to switch to a different channel.</remarks>
         public void SetExplicitChannel(string explicitChannel)
         {
             this._explicitChannel = explicitChannel;
@@ -971,6 +1021,13 @@ namespace Velopack
             command.Add("--name");
             command.Add(updateInfo.TargetFullRelease.FileName);
             return command;
+        }
+
+        /// <summary>Returns true if the current app is installed, false otherwise. If the app is not installed, other functions in 
+        /// UpdateManager may throw exceptions, so you may want to check this before calling other functions.</summary>
+        public bool IsInstalled()
+        {
+            return Platform.IsInstalled();
         }
 
         /// <summary>Checks for updates, returning null if there are none available. If there are updates available, this method will return an 

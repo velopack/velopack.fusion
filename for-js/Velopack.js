@@ -41,7 +41,7 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
     if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
     return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
-var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _StringStream_instances, _StringStream_builder, _StringStream_writer, _StringStream_initialised, _StringStream_init, _UpdateManagerSync__allowDowngrade, _UpdateManagerSync__explicitChannel, _UpdateManagerSync__urlOrPath, _VelopackApp_instances, _VelopackApp_handleArgs, _StringWriter_buf;
+var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _a, _Platform_impl_GetFusionExePath, _Platform_impl_GetUpdateExePath, _StringStream_instances, _StringStream_builder, _StringStream_writer, _StringStream_initialised, _StringStream_init, _UpdateManagerSync__allowDowngrade, _UpdateManagerSync__explicitChannel, _UpdateManagerSync__urlOrPath, _VelopackApp_instances, _VelopackApp_handleArgs, _StringWriter_buf;
 const { spawn, spawnSync } = require("child_process");
 const fs = require("fs");
 function emitLines(stream) {
@@ -318,12 +318,12 @@ class JsonParser {
         return result;
     }
     read() {
-        var _a;
+        var _b;
         if (__classPrivateFieldGet(this, _JsonParser_position, "f") >= __classPrivateFieldGet(this, _JsonParser_text, "f").length) {
             return -1;
         }
         let c = __classPrivateFieldGet(this, _JsonParser_text, "f").charCodeAt(__classPrivateFieldGet(this, _JsonParser_position, "f"));
-        __classPrivateFieldSet(this, _JsonParser_position, (_a = __classPrivateFieldGet(this, _JsonParser_position, "f"), _a++, _a), "f");
+        __classPrivateFieldSet(this, _JsonParser_position, (_b = __classPrivateFieldGet(this, _JsonParser_position, "f"), _b++, _b), "f");
         return c;
     }
     peek() {
@@ -590,7 +590,7 @@ class Platform {
         }
         let ret = "";
         ret = nativeStartProcessBlocking(command_line);
-        return Platform.strTrim(ret);
+        return _a.strTrim(ret);
     }
     /**
      * Starts a new process and returns immediately.
@@ -614,24 +614,23 @@ class Platform {
         ret = nativeDoesFileExist(path);
         return ret;
     }
+    static isInstalled() {
+        return (_a.fileExists(__classPrivateFieldGet(_a, _a, "m", _Platform_impl_GetFusionExePath).call(_a)) &&
+            _a.fileExists(__classPrivateFieldGet(_a, _a, "m", _Platform_impl_GetUpdateExePath).call(_a)));
+    }
+    static getFusionExePath() {
+        let path = __classPrivateFieldGet(_a, _a, "m", _Platform_impl_GetFusionExePath).call(_a);
+        if (!_a.fileExists(path)) {
+            throw new Error("Is the app installed? Fusion is not at: " + path);
+        }
+        return path;
+    }
     static getUpdateExePath() {
-        let exePath = Platform.getCurrentProcessPath();
-        if (Platform.isWindows()) {
-            exePath = Platform.pathJoin(Platform.pathParent(Platform.pathParent(exePath)), "Update.exe");
+        let path = __classPrivateFieldGet(_a, _a, "m", _Platform_impl_GetUpdateExePath).call(_a);
+        if (!_a.fileExists(path)) {
+            throw new Error("Is the app installed? Update is not at: " + path);
         }
-        else if (Platform.isLinux()) {
-            exePath = Platform.pathJoin(Platform.pathParent(exePath), "UpdateNix");
-        }
-        else if (Platform.isOsx()) {
-            exePath = Platform.pathJoin(Platform.pathParent(exePath), "UpdateMac");
-        }
-        else {
-            throw new Error("Unsupported platform");
-        }
-        if (!Platform.fileExists(exePath)) {
-            throw new Error("Update executable not found: " + exePath);
-        }
-        return exePath;
+        return path;
     }
     static strTrim(str) {
         let match;
@@ -653,10 +652,10 @@ class Platform {
         while (s2.startsWith("/") || s2.startsWith("\\")) {
             s2 = s2.substring(1);
         }
-        return s1 + Platform.pathSeparator() + s2;
+        return s1 + _a.pathSeparator() + s2;
     }
     static pathSeparator() {
-        if (Platform.isWindows()) {
+        if (_a.isWindows()) {
             return "\\";
         }
         else {
@@ -664,13 +663,13 @@ class Platform {
         }
     }
     static isWindows() {
-        return Platform.getOsName() == "win32";
+        return _a.getOsName() == "win32";
     }
     static isLinux() {
-        return Platform.getOsName() == "linux";
+        return _a.getOsName() == "linux";
     }
     static isOsx() {
-        return Platform.getOsName() == "darwin";
+        return _a.getOsName() == "darwin";
     }
     /**
      * Returns the name of the operating system.
@@ -684,6 +683,37 @@ class Platform {
         nativeExitProcess(code);
     }
 }
+_a = Platform, _Platform_impl_GetFusionExePath = function _Platform_impl_GetFusionExePath() {
+    let exePath = _a.getCurrentProcessPath();
+    if (_a.isWindows()) {
+        exePath = _a.pathJoin(_a.pathParent(exePath), "Vfusion.exe");
+    }
+    else if (_a.isLinux()) {
+        exePath = _a.pathJoin(_a.pathParent(exePath), "VfusionNix");
+    }
+    else if (_a.isOsx()) {
+        exePath = _a.pathJoin(_a.pathParent(exePath), "VfusionMac");
+    }
+    else {
+        throw new Error("Unsupported OS");
+    }
+    return exePath;
+}, _Platform_impl_GetUpdateExePath = function _Platform_impl_GetUpdateExePath() {
+    let exePath = _a.getCurrentProcessPath();
+    if (_a.isWindows()) {
+        exePath = _a.pathJoin(_a.pathParent(_a.pathParent(exePath)), "Update.exe");
+    }
+    else if (_a.isLinux()) {
+        exePath = _a.pathJoin(_a.pathParent(exePath), "UpdateNix");
+    }
+    else if (_a.isOsx()) {
+        exePath = _a.pathJoin(_a.pathParent(exePath), "UpdateMac");
+    }
+    else {
+        throw new Error("Unsupported OS");
+    }
+    return exePath;
+};
 class StringStream {
     constructor() {
         _StringStream_instances.add(this);
@@ -847,18 +877,33 @@ export class ProgressEvent {
         return progressEvent;
     }
 }
+/**
+ * This class is used to check for updates, download updates, and apply updates. It is a synchronous version of the UpdateManager class.
+ * This class is not recommended for use in GUI applications, as it will block the main thread, so you may want to use the async
+ * UpdateManager class instead, if it is supported for your programming language.
+ */
 export class UpdateManagerSync {
     constructor() {
         _UpdateManagerSync__allowDowngrade.set(this, false);
         _UpdateManagerSync__explicitChannel.set(this, "");
         _UpdateManagerSync__urlOrPath.set(this, "");
     }
+    /**
+     * Set the URL or local file path to the update server. This is required before calling CheckForUpdates or DownloadUpdates.
+     */
     setUrlOrPath(urlOrPath) {
         __classPrivateFieldSet(this, _UpdateManagerSync__urlOrPath, urlOrPath, "f");
     }
+    /**
+     * Set whether to allow downgrades to an earlier version. If this is false, the app will only update to a newer version.
+     */
     setAllowDowngrade(allowDowngrade) {
         __classPrivateFieldSet(this, _UpdateManagerSync__allowDowngrade, allowDowngrade, "f");
     }
+    /**
+     * Set the explicit channel to use when checking for updates. If this is not set, the default channel will be used.
+     * You usually should not set this, unless you are intending for the user to switch to a different channel.
+     */
     setExplicitChannel(explicitChannel) {
         __classPrivateFieldSet(this, _UpdateManagerSync__explicitChannel, explicitChannel, "f");
     }
@@ -903,6 +948,13 @@ export class UpdateManagerSync {
         command.push("--name");
         command.push(updateInfo.targetFullRelease.fileName);
         return command;
+    }
+    /**
+     * Returns true if the current app is installed, false otherwise. If the app is not installed, other functions in
+     * UpdateManager may throw exceptions, so you may want to check this before calling other functions.
+     */
+    isInstalled() {
+        return Platform.isInstalled();
     }
     /**
      * Checks for updates, returning null if there are none available. If there are updates available, this method will return an
