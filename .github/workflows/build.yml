@@ -19,6 +19,12 @@ jobs:
       - name: Build Fusion
         run: dotnet run
 
+      - name: Cargo Publish
+        working-directory: for-rust
+        run: |
+          cargo login ${{ secrets.CARGO_TOKEN }}
+          cargo publish
+
   build-cli:
     strategy:
       matrix:
