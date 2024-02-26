@@ -34,6 +34,7 @@ void BuildRust(StringBuilder sb)
 {
     RunProcess(sb, "cargo", "check", Path.Combine(projectDir, "for-rust"));
     RunProcess(sb, "cargo", "check --features cli", Path.Combine(projectDir, "for-rust"));
+    RunProcess(sb, "cargo", "check --features async", Path.Combine(projectDir, "for-rust"));
     RunProcess(sb, "cargo", "test --features cli", Path.Combine(projectDir, "for-rust"));
 }
 
@@ -184,7 +185,7 @@ void RunAll(params Action<StringBuilder>[] actions)
             sw.Start();
             action(sb);
             sw.Stop();
-            Log($"Completed: {name} in {sw.ElapsedMilliseconds}ms");
+            Log($"Completed: {name} in {sw.Elapsed.TotalSeconds}s");
         }
         catch (Exception ex)
         {

@@ -1,5 +1,5 @@
 //! # Velopack
-//! Velopack is a auto-update and installation framework for cross-platform desktop applications. 
+//! [Velopack](https://velopack.io) is a auto-update and installation framework for cross-platform desktop applications. 
 //! With less than 10 lines of code, you can add auto-update and installation features to your application.
 //!
 //! ## Features
