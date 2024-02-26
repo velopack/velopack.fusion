@@ -20,7 +20,7 @@ if (parseResult.GetValueForOption(setVersionArg))
     var newVersion = GetNbgvVersion();
     Log("Setting library versions to: " + newVersion);
     ReplaceAll(Path.Combine(projectDir, "for-js/package.json"), @"""version"":\s?""([\d\w\.-]+)"",", $@"""version"": ""{newVersion}"",", true);
-    ReplaceAll(Path.Combine(projectDir, "for-rust/Cargo.toml"), @"^version\s?=\s?""([\d\w\.-]+)""$", $@"version = ""{newVersion}""", true);
+    ReplaceAll(Path.Combine(projectDir, "for-rust/Cargo.toml"), @"^version\s?=\s?""([\d\w\.-]+)""", $@"version = ""{newVersion}""", true);
     return;
 }
 
