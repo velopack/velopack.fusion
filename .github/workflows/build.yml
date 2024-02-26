@@ -23,7 +23,7 @@ jobs:
         working-directory: for-rust
         run: |
           cargo login ${{ secrets.CARGO_TOKEN }}
-          cargo publish
+          cargo publish --allow-dirty
 
   build-cli:
     strategy:
