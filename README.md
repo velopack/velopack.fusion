@@ -8,7 +8,8 @@
 ---
 
 [![Discord](https://img.shields.io/discord/767856501477343282?style=flat-square&color=purple)](https://discord.gg/CjrCrNzd3F)
-[![Build](https://img.shields.io/github/actions/workflow/status/velopack/velopack.fusion/build.yml?branch=develop&style=flat-square)](https://github.com/velopack/velopack.fusion/actions)
+[![Crates.io](https://img.shields.io/crates/v/velopack?style=flat-square)](https://crates.io/crates/velopack)
+[![Build](https://img.shields.io/github/actions/workflow/status/velopack/velopack.fusion/build.yml?branch=master&style=flat-square)](https://github.com/velopack/velopack.fusion/actions)
 [![License](https://img.shields.io/github/license/velopack/velopack.fusion?style=flat-square)](https://github.com/velopack/velopack/blob/master/LICENSE)
 
 # Velopack Fusion
