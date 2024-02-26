@@ -1,7 +1,6 @@
 
 static class Platform
 {
-    /// Starts a new process and sychronously reads/returns its output.
     public static string() StartProcessBlocking(List<string()> command_line) throws Exception
     {
         if (command_line.Count == 0) {
@@ -13,7 +12,6 @@ static class Platform
         return StrTrim(ret);
     }
 
-    /// Starts a new process and returns immediately.
     public static void StartProcessFireAndForget(List<string()> command_line) throws Exception
     {
         if (command_line.Count == 0) {
@@ -22,7 +20,13 @@ static class Platform
         native { VMACRO_NativeStartProcessFireAndForget(command_line); }
     }
 
-    /// Returns the path of the current process.
+    public static int GetCurrentProcessId()
+    {
+        int ret = 0;
+        native { ret = VMACRO_NativeCurrentProcessId(); }
+        return ret;
+    }
+
     public static string() GetCurrentProcessPath()
     {
         string() ret = "";
@@ -131,7 +135,6 @@ static class Platform
     public static bool IsLinux() { return GetOsName() == "linux"; }
     public static bool IsOsx() { return GetOsName() == "darwin"; }
 
-    /// Returns the name of the operating system.
     public static string() GetOsName()
     {
         string() ret = "";

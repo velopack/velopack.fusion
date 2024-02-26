@@ -57,6 +57,10 @@ function nativeDoesFileExist(path: string): boolean {
   return fs.existsSync(path);
 }
 
+function nativeCurrentProcessId(): number {
+  return process.pid;
+}
+
 function nativeGetCurrentProcessPath(): string {
   return process.execPath;
 }
@@ -633,9 +637,6 @@ class JsonParser {
 class Platform {
   private constructor() {}
 
-  /**
-   * Starts a new process and sychronously reads/returns its output.
-   */
   public static startProcessBlocking(command_line: readonly string[]): string {
     if (command_line.length == 0) {
       throw new Error("Command line is empty");
@@ -645,9 +646,6 @@ class Platform {
     return Platform.strTrim(ret);
   }
 
-  /**
-   * Starts a new process and returns immediately.
-   */
   public static startProcessFireAndForget(
     command_line: readonly string[],
   ): void {
@@ -657,9 +655,12 @@ class Platform {
     nativeStartProcessFireAndForget(command_line);
   }
 
-  /**
-   * Returns the path of the current process.
-   */
+  public static getCurrentProcessId(): number {
+    let ret: number = 0;
+    ret = nativeCurrentProcessId();
+    return ret;
+  }
+
   public static getCurrentProcessPath(): string {
     let ret: string = "";
     ret = nativeGetCurrentProcessPath();
@@ -771,9 +772,6 @@ class Platform {
     return Platform.getOsName() == "darwin";
   }
 
-  /**
-   * Returns the name of the operating system.
-   */
   public static getOsName(): string {
     let ret: string = "";
     ret = nativeCurrentOsName();
@@ -1119,7 +1117,8 @@ export class UpdateManagerSync {
       command.push("--silent");
     }
     command.push("apply");
-    command.push("--wait");
+    command.push("--waitPid");
+    command.push(`${Platform.getCurrentProcessId()}`);
     if (assetPath.length > 0) {
       command.push("--package");
       command.push(assetPath);

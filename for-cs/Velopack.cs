@@ -570,7 +570,6 @@ namespace Velopack
     static class Platform
     {
 
-        /// <summary>Starts a new process and sychronously reads/returns its output.</summary>
         public static string StartProcessBlocking(List<string> command_line)
         {
             if (command_line.Count == 0)
@@ -581,7 +580,6 @@ namespace Velopack
             ret = NativeMethods.NativeStartProcessBlocking(command_line); return StrTrim(ret);
         }
 
-        /// <summary>Starts a new process and returns immediately.</summary>
         public static void StartProcessFireAndForget(List<string> command_line)
         {
             if (command_line.Count == 0)
@@ -591,7 +589,12 @@ namespace Velopack
             NativeMethods.NativeStartProcessFireAndForget(command_line);
         }
 
-        /// <summary>Returns the path of the current process.</summary>
+        public static int GetCurrentProcessId()
+        {
+            int ret = 0;
+            ret = NativeMethods.NativeCurrentProcessId(); return ret;
+        }
+
         public static string GetCurrentProcessPath()
         {
             string ret = "";
@@ -731,7 +734,6 @@ namespace Velopack
             return GetOsName() == "darwin";
         }
 
-        /// <summary>Returns the name of the operating system.</summary>
         public static string GetOsName()
         {
             string ret = "";
@@ -1067,7 +1069,8 @@ namespace Velopack
                 command.Add("--silent");
             }
             command.Add("apply");
-            command.Add("--wait");
+            command.Add("--waitPid");
+            command.Add($"{Platform.GetCurrentProcessId()}");
             if (assetPath.Length > 0)
             {
                 command.Add("--package");
@@ -1186,6 +1189,11 @@ namespace Velopack
 
     static class NativeMethods
     {
+        public static int NativeCurrentProcessId()
+        {
+            return Process.GetCurrentProcess().Id;
+        }
+
         public static void NativeExitProcess(int code)
         {
             Environment.Exit(code);

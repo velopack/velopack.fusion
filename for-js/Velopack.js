@@ -65,6 +65,9 @@ function emitLines(stream) {
 function nativeDoesFileExist(path) {
     return fs.existsSync(path);
 }
+function nativeCurrentProcessId() {
+    return process.pid;
+}
 function nativeGetCurrentProcessPath() {
     return process.execPath;
 }
@@ -578,9 +581,6 @@ _JsonParser_text = new WeakMap(), _JsonParser_position = new WeakMap(), _JsonPar
 };
 class Platform {
     constructor() { }
-    /**
-     * Starts a new process and sychronously reads/returns its output.
-     */
     static startProcessBlocking(command_line) {
         if (command_line.length == 0) {
             throw new Error("Command line is empty");
@@ -589,18 +589,17 @@ class Platform {
         ret = nativeStartProcessBlocking(command_line);
         return _a.strTrim(ret);
     }
-    /**
-     * Starts a new process and returns immediately.
-     */
     static startProcessFireAndForget(command_line) {
         if (command_line.length == 0) {
             throw new Error("Command line is empty");
         }
         nativeStartProcessFireAndForget(command_line);
     }
-    /**
-     * Returns the path of the current process.
-     */
+    static getCurrentProcessId() {
+        let ret = 0;
+        ret = nativeCurrentProcessId();
+        return ret;
+    }
     static getCurrentProcessPath() {
         let ret = "";
         ret = nativeGetCurrentProcessPath();
@@ -668,9 +667,6 @@ class Platform {
     static isOsx() {
         return _a.getOsName() == "darwin";
     }
-    /**
-     * Returns the name of the operating system.
-     */
     static getOsName() {
         let ret = "";
         ret = nativeCurrentOsName();
@@ -1013,7 +1009,8 @@ export class UpdateManagerSync {
             command.push("--silent");
         }
         command.push("apply");
-        command.push("--wait");
+        command.push("--waitPid");
+        command.push(`${Platform.getCurrentProcessId()}`);
         if (assetPath.length > 0) {
             command.push("--package");
             command.push(assetPath);

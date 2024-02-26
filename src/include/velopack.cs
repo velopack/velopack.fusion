@@ -57,6 +57,11 @@ namespace Velopack
 
     static class NativeMethods
     {
+        public static int NativeCurrentProcessId()
+        {
+            return Process.GetCurrentProcess().Id;
+        }
+        
         public static void NativeExitProcess(int code)
         {
             Environment.Exit(code);

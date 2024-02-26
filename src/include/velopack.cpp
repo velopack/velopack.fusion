@@ -14,7 +14,9 @@
 #define WIN32_LEAN_AND_MEAN
 #define PATH_MAX MAX_PATH
 #include <Windows.h>
-#endif // VELO_MSVC
+#elif defined(__unix__) || defined(__APPLE__) && defined(__MACH__)
+#include <unistd.h> // For getpid on UNIX-like systems
+#endif
 
 static std::string nativeCurrentOsName()
 {
@@ -123,7 +125,7 @@ static void nativeStartProcessFireAndForget(const std::vector<std::string> *comm
 //                 }
 //                 accumulatedData.erase(0, pos + 1);
 //             }
-//         } 
+//         }
 //     });
 
 //     return outputThread;
@@ -147,6 +149,18 @@ static std::string nativeStartProcessBlocking(const std::vector<std::string> *co
     }
 
     return buffer.str();
+}
+
+static int32_t nativeCurrentProcessId()
+{
+#if defined(_WIN32)
+    return GetCurrentProcessId();
+#elif defined(__unix__) || defined(__APPLE__) && defined(__MACH__)
+    return getpid();
+#else
+#error "Unsupported platform"
+    return -1; // Indicate error or unsupported platform
+#endif
 }
 
 namespace Velopack

@@ -24,6 +24,10 @@ function nativeDoesFileExist(path: string): boolean {
     return fs.existsSync(path);
 }
 
+function nativeCurrentProcessId(): number {
+    return process.pid;
+}
+
 function nativeGetCurrentProcessPath(): string {
     return process.execPath;
 }

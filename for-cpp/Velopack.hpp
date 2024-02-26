@@ -201,17 +201,9 @@ private:
 class Platform
 {
 public:
-    /**
-     * Starts a new process and sychronously reads/returns its output.
-     */
     static std::string startProcessBlocking(const std::vector<std::string> * command_line);
-    /**
-     * Starts a new process and returns immediately.
-     */
     static void startProcessFireAndForget(const std::vector<std::string> * command_line);
-    /**
-     * Returns the path of the current process.
-     */
+    static int getCurrentProcessId();
     static std::string getCurrentProcessPath();
     static bool fileExists(std::string path);
     static bool isInstalled();
@@ -224,9 +216,6 @@ public:
     static bool isWindows();
     static bool isLinux();
     static bool isOsx();
-    /**
-     * Returns the name of the operating system.
-     */
     static std::string getOsName();
     static void exit(int code);
 private:
