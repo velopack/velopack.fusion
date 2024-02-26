@@ -25,8 +25,6 @@ if (parseResult.GetValueForOption(setVersionArg))
 }
 
 // build libraries
-string vswherePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Visual Studio", "Installer", "vswhere.exe");
-string msbuildPath = GetProcessOutput(vswherePath, "-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe", projectDir);
 var macros = LoadNativeMacros();
 RunAll(BuildRust, BuildJs, BuildCpp, BuildCs);
 
@@ -74,7 +72,13 @@ void BuildCpp(StringBuilder sb)
     // final touches
     FixLineEndingAndTabs(outCpp);
     FixLineEndingAndTabs(outHpp);
-    RunProcess(sb, msbuildPath, "for-cpp/samples/win32/VeloCppWinSample.sln /t:Build /p:Configuration=Release", projectDir);
+
+    if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+    {
+        string vswherePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Microsoft Visual Studio", "Installer", "vswhere.exe");
+        string msbuildPath = GetProcessOutput(vswherePath, "-latest -requires Microsoft.Component.MSBuild -find MSBuild\\**\\Bin\\MSBuild.exe", projectDir);
+        RunProcess(sb, msbuildPath, "for-cpp/samples/win32/VeloCppWinSample.sln /t:Build /p:Configuration=Release", projectDir);
+    }
 }
 
 void BuildCs(StringBuilder sb)
@@ -434,19 +438,28 @@ string GetNbgvVersion()
 
 string FindExecutableInPath(string executable)
 {
+    // Directly check if the executable path is provided and exists
     if (File.Exists(executable))
         return Path.GetFullPath(executable);
 
-    var extensions = new[] { ".exe", ".cmd", ".bat" };
+    // Set extensions to search for on Windows; on UNIX-like systems, this will be ignored
+    var extensions = Environment.OSVersion.Platform == PlatformID.Win32NT
+        ? new[] { ".exe", ".cmd", ".bat" }
+        : Array.Empty<string>();
 
     var pathVar = Environment.GetEnvironmentVariable("PATH");
+    if (pathVar == null) throw new InvalidOperationException("The PATH environment variable is not set.");
+
     var paths = pathVar.Split(Path.PathSeparator);
+
     foreach (var path in paths)
     {
+        // Check if the executable without extension exists (for UNIX-like systems)
         var fullPath = Path.Combine(path, executable);
-        if (File.Exists(fullPath) && extensions.Contains(Path.GetExtension(fullPath)))
+        if (File.Exists(fullPath) && (extensions.Length == 0 || extensions.Contains(Path.GetExtension(fullPath))))
             return fullPath;
 
+        // Check with extensions if on Windows
         foreach (var ext in extensions)
         {
             fullPath = Path.Combine(path, executable + ext);
@@ -455,7 +468,7 @@ string FindExecutableInPath(string executable)
         }
     }
 
-    throw new Exception("Unable to find binary: " + executable);
+    throw new FileNotFoundException($"Unable to find the executable: {executable} in the system PATH.");
 }
 
 //IEnumerable<string> SplitByCharacterType(string input)
