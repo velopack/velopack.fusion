@@ -21,6 +21,7 @@ jobs:
 
       - name: Cargo Publish
         working-directory: for-rust
+        if: github.ref == 'refs/heads/master'
         run: |
           cargo login ${{ secrets.CARGO_TOKEN }}
           cargo publish --allow-dirty
