@@ -32,18 +32,11 @@ export class UpdateManager extends UpdateManagerSync {
      */
     public async downloadUpdatesAsync(updateInfo: UpdateInfo, progress: ProgressFn): Promise<void> {
         const command: string[] = this.getDownloadUpdatesCommand(updateInfo);
-        let error: string = "";
         await nativeStartProcessAsyncReadLine(command, (data: string) => {
-            let msg: ProgressEvent = ProgressEvent.fromJson(data);
-            if (msg.progress > 0) {
-                progress(msg.progress);
-            }
-            if (msg.error) {
-                error = msg.error;
+            const p = parseInt(data);
+            if (!isNaN(p) && p > 0) {
+                progress(p);
             }
         });
-        if (error.length > 0) {
-            throw new Error(error);
-        }
     }
 }

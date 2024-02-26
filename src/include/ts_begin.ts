@@ -63,7 +63,7 @@ function nativeStartProcessAsync(command_line: readonly string[]): Promise<strin
 
         process.on('close', (code) => {
             if (code === 0) {
-                resolve(output);
+                resolve(output.trim());
             } else {
                 reject(new Error(`Process exited with code: ${code}`));
             }

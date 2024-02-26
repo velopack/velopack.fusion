@@ -100,7 +100,7 @@ function nativeStartProcessAsync(command_line) {
         });
         process.on("close", (code) => {
             if (code === 0) {
-                resolve(output);
+                resolve(output.trim());
             }
             else {
                 reject(new Error(`Process exited with code: ${code}`));
@@ -1113,18 +1113,11 @@ export class UpdateManager extends UpdateManagerSync {
      */
     async downloadUpdatesAsync(updateInfo, progress) {
         const command = this.getDownloadUpdatesCommand(updateInfo);
-        let error = "";
         await nativeStartProcessAsyncReadLine(command, (data) => {
-            let msg = ProgressEvent.fromJson(data);
-            if (msg.progress > 0) {
-                progress(msg.progress);
-            }
-            if (msg.error) {
-                error = msg.error;
+            const p = parseInt(data);
+            if (!isNaN(p) && p > 0) {
+                progress(p);
             }
         });
-        if (error.length > 0) {
-            throw new Error(error);
-        }
     }
 }

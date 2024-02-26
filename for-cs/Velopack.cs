@@ -1172,10 +1172,9 @@ namespace Velopack
         }
 
         /// <inheritdoc cref="UpdateManagerSync.DownloadUpdates"/>
-        public Task DownloadUpdatesAsync(UpdateInfo updateInfo, Action<int> progress = null)
+        public async Task DownloadUpdatesAsync(UpdateInfo updateInfo, Action<int> progress = null)
         {
             var command_line = GetDownloadUpdatesCommand(updateInfo);
-            var source = new TaskCompletionSource<bool>();
             var psi = new ProcessStartInfo()
             {
                 CreateNoWindow = true,
@@ -1193,28 +1192,24 @@ namespace Velopack
             process.StartInfo = psi;
             process.OutputDataReceived += (sender, e) =>
             {
-                if (e.Data == null) return;
-                try
+                if (e.Data == null)
                 {
-                    var msg = ProgressEvent.FromJson(e.Data);
-                    if (msg.Complete) source.TrySetResult(true);
-                    else if (!String.IsNullOrEmpty(msg.Error)) source.TrySetException(new Exception(msg.Error));
-                    else if (msg.Progress > 0) progress?.Invoke(msg.Progress);
+                    return;
                 }
-                catch (Exception) { }
+                if (int.TryParse(e.Data, out var p))
+                {
+                    progress?.Invoke(p);
+                }
             };
 
             process.Start();
             process.BeginOutputReadLine();
-            process.WaitForExitAsync().ContinueWith(t => Task.Delay(1000)).ContinueWith(t =>
-            {
-                if (t.IsFaulted) source.TrySetException(t.Exception);
-                else if (t.IsCanceled) source.TrySetCanceled();
-                else if (process.ExitCode != 0) source.TrySetException(new Exception($"Process exited with code {process.ExitCode}"));
-                else source.TrySetException(new Exception("No completed output from process"));
-            });
+            await process.WaitForExitAsync();
 
-            return source.Task;
+            if (process.ExitCode != 0)
+            {
+                throw new Exception($"Process returned non-zero exit code ({process.ExitCode}). Check the log for more details.");
+            }
         }
     }
 
