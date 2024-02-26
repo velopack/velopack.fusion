@@ -9,3 +9,4 @@ debug
 release
 node_modules
 .vscode
+.DS_Store
