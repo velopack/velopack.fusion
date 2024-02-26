@@ -180,6 +180,7 @@ impl UpdateManager {
         let path = &self.url_or_path;
         let name = &update.TargetFullRelease.FileName;
         let packages_dir = &self.paths.packages_dir;
+        fs::create_dir_all(packages_dir)?;
         let target_file = packages_dir.join(name);
 
         let mut to_delete = Vec::new();
@@ -274,7 +275,8 @@ impl UpdateManager {
 
         let mut args = Vec::new();
         args.push("apply".to_string());
-        args.push("--wait".to_string());
+        args.push("--waitPid".to_string());
+        args.push(format!("{}", std::process::id()));
         args.push("--package".to_string());
         args.push(pkg_path_str.into_owned());
 
