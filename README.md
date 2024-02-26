@@ -37,7 +37,7 @@ These libraries are a light weight wrapper around `vfusion.exe`. They will provi
 ### Command Line
 While there might not be a client library for your programming language, you can always redistribute the `vfusion.exe` binary with your application and use the command line interface to download updates. The command line reference is below:
 
-```sh
+```txt
 $ vfusion.exe -h
 Velopack Fusion (0.0.0-local) manages and downloads packages.
 https://github.com/velopack/velopack
@@ -82,7 +82,7 @@ The rest of the libraries available here are transpiled from [fusion / fut](http
 
 ## Compiling Fusion
 There is a custom build system written in C#. To compile all of Fusion you can run the following commands in your terminal:
-```sh
+```txt
 git clone https://github.com/velopack/velopack.fusion.git
 cd velopack.fusion
 dotnet run

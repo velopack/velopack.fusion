@@ -1,0 +1,125 @@
+name: Build
+
+on: [ push, pull_request ]
+
+jobs:
+  build-fusion:
+    runs-on: windows-latest
+    steps:
+      - name: Print dotnet version
+        run: dotnet --info
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set Library Versions
+        run: dotnet run --set-version
+
+      - name: Build Fusion
+        run: dotnet run
+
+  build-cli:
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Print dotnet version
+        run: dotnet --info
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set Library Versions
+        run: dotnet run --set-version
+
+      - name: Set Rust Flags (Windows)
+        shell: pwsh
+        run: |
+          rustup target add i686-pc-windows-msvc
+          Add-Content -Path $env:GITHUB_ENV -Value "EXTRA_RUST_FLAGS=--target i686-pc-windows-msvc --features windows"
+        if: ${{ matrix.os == 'windows-latest' }}
+
+      - name: Set Rust Flags (Linux)
+        run: echo "EXTRA_RUST_FLAGS=--target x86_64-unknown-linux-gnu" >> "$GITHUB_ENV"
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+
+      - name: Build Rust
+        working-directory: for-rust
+        run: cargo build --release ${{ env.EXTRA_RUST_FLAGS }}
+
+      - name: Collect Rust Binaries (Windows)
+        working-directory: for-rust/target
+        run: |
+          copy i686-pc-windows-msvc\release\*.exe release
+          copy i686-pc-windows-msvc\release\*.pdb release
+        if: ${{ matrix.os == 'windows-latest' }}
+
+      - name: Collect Rust Binaries (Linux)
+        working-directory: for-rust/target
+        run: cp ./x86_64-unknown-linux-gnu/release/vfusion ./release/VfusionNix
+        if: ${{ matrix.os == 'ubuntu-latest' }}
+
+      - name: Collect Rust Binaries (OSX)
+        working-directory: for-rust/target/release
+        run: cp vfusion VfusionMac
+        if: ${{ matrix.os == 'macos-latest' }}
+
+      - name: Upload Rust Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: vfusion-cli-${{ matrix.os }}
+          path: |
+            for-rust/target/release/VfusionMac
+            for-rust/target/release/VfusionNix
+            for-rust/target/release/*.exe
+
+  # package:
+  #   runs-on: ubuntu-latest
+  #   needs: [build]
+  #   steps:
+  #     - name: Print dotnet version
+  #       run: dotnet --info
+
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+
+  #     - uses: actions/cache@v4
+  #       with:
+  #         path: ~/.nuget/packages
+  #         key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+  #         restore-keys: ${{ runner.os }}-nuget-
+
+  #     - name: Download Rust OSX
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: rust-macos-latest
+  #         path: for-rust/target/release
+
+  #     - name: Download Rust Windows
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: rust-windows-latest
+  #         path: for-rust/target/release
+
+  #     - name: Download Rust Linux
+  #       uses: actions/download-artifact@v4
+  #       with:
+  #         name: rust-ubuntu-latest
+  #         path: for-rust/target/release
+
+  #     - name: Build .NET
+  #       run: dotnet build -c Release /p:PackRustAssets=true
+
+  #     - name: Upload Package Artifacts
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: packages
+  #         path: build/Release/*.nupkg
+
+      # - name: Publish to GitHub Packages
+      #   shell: pwsh
+      #   run: dotnet nuget push build/Release/*.nupkg -k ${{ secrets.GITHUB_TOKEN }} -s https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --skip-duplicate
