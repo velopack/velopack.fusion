@@ -42,6 +42,9 @@ function nativeStartProcessFireAndForget(command_line: readonly string[]): void 
 
 function nativeStartProcessBlocking(command_line: readonly string[]): string {
     const child = spawnSync(command_line[0], command_line.slice(1), { encoding: "utf8" });
+    if (child.status !== 0) {
+        throw new Error(`Process returned non-zero exit code (${child.status}). Check the log for more details.`);
+    }
     return child.stdout;
 }
 

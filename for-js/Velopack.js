@@ -81,6 +81,9 @@ function nativeStartProcessBlocking(command_line) {
     const child = spawnSync(command_line[0], command_line.slice(1), {
         encoding: "utf8",
     });
+    if (child.status !== 0) {
+        throw new Error(`Process returned non-zero exit code (${child.status}). Check the log for more details.`);
+    }
     return child.stdout;
 }
 function nativeStartProcessAsync(command_line) {
@@ -909,7 +912,7 @@ export class UpdateManagerSync {
     }
     getCurrentVersionCommand() {
         const command = [];
-        command.push(Platform.getUpdateExePath());
+        command.push(Platform.getFusionExePath());
         command.push("get-version");
         return command;
     }
@@ -918,12 +921,10 @@ export class UpdateManagerSync {
             throw new Error("Please call SetUrlOrPath before trying to check for updates.");
         }
         const command = [];
-        command.push(Platform.getUpdateExePath());
+        command.push(Platform.getFusionExePath());
         command.push("check");
         command.push("--url");
         command.push(__classPrivateFieldGet(this, _UpdateManagerSync__urlOrPath, "f"));
-        command.push("--format");
-        command.push("json");
         if (__classPrivateFieldGet(this, _UpdateManagerSync__allowDowngrade, "f")) {
             command.push("--downgrade");
         }
@@ -938,15 +939,17 @@ export class UpdateManagerSync {
             throw new Error("Please call SetUrlOrPath before trying to download updates.");
         }
         const command = [];
-        command.push(Platform.getUpdateExePath());
+        command.push(Platform.getFusionExePath());
         command.push("download");
         command.push("--url");
         command.push(__classPrivateFieldGet(this, _UpdateManagerSync__urlOrPath, "f"));
-        command.push("--clean");
-        command.push("--format");
-        command.push("json");
-        command.push("--name");
-        command.push(updateInfo.targetFullRelease.fileName);
+        if (__classPrivateFieldGet(this, _UpdateManagerSync__allowDowngrade, "f")) {
+            command.push("--downgrade");
+        }
+        if (__classPrivateFieldGet(this, _UpdateManagerSync__explicitChannel, "f").length > 0) {
+            command.push("--channel");
+            command.push(__classPrivateFieldGet(this, _UpdateManagerSync__explicitChannel, "f"));
+        }
         return command;
     }
     /**
@@ -985,12 +988,7 @@ export class UpdateManagerSync {
      */
     downloadUpdates(updateInfo) {
         const command = this.getDownloadUpdatesCommand(updateInfo);
-        let output = Platform.startProcessBlocking(command);
-        let lastLine = output.substring(output.lastIndexOf("\n"));
-        let result = ProgressEvent.fromJson(lastLine);
-        if (result.error.length > 0) {
-            throw new Error(result.error);
-        }
+        Platform.startProcessBlocking(command);
     }
     /**
      * This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified

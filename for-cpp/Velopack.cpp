@@ -1370,6 +1370,15 @@ static std::string nativeStartProcessBlocking(const std::vector<std::string> *co
     std::istream is(&buf);
     std::stringstream buffer;
     buffer << is.rdbuf();
+
+    int return_code;
+    subprocess_join(&subprocess, &return_code);
+
+    if (return_code != 0)
+    {
+        throw std::runtime_error("Process returned non-zero exit code. Check the log for more details.");
+    }
+
     return buffer.str();
 }
 
@@ -2157,7 +2166,7 @@ void UpdateManagerSync::setExplicitChannel(std::string explicitChannel)
 std::vector<std::string> UpdateManagerSync::getCurrentVersionCommand() const
 {
     std::vector<std::string> command;
-    command.push_back(Platform::getUpdateExePath());
+    command.push_back(Platform::getFusionExePath());
     command.push_back("get-version");
     return command;
 }
@@ -2168,12 +2177,10 @@ std::vector<std::string> UpdateManagerSync::getCheckForUpdatesCommand() const
         throw std::runtime_error("Please call SetUrlOrPath before trying to check for updates.");
     }
     std::vector<std::string> command;
-    command.push_back(Platform::getUpdateExePath());
+    command.push_back(Platform::getFusionExePath());
     command.push_back("check");
     command.push_back("--url");
     command.push_back(this->_urlOrPath);
-    command.push_back("--format");
-    command.push_back("json");
     if (this->_allowDowngrade) {
         command.push_back("--downgrade");
     }
@@ -2190,15 +2197,17 @@ std::vector<std::string> UpdateManagerSync::getDownloadUpdatesCommand(std::share
         throw std::runtime_error("Please call SetUrlOrPath before trying to download updates.");
     }
     std::vector<std::string> command;
-    command.push_back(Platform::getUpdateExePath());
+    command.push_back(Platform::getFusionExePath());
     command.push_back("download");
     command.push_back("--url");
     command.push_back(this->_urlOrPath);
-    command.push_back("--clean");
-    command.push_back("--format");
-    command.push_back("json");
-    command.push_back("--name");
-    command.push_back(updateInfo->targetFullRelease->fileName);
+    if (this->_allowDowngrade) {
+        command.push_back("--downgrade");
+    }
+    if (!this->_explicitChannel.empty()) {
+        command.push_back("--channel");
+        command.push_back(this->_explicitChannel);
+    }
     return command;
 }
 
@@ -2226,12 +2235,7 @@ std::shared_ptr<UpdateInfo> UpdateManagerSync::checkForUpdates() const
 void UpdateManagerSync::downloadUpdates(std::shared_ptr<UpdateInfo> updateInfo) const
 {
     std::vector<std::string> command = getDownloadUpdatesCommand(updateInfo);
-    std::string output{Platform::startProcessBlocking(&command)};
-    std::string lastLine{output.substr(static_cast<int>(output.rfind('\n')))};
-    std::shared_ptr<ProgressEvent> result = ProgressEvent::fromJson(lastLine);
-    if (!result->error.empty()) {
-        throw std::runtime_error(result->error);
-    }
+    Platform::startProcessBlocking(&command);
 }
 
 void UpdateManagerSync::applyUpdatesAndExit(std::string assetPath) const

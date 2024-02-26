@@ -974,7 +974,7 @@ namespace Velopack
         protected List<string> GetCurrentVersionCommand()
         {
             List<string> command = new List<string>();
-            command.Add(Platform.GetUpdateExePath());
+            command.Add(Platform.GetFusionExePath());
             command.Add("get-version");
             return command;
         }
@@ -986,12 +986,10 @@ namespace Velopack
                 throw new Exception("Please call SetUrlOrPath before trying to check for updates.");
             }
             List<string> command = new List<string>();
-            command.Add(Platform.GetUpdateExePath());
+            command.Add(Platform.GetFusionExePath());
             command.Add("check");
             command.Add("--url");
             command.Add(this._urlOrPath);
-            command.Add("--format");
-            command.Add("json");
             if (this._allowDowngrade)
             {
                 command.Add("--downgrade");
@@ -1011,15 +1009,19 @@ namespace Velopack
                 throw new Exception("Please call SetUrlOrPath before trying to download updates.");
             }
             List<string> command = new List<string>();
-            command.Add(Platform.GetUpdateExePath());
+            command.Add(Platform.GetFusionExePath());
             command.Add("download");
             command.Add("--url");
             command.Add(this._urlOrPath);
-            command.Add("--clean");
-            command.Add("--format");
-            command.Add("json");
-            command.Add("--name");
-            command.Add(updateInfo.TargetFullRelease.FileName);
+            if (this._allowDowngrade)
+            {
+                command.Add("--downgrade");
+            }
+            if (this._explicitChannel.Length > 0)
+            {
+                command.Add("--channel");
+                command.Add(this._explicitChannel);
+            }
             return command;
         }
 
@@ -1059,13 +1061,7 @@ namespace Velopack
         public void DownloadUpdates(UpdateInfo updateInfo)
         {
             List<string> command = GetDownloadUpdatesCommand(updateInfo);
-            string output = Platform.StartProcessBlocking(command);
-            string lastLine = output.Substring(output.LastIndexOf('\n'));
-            ProgressEvent result = ProgressEvent.FromJson(lastLine);
-            if (result.Error.Length > 0)
-            {
-                throw new Exception(result.Error);
-            }
+            Platform.StartProcessBlocking(command);
         }
 
         /// <summary>This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified 
@@ -1291,7 +1287,7 @@ namespace Velopack
 
             if (process.ExitCode != 0)
             {
-                throw new Exception($"Process exited with code {process.ExitCode}");
+                throw new Exception($"Process returned non-zero exit code ({process.ExitCode}). Check the log for more details.");
             }
 
             return output.ToString();

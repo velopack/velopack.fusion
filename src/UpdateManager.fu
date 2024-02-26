@@ -20,7 +20,7 @@ public class UpdateManagerSync
     protected List<string()>() GetCurrentVersionCommand() throws Exception
     {
         List<string()>() command;
-        command.Add(Platform.GetUpdateExePath());
+        command.Add(Platform.GetFusionExePath());
         command.Add("get-version");
         return command;
     }
@@ -33,12 +33,10 @@ public class UpdateManagerSync
         }
 
         List<string()>() command;
-        command.Add(Platform.GetUpdateExePath());
+        command.Add(Platform.GetFusionExePath());
         command.Add("check");
         command.Add("--url");
         command.Add(_urlOrPath);
-        command.Add("--format");
-        command.Add("json");
 
         if (_allowDowngrade)
         {
@@ -61,15 +59,21 @@ public class UpdateManagerSync
         }
 
         List<string()>() command;
-        command.Add(Platform.GetUpdateExePath());
+        command.Add(Platform.GetFusionExePath());
         command.Add("download");
         command.Add("--url");
         command.Add(_urlOrPath);
-        command.Add("--clean");
-        command.Add("--format");
-        command.Add("json");
-        command.Add("--name");
-        command.Add(updateInfo.TargetFullRelease.FileName);
+
+        if (_allowDowngrade)
+        {
+            command.Add("--downgrade");
+        }
+
+        if (_explicitChannel.Length > 0)
+        {
+            command.Add("--channel");
+            command.Add(_explicitChannel);
+        }
         return command;
     }
 
@@ -109,12 +113,7 @@ public class UpdateManagerSync
     public void DownloadUpdates(UpdateInfo# updateInfo) throws Exception
     {
         List<string()>() command = GetDownloadUpdatesCommand(updateInfo);
-        string() output = Platform.StartProcessBlocking(command);
-        string() lastLine = output.Substring(output.LastIndexOf("\n"));
-        ProgressEvent# result = ProgressEvent.FromJson(lastLine);
-        if (result.Error.Length > 0) {
-            throw Exception(result.Error);
-        }
+        Platform.StartProcessBlocking(command); // throws on non-zero exit codes
     }
 
     /// This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified 

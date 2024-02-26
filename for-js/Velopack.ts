@@ -79,6 +79,11 @@ function nativeStartProcessBlocking(command_line: readonly string[]): string {
   const child = spawnSync(command_line[0], command_line.slice(1), {
     encoding: "utf8",
   });
+  if (child.status !== 0) {
+    throw new Error(
+      `Process returned non-zero exit code (${child.status}). Check the log for more details.`,
+    );
+  }
   return child.stdout;
 }
 
@@ -997,7 +1002,7 @@ export class UpdateManagerSync {
 
   protected getCurrentVersionCommand(): string[] {
     const command: string[] = [];
-    command.push(Platform.getUpdateExePath());
+    command.push(Platform.getFusionExePath());
     command.push("get-version");
     return command;
   }
@@ -1009,12 +1014,10 @@ export class UpdateManagerSync {
       );
     }
     const command: string[] = [];
-    command.push(Platform.getUpdateExePath());
+    command.push(Platform.getFusionExePath());
     command.push("check");
     command.push("--url");
     command.push(this.#_urlOrPath);
-    command.push("--format");
-    command.push("json");
     if (this.#_allowDowngrade) {
       command.push("--downgrade");
     }
@@ -1032,15 +1035,17 @@ export class UpdateManagerSync {
       );
     }
     const command: string[] = [];
-    command.push(Platform.getUpdateExePath());
+    command.push(Platform.getFusionExePath());
     command.push("download");
     command.push("--url");
     command.push(this.#_urlOrPath);
-    command.push("--clean");
-    command.push("--format");
-    command.push("json");
-    command.push("--name");
-    command.push(updateInfo.targetFullRelease.fileName);
+    if (this.#_allowDowngrade) {
+      command.push("--downgrade");
+    }
+    if (this.#_explicitChannel.length > 0) {
+      command.push("--channel");
+      command.push(this.#_explicitChannel);
+    }
     return command;
   }
 
@@ -1083,12 +1088,7 @@ export class UpdateManagerSync {
    */
   public downloadUpdates(updateInfo: UpdateInfo): void {
     const command: string[] = this.getDownloadUpdatesCommand(updateInfo);
-    let output: string = Platform.startProcessBlocking(command);
-    let lastLine: string = output.substring(output.lastIndexOf("\n"));
-    let result: ProgressEvent = ProgressEvent.fromJson(lastLine);
-    if (result.error.length > 0) {
-      throw new Error(result.error);
-    }
+    Platform.startProcessBlocking(command);
   }
 
   /**

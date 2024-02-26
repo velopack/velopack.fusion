@@ -124,7 +124,7 @@ namespace Velopack
 
             if (process.ExitCode != 0)
             {
-                throw new Exception($"Process exited with code {process.ExitCode}");
+                throw new Exception($"Process returned non-zero exit code ({process.ExitCode}). Check the log for more details.");
             }
 
             return output.ToString();

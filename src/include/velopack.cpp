@@ -137,6 +137,15 @@ static std::string nativeStartProcessBlocking(const std::vector<std::string> *co
     std::istream is(&buf);
     std::stringstream buffer;
     buffer << is.rdbuf();
+
+    int return_code;
+    subprocess_join(&subprocess, &return_code);
+
+    if (return_code != 0)
+    {
+        throw std::runtime_error("Process returned non-zero exit code. Check the log for more details.");
+    }
+
     return buffer.str();
 }
 
