@@ -34,6 +34,13 @@
 const { spawn, spawnSync } = require("child_process");
 const fs = require("fs");
 
+let electron;
+let is_electron = false;
+try {
+  electron = require("electron");
+  is_electron = true;
+} catch {}
+
 function emitLines(stream) {
   var backlog = "";
   stream.on("data", function (data) {
@@ -70,7 +77,29 @@ function nativeCurrentOsName(): string {
 }
 
 function nativeExitProcess(code: number): void {
-  process.exit(code);
+  if (is_electron) {
+    if (electron.app) {
+      electron.app.quit(code);
+    } else if (electron.remote) {
+      electron.remote.app.quit(code);
+    } else if (electron.ipcRenderer) {
+      electron.ipcRenderer.send("velopack-quit", code);
+    } else {
+      throw new Error(
+        "Could not find a way to exit the process, electron.app, electron.remote.app, and electron.ipcRenderer are all undefined.",
+      );
+    }
+  } else {
+    process.exit(code);
+  }
+}
+
+function nativeRegisterElectonQuit(): void {
+  if (is_electron) {
+    electron.ipcMain.on("velopack-quit", (event, code) => {
+      electron.app.quit(code);
+    });
+  }
 }
 
 function nativeStartProcessFireAndForget(
@@ -1175,6 +1204,7 @@ export class VelopackApp {
    * In some circumstances it may terminate/restart the process to perform tasks.
    */
   public run(): void {
+    nativeRegisterElectonQuit();
     const args: string[] = [];
     Array.prototype.push.apply(args, process.argv);
     for (let i: number = 0; i < args.length; i++) {

@@ -1,6 +1,13 @@
 const { spawn, spawnSync } = require("child_process");
 const fs = require("fs");
 
+let electron;
+let is_electron = false;
+try {
+    electron = require('electron');
+    is_electron = true;
+} catch { }
+
 function emitLines(stream) {
     var backlog = "";
     stream.on("data", function (data) {
@@ -37,18 +44,26 @@ function nativeCurrentOsName(): string {
 }
 
 function nativeExitProcess(code: number): void {
-    let electron;
-    try {
-        electron = require('electron');
-    } catch {
+    if (is_electron) {
+        if (electron.app) {
+            electron.app.quit(code);
+        } else if (electron.remote) {
+            electron.remote.app.quit(code);
+        } else if (electron.ipcRenderer) {
+            electron.ipcRenderer.send('velopack-quit', code);
+        } else {
+            throw new Error('Could not find a way to exit the process, electron.app, electron.remote.app, and electron.ipcRenderer are all undefined.');
+        }
+    } else {
         process.exit(code);
-        return;
     }
+}
 
-    if (electron.app) {
-        electron.app.quit(code);
-    } else if (electron.remote) {
-        electron.remote.app.quit(code);
+function nativeRegisterElectonQuit(): void {
+    if (is_electron) {
+        electron.ipcMain.on('velopack-quit', (event, code) => {
+            electron.app.quit(code);
+        });
     }
 }
 

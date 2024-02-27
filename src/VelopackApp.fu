@@ -12,6 +12,10 @@ public class VelopackApp
     /// In some circumstances it may terminate/restart the process to perform tasks.
     public void Run()
     {
+#if JS
+        native { VMACRO_NativeRegisterElectonQuit(); }
+#endif
+
         List<string()>() args;
 #if JS
         native { Array.prototype.push.apply(args, process.argv); }
