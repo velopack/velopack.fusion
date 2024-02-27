@@ -1,10 +1,9 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
+const { VelopackApp } = require('velopack');
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
-// if (require('electron-squirrel-startup')) {
-//   app.quit();
-// }
+// Velopack builder needs to be the first thing to run in the main process.
+VelopackApp.build().run();
 
 const createWindow = () => {
   // Create the browser window.
@@ -12,7 +11,9 @@ const createWindow = () => {
     width: 800,
     height: 600,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      nodeIntegration: true,
+      contextIsolation: false,
+      //preload: path.join(__dirname, 'preload.js'),
     },
   });
 
