@@ -1331,9 +1331,11 @@ export class UpdateManager extends UpdateManagerSync {
   ): Promise<void> {
     const command: string[] = this.getDownloadUpdatesCommand(toDownload);
     await nativeStartProcessAsyncReadLine(command, (data: string) => {
-      const p = parseInt(data);
-      if (!isNaN(p) && p > 0) {
-        progress(p);
+      if (progress && progress instanceof Function) {
+        const p = parseInt(data);
+        if (!isNaN(p) && p > 0) {
+          progress(p);
+        }
       }
     });
   }

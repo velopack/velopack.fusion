@@ -1200,9 +1200,11 @@ class UpdateManager extends UpdateManagerSync {
     async downloadUpdatesAsync(toDownload, progress) {
         const command = this.getDownloadUpdatesCommand(toDownload);
         await nativeStartProcessAsyncReadLine(command, (data) => {
-            const p = parseInt(data);
-            if (!isNaN(p) && p > 0) {
-                progress(p);
+            if (progress && progress instanceof Function) {
+                const p = parseInt(data);
+                if (!isNaN(p) && p > 0) {
+                    progress(p);
+                }
             }
         });
     }
