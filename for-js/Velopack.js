@@ -677,20 +677,22 @@ class Platform {
     }
 }
 _a = Platform, _Platform_impl_GetFusionExePath = function _Platform_impl_GetFusionExePath() {
-    let exePath = _a.getCurrentProcessPath();
+    let exeName = "";
     if (_a.isWindows()) {
-        exePath = _a.pathJoin(_a.pathParent(exePath), "Vfusion.exe");
+        exeName = "Vfusion.exe";
     }
     else if (_a.isLinux()) {
-        exePath = _a.pathJoin(_a.pathParent(exePath), "VfusionNix");
+        exeName = "VfusionNix";
     }
     else if (_a.isOsx()) {
-        exePath = _a.pathJoin(_a.pathParent(exePath), "VfusionMac");
+        exeName = "VfusionMac";
     }
     else {
         throw new Error("Unsupported OS");
     }
-    return exePath;
+    let libraryDir = "";
+    libraryDir = __dirname;
+    return _a.pathJoin(_a.pathJoin(libraryDir, "bin"), exeName);
 }, _Platform_impl_GetUpdateExePath = function _Platform_impl_GetUpdateExePath() {
     let exePath = _a.getCurrentProcessPath();
     if (_a.isWindows()) {

@@ -1976,20 +1976,20 @@ std::string Platform::getUpdateExePath()
 
 std::string Platform::impl_GetFusionExePath()
 {
-    std::string exePath{getCurrentProcessPath()};
+    std::string exeName{""};
     if (isWindows()) {
-        exePath = pathJoin(pathParent(exePath), "Vfusion.exe");
+        exeName = "Vfusion.exe";
     }
     else if (isLinux()) {
-        exePath = pathJoin(pathParent(exePath), "VfusionNix");
+        exeName = "VfusionNix";
     }
     else if (isOsx()) {
-        exePath = pathJoin(pathParent(exePath), "VfusionMac");
+        exeName = "VfusionMac";
     }
     else {
         std::abort(); // "Unsupported OS"
     }
-    return exePath;
+    return pathJoin(pathParent(getCurrentProcessPath()), exeName);
 }
 
 std::string Platform::impl_GetUpdateExePath()

@@ -66,17 +66,24 @@ static class Platform
 
     static string() Impl_GetFusionExePath()
     {
-        string() exePath = GetCurrentProcessPath();
+        string() exeName = "";
         if (IsWindows()) {
-            exePath = PathJoin(PathParent(exePath), "Vfusion.exe");
+            exeName = "Vfusion.exe";
         } else if (IsLinux()) {
-            exePath = PathJoin(PathParent(exePath), "VfusionNix");
+            exeName = "VfusionNix";
         } else if (IsOsx()) {
-            exePath = PathJoin(PathParent(exePath), "VfusionMac");
+            exeName = "VfusionMac";
         } else {
             assert false, "Unsupported OS";
         }
-        return exePath;
+
+#if JS
+        string() libraryDir = "";
+        native { libraryDir = __dirname; }
+        return PathJoin(PathJoin(libraryDir, "bin"), exeName);
+#else
+        return PathJoin(PathParent(GetCurrentProcessPath()), exeName);
+#endif
     }
 
     static string() Impl_GetUpdateExePath()

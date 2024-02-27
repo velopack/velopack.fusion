@@ -634,24 +634,24 @@ namespace Velopack
 
         static string Impl_GetFusionExePath()
         {
-            string exePath = GetCurrentProcessPath();
+            string exeName = "";
             if (IsWindows())
             {
-                exePath = PathJoin(PathParent(exePath), "Vfusion.exe");
+                exeName = "Vfusion.exe";
             }
             else if (IsLinux())
             {
-                exePath = PathJoin(PathParent(exePath), "VfusionNix");
+                exeName = "VfusionNix";
             }
             else if (IsOsx())
             {
-                exePath = PathJoin(PathParent(exePath), "VfusionMac");
+                exeName = "VfusionMac";
             }
             else
             {
                 throw new NotImplementedException("Unsupported OS");
             }
-            return exePath;
+            return PathJoin(PathParent(GetCurrentProcessPath()), exeName);
         }
 
         static string Impl_GetUpdateExePath()

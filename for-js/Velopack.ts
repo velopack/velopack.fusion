@@ -697,17 +697,19 @@ class Platform {
   }
 
   static #impl_GetFusionExePath(): string {
-    let exePath: string = Platform.getCurrentProcessPath();
+    let exeName: string = "";
     if (Platform.isWindows()) {
-      exePath = Platform.pathJoin(Platform.pathParent(exePath), "Vfusion.exe");
+      exeName = "Vfusion.exe";
     } else if (Platform.isLinux()) {
-      exePath = Platform.pathJoin(Platform.pathParent(exePath), "VfusionNix");
+      exeName = "VfusionNix";
     } else if (Platform.isOsx()) {
-      exePath = Platform.pathJoin(Platform.pathParent(exePath), "VfusionMac");
+      exeName = "VfusionMac";
     } else {
       throw new Error("Unsupported OS");
     }
-    return exePath;
+    let libraryDir: string = "";
+    libraryDir = __dirname;
+    return Platform.pathJoin(Platform.pathJoin(libraryDir, "bin"), exeName);
   }
 
   static #impl_GetUpdateExePath(): string {
