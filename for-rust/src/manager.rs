@@ -293,6 +293,20 @@ impl<T: UpdateSource> UpdateManager<T> {
         self.source.download_release_entry(&update.TargetFullRelease, &target_file.to_string_lossy(), progress)?;
         info!("Successfully placed file: '{}'", target_file.to_string_lossy());
 
+        // extract new Update.exe on Windows only
+        #[cfg(target_os = "windows")]
+        match crate::bundle::load_bundle_from_file(&target_file) {
+            Ok(bundle) => {
+                info!("Bundle loaded successfully.");
+                if let Err(e) = bundle.extract_zip_predicate_to_path(|f| f.ends_with("Squirrel.exe"), &self.paths.update_exe_path) {
+                    error!("Error extracting Update.exe from bundle: {}", e);
+                }
+            }
+            Err(e) => {
+                error!("Error loading bundle: {}", e);
+            }
+        }
+
         for path in to_delete {
             info!("Cleaning up old package: '{}'", path.to_string_lossy());
             let _ = fs::remove_file(&path);

@@ -76,6 +76,7 @@
 #![warn(missing_docs)]
 
 mod app;
+mod bundle;
 mod download;
 mod manager;
 mod manifest;

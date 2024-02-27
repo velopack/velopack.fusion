@@ -14,7 +14,7 @@ categories = ["development-tools"]
 
 [features]
 cli = ["clap", "simplelog", "file-rotate"]
-delta = ["zstd", "zip"]
+delta = ["zstd"]
 async = ["async-std"]
 
 [lib]
@@ -51,10 +51,10 @@ derivative = "2.2"
 glob = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { version = "1.0" }
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
 
 # delta packages
 zstd = { version = "0.13", optional = true }
-zip = { version = "0.6", default-features = false, features = ["deflate"], optional = true }
 
 # cli packages
 clap = { version = "4.4", optional = true }
