@@ -709,6 +709,8 @@ class Platform {
     }
     let libraryDir: string = "";
     libraryDir = __dirname;
+    libraryDir = libraryDir.replaceAll("\\app.asar\\", "\\app.asar.unpacked\\");
+    libraryDir = libraryDir.replaceAll("/app.asar/", "/app.asar.unpacked/");
     return Platform.pathJoin(Platform.pathJoin(libraryDir, "bin"), exeName);
   }
 

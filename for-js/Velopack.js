@@ -696,6 +696,8 @@ _a = Platform, _Platform_impl_GetFusionExePath = function _Platform_impl_GetFusi
     }
     let libraryDir = "";
     libraryDir = __dirname;
+    libraryDir = libraryDir.replaceAll("\\app.asar\\", "\\app.asar.unpacked\\");
+    libraryDir = libraryDir.replaceAll("/app.asar/", "/app.asar.unpacked/");
     return _a.pathJoin(_a.pathJoin(libraryDir, "bin"), exeName);
 }, _Platform_impl_GetUpdateExePath = function _Platform_impl_GetUpdateExePath() {
     let exePath = _a.getCurrentProcessPath();

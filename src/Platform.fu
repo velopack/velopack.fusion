@@ -80,6 +80,8 @@ static class Platform
 #if JS
         string() libraryDir = "";
         native { libraryDir = __dirname; }
+        libraryDir = libraryDir.Replace("\\app.asar\\", "\\app.asar.unpacked\\");
+        libraryDir = libraryDir.Replace("/app.asar/", "/app.asar.unpacked/");
         return PathJoin(PathJoin(libraryDir, "bin"), exeName);
 #else
         return PathJoin(PathParent(GetCurrentProcessPath()), exeName);
