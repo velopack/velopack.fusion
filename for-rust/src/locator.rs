@@ -39,7 +39,7 @@ pub fn auto_locate() -> Result<VelopackLocator> {
     // see if we can find the current dir in the path, maybe we're more nested than that.
     path = std::env::current_exe()?;
     let path = path.to_string_lossy();
-    let idx = path.rfind("/current/");
+    let idx = path.rfind("\\current\\");
     if let Some(i) = idx {
         let maybe_root = &path[..i];
         let maybe_root = PathBuf::from(maybe_root);
