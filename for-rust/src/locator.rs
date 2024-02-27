@@ -22,10 +22,12 @@ pub struct VelopackLocator {
 #[cfg(target_os = "windows")]
 /// Automatically locates the current app's important paths. If the app is not installed, it will return an error.
 pub fn auto_locate() -> Result<VelopackLocator> {
+    // check if Update.exe exists in parent dir, if it does, that's the root dir.
     let mut path = std::env::current_exe()?;
     path.pop(); // current dir
     path.pop(); // root dir
     if (path.join("Update.exe")).exists() {
+        info!("Found Update.exe in parent directory: {}", path.to_string_lossy());
         return Ok(VelopackLocator {
             root_app_dir: path.clone(),
             update_exe_path: path.join("Update.exe"),
@@ -33,7 +35,26 @@ pub fn auto_locate() -> Result<VelopackLocator> {
             manifest: read_current_manifest(&path.join("current").join("sq.version"))?,
         });
     }
-    bail!("Unable to locate Update.exe in directory: {}", path.to_string_lossy());
+
+    // see if we can find the current dir in the path, maybe we're more nested than that.
+    path = std::env::current_exe()?;
+    let path = path.to_string_lossy();
+    let idx = path.rfind("/current/");
+    if let Some(i) = idx {
+        let maybe_root = &path[..i];
+        let maybe_root = PathBuf::from(maybe_root);
+        if (maybe_root.join("Update.exe")).exists() {
+            info!("Found Update.exe in parent directory: {}", maybe_root.to_string_lossy());
+            return Ok(VelopackLocator {
+                root_app_dir: maybe_root.clone(),
+                update_exe_path: maybe_root.join("Update.exe"),
+                packages_dir: maybe_root.join("packages"),
+                manifest: read_current_manifest(&maybe_root.join("current").join("sq.version"))?,
+            });
+        }
+    }
+
+    bail!("Unable to locate Update.exe in parent directory, and not able to find '/current' dir in path");
 }
 
 #[cfg(target_os = "linux")]
@@ -41,7 +62,7 @@ pub fn auto_locate() -> Result<VelopackLocator> {
 pub fn auto_locate() -> Result<VelopackLocator> {
     let path = std::env::current_exe()?;
     let path = path.to_string_lossy();
-    let idx = path.find("/usr/bin/");
+    let idx = path.rfind("/usr/bin/");
     if idx.is_none() {
         bail!("Unable to locate '/usr/bin/' directory in path: {}", path);
     }
@@ -69,7 +90,7 @@ pub fn auto_locate() -> Result<VelopackLocator> {
 pub fn auto_locate() -> Result<VelopackLocator> {
     let path = std::env::current_exe()?;
     let path = path.to_string_lossy();
-    let idx = path.find(".app/");
+    let idx = path.rfind(".app/");
     if idx.is_none() {
         bail!("Unable to locate '.app' directory in path: {}", path);
     }
