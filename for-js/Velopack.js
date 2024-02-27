@@ -1,3 +1,4 @@
+"use strict";
 //
 //  INTRODUCTION
 //
@@ -42,6 +43,8 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
     return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
 var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _a, _Platform_impl_GetFusionExePath, _Platform_impl_GetUpdateExePath, _StringStream_instances, _StringStream_builder, _StringStream_writer, _StringStream_initialised, _StringStream_init, _UpdateManagerSync__allowDowngrade, _UpdateManagerSync__explicitChannel, _UpdateManagerSync__urlOrPath, _StringWriter_buf;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.UpdateManager = exports.VelopackApp = exports.UpdateManagerSync = exports.UpdateInfo = exports.VelopackAsset = exports.VelopackAssetType = exports.JsonNode = exports.JsonNodeType = void 0;
 const { spawn, spawnSync } = require("child_process");
 const fs = require("fs");
 function emitLines(stream) {
@@ -141,7 +144,7 @@ function nativeStartProcessAsyncReadLine(command_line, handler) {
         });
     });
 }
-export var JsonNodeType;
+var JsonNodeType;
 (function (JsonNodeType) {
     JsonNodeType[JsonNodeType["NULL"] = 0] = "NULL";
     JsonNodeType[JsonNodeType["BOOL"] = 1] = "BOOL";
@@ -149,7 +152,7 @@ export var JsonNodeType;
     JsonNodeType[JsonNodeType["OBJECT"] = 3] = "OBJECT";
     JsonNodeType[JsonNodeType["NUMBER"] = 4] = "NUMBER";
     JsonNodeType[JsonNodeType["STRING"] = 5] = "STRING";
-})(JsonNodeType || (JsonNodeType = {}));
+})(JsonNodeType || (exports.JsonNodeType = JsonNodeType = {}));
 var JsonToken;
 (function (JsonToken) {
     JsonToken[JsonToken["NONE"] = 0] = "NONE";
@@ -164,7 +167,7 @@ var JsonToken;
     JsonToken[JsonToken["BOOL"] = 9] = "BOOL";
     JsonToken[JsonToken["NULL"] = 10] = "NULL";
 })(JsonToken || (JsonToken = {}));
-export class JsonNode {
+class JsonNode {
     constructor() {
         _JsonNode_type.set(this, JsonNodeType.NULL);
         _JsonNode_objectValue.set(this, {});
@@ -294,6 +297,7 @@ export class JsonNode {
         __classPrivateFieldSet(this, _JsonNode_stringValue, value, "f");
     }
 }
+exports.JsonNode = JsonNode;
 _JsonNode_type = new WeakMap(), _JsonNode_objectValue = new WeakMap(), _JsonNode_arrayValue = new WeakMap(), _JsonNode_stringValue = new WeakMap(), _JsonNode_numberValue = new WeakMap(), _JsonNode_boolValue = new WeakMap();
 class JsonParser {
     constructor() {
@@ -742,16 +746,16 @@ _StringStream_builder = new WeakMap(), _StringStream_writer = new WeakMap(), _St
         __classPrivateFieldSet(this, _StringStream_initialised, true, "f");
     }
 };
-export var VelopackAssetType;
+var VelopackAssetType;
 (function (VelopackAssetType) {
     VelopackAssetType[VelopackAssetType["UNKNOWN"] = 0] = "UNKNOWN";
     VelopackAssetType[VelopackAssetType["FULL"] = 1] = "FULL";
     VelopackAssetType[VelopackAssetType["DELTA"] = 2] = "DELTA";
-})(VelopackAssetType || (VelopackAssetType = {}));
+})(VelopackAssetType || (exports.VelopackAssetType = VelopackAssetType = {}));
 /**
  * An individual Velopack asset, could refer to an asset on-disk or in a remote package feed.
  */
-export class VelopackAsset {
+class VelopackAsset {
     constructor() {
         /**
          * The name or Id of the package containing this release.
@@ -832,10 +836,11 @@ export class VelopackAsset {
         return asset;
     }
 }
+exports.VelopackAsset = VelopackAsset;
 /**
  * Holds information about the current version and pending updates, such as how many there are, and access to release notes.
  */
-export class UpdateInfo {
+class UpdateInfo {
     constructor() {
         /**
          * True if the update is a version downgrade or lateral move (such as when switching channels to the same version number).
@@ -863,12 +868,13 @@ export class UpdateInfo {
         return updateInfo;
     }
 }
+exports.UpdateInfo = UpdateInfo;
 /**
  * This class is used to check for updates, download updates, and apply updates. It is a synchronous version of the UpdateManager class.
  * This class is not recommended for use in GUI applications, as it will block the main thread, so you may want to use the async
  * UpdateManager class instead, if it is supported for your programming language.
  */
-export class UpdateManagerSync {
+class UpdateManagerSync {
     constructor() {
         _UpdateManagerSync__allowDowngrade.set(this, false);
         _UpdateManagerSync__explicitChannel.set(this, "");
@@ -1046,11 +1052,12 @@ export class UpdateManagerSync {
         Platform.startProcessFireAndForget(command);
     }
 }
+exports.UpdateManagerSync = UpdateManagerSync;
 _UpdateManagerSync__allowDowngrade = new WeakMap(), _UpdateManagerSync__explicitChannel = new WeakMap(), _UpdateManagerSync__urlOrPath = new WeakMap();
 /**
  * The main VelopackApp struct. This is the main entry point for your app.
  */
-export class VelopackApp {
+class VelopackApp {
     /**
      * Create a new VelopackApp instance.
      */
@@ -1082,6 +1089,7 @@ export class VelopackApp {
         }
     }
 }
+exports.VelopackApp = VelopackApp;
 class StringWriter {
     constructor() {
         _StringWriter_buf.set(this, "");
@@ -1102,7 +1110,7 @@ _StringWriter_buf = new WeakMap();
  * It provides the asynchronous functions of the UpdateManager class.
  * @extends UpdateManagerSync
  */
-export class UpdateManager extends UpdateManagerSync {
+class UpdateManager extends UpdateManagerSync {
     /**
      * Checks for updates, returning null if there are none available. If there are updates available, this method will return an
      * UpdateInfo object containing the latest available release, and any delta updates that can be applied if they are available.
@@ -1140,3 +1148,4 @@ export class UpdateManager extends UpdateManagerSync {
         });
     }
 }
+exports.UpdateManager = UpdateManager;
