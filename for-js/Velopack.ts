@@ -65,7 +65,11 @@ function nativeDoesFileExist(path: string): boolean {
 }
 
 function nativeCurrentProcessId(): number {
-  return process.pid;
+  if (is_electron && !electron.app) {
+    return electron.ipcRenderer.sendSync("velopack-get-pid");
+  } else {
+    return process.pid;
+  }
 }
 
 function nativeGetCurrentProcessPath(): string {
@@ -80,6 +84,7 @@ function nativeExitProcess(code: number): void {
   if (is_electron) {
     if (electron.app) {
       electron.app.quit(code);
+      process.exit(code);
     } else if (electron.remote) {
       electron.remote.app.quit(code);
     } else if (electron.ipcRenderer) {
@@ -98,6 +103,9 @@ function nativeRegisterElectonQuit(): void {
   if (is_electron) {
     electron.ipcMain.on("velopack-quit", (event, code) => {
       electron.app.quit(code);
+    });
+    electron.ipcMain.on("velopack-get-pid", (event) => {
+      event.returnValue = process.pid;
     });
   }
 }
