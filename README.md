@@ -47,13 +47,14 @@ If your programming language is not listed above, or is not completed, you can a
 ### Command Line Reference
 ```txt
 $ vfusion.exe -h
-Velopack Fusion (0.0.0-local) manages and downloads packages.
+Velopack Fusion manages and downloads packages.
 https://github.com/velopack/velopack
 
 Usage: vfusion.exe [OPTIONS]
        vfusion.exe get-version [OPTIONS]
+       vfusion.exe get-packages [OPTIONS]
        vfusion.exe check [OPTIONS] --url <URL>
-       vfusion.exe download [OPTIONS] --url <URL>
+       vfusion.exe download [OPTIONS] --url <URL> --name <NAME>
 
 Options:
       --verbose  Print debug messages to console / log
@@ -62,23 +63,21 @@ Options:
 
 vfusion.exe get-version:
 Prints the current version of the application
-  -h, --help  Print help
+
+vfusion.exe get-packages:
+Prints the path to the packages directory
 
 vfusion.exe check:
 Checks for available updates
       --url <URL>       URL or local folder containing an update source
       --downgrade       Allow version downgrade
       --channel <NAME>  Explicitly switch to a specific channel
-  -h, --help            Print help
 
 vfusion.exe download:
 Download/copies an available remote file into the packages directory
       --url <URL>       URL or local folder containing an update source
-      --downgrade       Allow version downgrade
+      --name <NAME>     The name of the release to download
       --channel <NAME>  Explicitly switch to a specific channel
-  -h, --help            Print help
-
-C:\Source\velopack.fusion\for-rust\target\release>
 ```
 
 ## How does Velopack Fusion work?
