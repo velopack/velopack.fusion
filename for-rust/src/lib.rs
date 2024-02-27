@@ -63,7 +63,13 @@
 //! cargo build --release
 //! ```
 //!
-//! 5. Package your Velopack release / installers:
+//! 5. Install the `vpk` command line tool:
+//! ```sh
+//! dotnet tool update -g vpk
+//! ```
+//! ***Note: you must have the .NET Core SDK 6 installed to use and update the `vpk`***
+//!
+//! 6. Package your Velopack release / installers:
 //! ```sh
 //! vpk pack -u MyAppUniqueId -v 1.0.0 -p /target/release -e myexename.exe
 //! ```

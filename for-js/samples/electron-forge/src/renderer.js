@@ -22,7 +22,7 @@ let downloaded;
 async function updateBtnClicked() {
     if (!updateInfo) {
         updateBtn.disabled = true;
-        updateInfo = await um.checkForUpdates();
+        updateInfo = await um.checkForUpdatesAsync();
         if (updateInfo) {
             updateLabel.innerHTML = "New version available: " + updateInfo.targetFullRelease.version;
             updateBtn.innerHTML = "Download Updates";
@@ -33,7 +33,7 @@ async function updateBtnClicked() {
         updateBtn.disabled = false;
     } else if (updateInfo && !downloaded) {
         updateBtn.disabled = true;
-        await um.downloadUpdates(updateInfo.targetFullRelease);
+        await um.downloadUpdatesAsync(updateInfo.targetFullRelease);
         downloaded = true;
         updateLabel.innerHTML = "Downloaded version: " + updateInfo.targetFullRelease.version;
         updateBtn.innerHTML = "Install Updates";

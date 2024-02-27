@@ -7,8 +7,9 @@
 
 ---
 
-[![Discord](https://img.shields.io/discord/767856501477343282?style=flat-square&color=purple)](https://discord.gg/CjrCrNzd3F)
 [![Crates.io](https://img.shields.io/crates/v/velopack?style=flat-square)](https://crates.io/crates/velopack)
+[![npmjs.com](https://img.shields.io/npm/v/velopack?style=flat-square)](https://www.npmjs.com/package/velopack)
+[![Discord](https://img.shields.io/discord/767856501477343282?style=flat-square&color=purple)](https://discord.gg/CjrCrNzd3F)
 [![Build](https://img.shields.io/github/actions/workflow/status/velopack/velopack.fusion/build.yml?branch=master&style=flat-square)](https://github.com/velopack/velopack.fusion/actions)
 [![License](https://img.shields.io/github/license/velopack/velopack.fusion?style=flat-square)](https://github.com/velopack/velopack/blob/master/LICENSE)
 
@@ -27,10 +28,10 @@ There are a variety of getting started guides also available at [https://velopac
 
 | Lang | Status | Runtime Deps | Sync | Async | Links |
 |:-:|---|---|---|---|---|
-| C# | ✅ Done | ✅ None | ✅ Yes | ✅ Yes | [quick start](https://velopack.io/docs/getting-started/csharp.html), [docs](https://velopack.io/docs/updating/overview.html), [samples](https://github.com/velopack/velopack/tree/master/samples), [nuget.org](https://nuget.org/packages/velopack) |
-| Rust | ✅ Done | ✅ None | ✅ Yes | ✅ Yes | [quick start](https://velopack.io/docs/getting-started/rust.html), [docs](https://docs.rs/velopack), [samples](https://github.com/velopack/velopack.fusion/tree/master/for-rust/samples/iced), [crates.io](crates.io/crates/velopack) |
-| JS | ✅ Done | ✅ None | ✅ Yes | ✅ Yes | - |
-| C++ | ✅ Done | 🔶 vfusion.exe | ✅ Yes | ❌ No | [velopack.hpp](https://github.com/velopack/velopack.fusion/tree/master/for-cpp) |
+| C# | ✅ Complete | ✅ None | ✅ Yes | ✅ Yes | [quick start](https://velopack.io/docs/getting-started/csharp.html), [docs](https://velopack.io/docs/updating/overview.html), [samples](https://github.com/velopack/velopack/tree/master/samples), [nuget.org](https://nuget.org/packages/velopack) |
+| Rust | ✅ Complete | ✅ None | ✅ Yes | ✅ Yes | [quick start](https://velopack.io/docs/getting-started/rust.html), [docs](https://docs.rs/velopack), [samples](https://github.com/velopack/velopack.fusion/tree/master/for-rust/samples/iced), [crates.io](crates.io/crates/velopack) |
+| JS | ✅ Complete | ✅ None | ✅ Yes | ✅ Yes | [quick start](https://github.com/velopack/velopack.fusion/tree/master/for-js/README.md), [samples](https://github.com/velopack/velopack.fusion/tree/master/for-js/samples/electron-forge), [npmjs.com](https://www.npmjs.com/package/velopack) |
+| C++ | ✅ Complete | 🔶 vfusion.exe | ✅ Yes | ❌ No | [velopack.hpp](https://github.com/velopack/velopack.fusion/tree/master/for-cpp) |
 | Java | Planned | - | - | - | - |
 | Swift | Planned | - | - | - | - |
 | Python | Planned | - | - | - | - |
