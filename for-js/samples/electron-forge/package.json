@@ -25,5 +25,8 @@
     "@electron-forge/maker-zip": "^7.2.0",
     "@electron-forge/plugin-auto-unpack-natives": "^7.2.0",
     "electron": "28.2.3"
+  },
+  "dependencies": {
+    "velopack": "^0.0.56-g87321d7"
   }
 }

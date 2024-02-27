@@ -1,6 +1,9 @@
 module.exports = {
   packagerConfig: {
-    asar: true,
+    asar: {
+      // velopack contains native binaries which must remain unpacked
+      unpack: '**/node_modules/velopack/**',
+    },
   },
   rebuildConfig: {},
   makers: [
