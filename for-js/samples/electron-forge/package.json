@@ -27,6 +27,6 @@
     "electron": "28.2.3"
   },
   "dependencies": {
-    "velopack": "^0.0.62-g726ccc1"
+    "velopack": "^0.0.67-g7fd45b5"
   }
 }
