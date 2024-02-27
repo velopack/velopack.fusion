@@ -17,7 +17,7 @@ pub enum Message {
 }
 
 pub struct GUI {
-    update_manager: Option<UpdateManager>,
+    update_manager: Option<UpdateManager<sources::FileSource>>,
     state: GUIState,
     current_version: Option<String>,
     update_info: Option<UpdateInfo>,
@@ -49,7 +49,8 @@ impl Application for GUI {
     type Flags = ();
 
     fn new(_flags: ()) -> (Self, Command<Self::Message>) {
-        let um = UpdateManager::new(env!("RELEASES_DIR"), None);
+        let sounce = sources::FileSource::new(env!("RELEASES_DIR"));
+        let um = UpdateManager::new(sounce, None);
         let mut version: Option<String> = None;
         let mut state = GUIState::NotInstalled;
         if um.is_ok() {

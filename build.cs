@@ -35,6 +35,7 @@ void BuildRust(StringBuilder sb)
     RunProcess(sb, "cargo", "check --features cli", Path.Combine(projectDir, "for-rust"));
     RunProcess(sb, "cargo", "check --features async", Path.Combine(projectDir, "for-rust"));
     RunProcess(sb, "cargo", "test --features cli", Path.Combine(projectDir, "for-rust"));
+    RunProcess(sb, "cargo", "check", Path.Combine(projectDir, "for-rust", "samples", "iced"));
 }
 
 void BuildJs(StringBuilder sb)
