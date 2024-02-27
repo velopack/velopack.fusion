@@ -14,9 +14,9 @@
 
 # Velopack Fusion
 
-Velopack is an installer and automatic update framework for cross-platform desktop applications.
+[Velopack](https://velopack.io) is an installer and automatic update framework for cross-platform desktop applications.
 
-Fusion is the home for client libraries which assist developers integrating their applications with [Velopack](https://velopack.io). Fusion also provides a simple command line interface for downloading and staging updates, so if your language does not have a client library you can still use the CLI.
+Fusion is the home for client libraries which assist developers integrating their applications with [Velopack](https://velopack.io). Fusion also provides a simple command line interface for downloading and staging updates, so if your language does not have a client library you can still use the CLI to integrate your app.
 
 ## Documentation / Getting Started
 The full Velopack documentation for the framework is available at [https://velopack.io/docs](https://velopack.io/docs), however there may be some additional library-specific documentation linked below.
@@ -25,19 +25,26 @@ There are a variety of getting started guides also available at [https://velopac
 
 ## Supported Languages
 
-### Standalone
-These are full stand-alone library implementations, which you can install and require no additional dependencies.
-- **C# / .NET:** The core reference library is at [velopack/velopack](https://github.com/velopack/velopack). Also see the [documentation](https://velopack.io/docs) and the [NuGet package](https://www.nuget.org/packages/Velopack). While there is also a Fusion generated C# library in this repository it should generally not be used.
-- **Rust:** There is an [official Rust crate](https://crates.io/crates/velopack). Also see the [documentation](https://docs.rs/velopack/0.0.1/velopack/).
+| Lang | Status | Runtime Deps | Sync | Async | Links |
+|---|---|---|---|---|---|
+| C# | ✅ Done | ✅ None | ✅ Yes | ✅ Yes | [quick start](https://velopack.io/docs/getting-started/csharp.html), [docs](https://velopack.io/docs/updating/overview.html), [samples](https://github.com/velopack/velopack/tree/master/samples) |
+| Rust | ✅ Done | ✅ None | ✅ Yes | ✅ Yes | [quick start](https://velopack.io/docs/getting-started/rust.html), [docs](https://docs.rs/velopack), [samples](https://github.com/velopack/velopack.fusion/tree/master/for-rust/samples/iced) |
+| JS | 🔶 WIP | 🔶 vfusion.exe | ✅ Yes | ✅ Yes | - |
+| C++ | 🔶 WIP | 🔶 vfusion.exe | ✅ Yes | ❌ No | [velopack.hpp](https://github.com/velopack/velopack.fusion/tree/master/for-cpp) |
+| Java | Planned | - | - | - | - |
+| Swift | Planned | - | - | - | - |
+| Python | Planned | - | - | - | - |
+| Go | Planned | - | - | - | - |
 
-### Fusion
-These libraries are a light weight wrapper around `vfusion.exe`. They will provide a native and convenient API to application authors, but ***require you also distribute the `vfusion.exe` binary (1.3mb) with your app.***
-- **C++:** This is shipped as a pair of `.hpp`/`.cpp` files. The latest [can be found here](https://github.com/velopack/velopack.fusion/tree/master/for-cpp).
-- **JS / TS / Electron:**: WIP, will be published on npmjs.com soon.
+Want to see your programming language get a client library but it's not listed here? [Open an issue!](https://github.com/velopack/velopack.fusion/issues)
 
-### Command Line
-While there might not be a client library for your programming language, you can always redistribute the `vfusion.exe` binary with your application and use the command line interface to download updates. The command line reference is below:
+> [!WARNING]
+> If your library requires `vfusion.exe` as a runtime dependency, it's currently up to you to distribute this small binary (1.3mb) with your application. In the future, this will be automated.
 
+## Other Languages
+If your programming language is not listed above, or is not completed, you can always redistribute the `vfusion.exe` binary with your application and use the command line interface to download updates.
+
+### Command Line Reference
 ```txt
 $ vfusion.exe -h
 Velopack Fusion (0.0.0-local) manages and downloads packages.
@@ -77,9 +84,9 @@ C:\Source\velopack.fusion\for-rust\target\release>
 ## How does Velopack Fusion work?
 Velopack has two fully implemented reference libraries, [one for C#](https://github.com/velopack/velopack) and [one for Rust](https://github.com/velopack/velopack.fusion/tree/master/for-rust).
 
-For other languages, the Rust library is compiled into a small binary (`vfusion.exe`) which exposes the functionality as a CLI. 
+For other languages, the Rust library is compiled into a small binary (`vfusion.exe`) which exposes the core functionality as a CLI. 
 
-The rest of the libraries available here are transpiled from [fusion / fut](https://github.com/fusionlanguage/fut), which is a programming langauge designed to be transpiled into other languages. These light-weight transpiled libraries interface with the fusion cli to provide a native-like programming experience, which is why they require the fusion binary bundled with your application. 
+The rest of the libraries available here are transpiled from [the fusion (fut) language](https://github.com/fusionlanguage/fut), which is a programming langauge which does not compile, and is designed to be transpiled into other languages. These light-weight transpiled libraries interface with the fusion cli to provide a native-like programming experience, which is why they require the fusion binary bundled with your application. 
 
 ## Compiling Fusion
 There is a custom build system written in C#. To compile all of Fusion you can run the following commands in your terminal:
