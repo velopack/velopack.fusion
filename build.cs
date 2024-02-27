@@ -41,6 +41,7 @@ if (parseResult.GetValueForOption(isciArg))
     {
         var untrackedFiles = status.Split(new char[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Where(x => !x.Contains("package.json"))
+            .Where(x => !x.Contains("package-lock.json"))
             .Where(x => !x.Contains("Cargo.toml"))
             .Where(x => !x.Contains("Cargo.lock"))
             .ToList();
