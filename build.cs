@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.CommandLine;
 using System.CommandLine.Parsing;
 using System.Diagnostics;
@@ -175,7 +176,7 @@ Dictionary<string, List<string>> LoadNativeMacros()
 
 void RunAll(params Action<StringBuilder>[] actions)
 {
-    Dictionary<string, string> errors = new();
+    ConcurrentDictionary<string, string> errors = new();
     Parallel.ForEach(actions, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, action =>
     {
         var sb = new StringBuilder();
@@ -203,11 +204,11 @@ void RunAll(params Action<StringBuilder>[] actions)
     {
         foreach (var err in errors)
         {
+            Console.WriteLine();
             Error(err.Key + " failed with: " + Environment.NewLine);
             Console.WriteLine(err.Value);
         }
 
-        Console.WriteLine();
         Console.WriteLine();
 
         Error($"{actions.Length - errors.Count}/{actions.Length} completed, and {errors.Count} errors occurred.");
