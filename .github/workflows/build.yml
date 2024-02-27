@@ -26,6 +26,13 @@ jobs:
           cargo login ${{ secrets.CARGO_TOKEN }}
           cargo publish --allow-dirty
 
+      - name: NPM Publish
+        working-directory: for-js
+        if: github.ref == 'refs/heads/master'
+        run: |
+          npm set "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" 
+          npm publish --access public
+
   build-cli:
     strategy:
       matrix:
