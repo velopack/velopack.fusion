@@ -45,7 +45,8 @@ fn main() -> Result<()> {
         matches.subcommand().ok_or_else(|| anyhow!("No subcommand was used. Try `--help` for more information."))?;
     let verbose = matches.get_flag("verbose");
     default_logging(verbose)?;
-
+    
+    info!("--");
     info!("Starting Velopack Fusion ({})", env!("CARGO_PKG_VERSION"));
     info!("    Location: {}", env::current_exe()?.to_string_lossy());
     info!("    Verbose: {}", verbose);
@@ -87,13 +88,17 @@ pub fn default_logging(verbose: bool) -> Result<()> {
 }
 
 fn get_version(_matches: &ArgMatches) -> Result<()> {
+    info!("Command: Get-Version");
     let loc = locator::auto_locate()?;
+    info!("    Version: {}", loc.manifest.version);
     println!("{}", loc.manifest.version);
     Ok(())
 }
 
 fn get_packages(_matches: &ArgMatches) -> Result<()> {
+    info!("Command: Get-Packages");
     let loc = locator::auto_locate()?;
+    info!("    Packages Directory: {}", loc.packages_dir.to_string_lossy());
     println!("{}", loc.packages_dir.to_string_lossy());
     Ok(())
 }

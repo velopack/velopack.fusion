@@ -21,8 +21,8 @@ HINSTANCE hInst;
 const WCHAR szTitle[] = L"Velopack C++ Sample App";
 const WCHAR szWindowClass[] = L"VeloCppWinSample";
 std::shared_ptr<Velopack::UpdateInfo> updInfo{};
+bool downloaded = false;
 Velopack::UpdateManagerSync manager{};
-std::string updPath = "";
 std::string currentVersion = "";
 
 // Forward declarations of functions included in this code module:
@@ -166,6 +166,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 				if (updInfo != nullptr) {
 					try {
 						manager.downloadUpdates(updInfo->targetFullRelease.get());
+						downloaded = true;
+						MessageBoxCentered(hWnd, L"Download completed successfully.", szTitle, MB_OK);
 					}
 					catch (std::exception& e) {
 						std::wstring wideWhat = utf8_to_wstring(e.what());
@@ -178,7 +180,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			}
 			else if ((HWND)lParam == hRestartButton)
 			{
-				if (updPath.empty()) {
+				if (!downloaded) {
 					MessageBoxCentered(hWnd, L"Download an update first.", szTitle, MB_OK);
 				}
 				else {

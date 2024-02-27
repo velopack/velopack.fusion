@@ -268,6 +268,11 @@ impl<T: UpdateSource> UpdateManager<T> {
         fs::create_dir_all(packages_dir)?;
         let target_file = packages_dir.join(name);
 
+        if target_file.exists() {
+            info!("Package already exists on disk, skipping download: '{}'", target_file.to_string_lossy());
+            return Ok(());
+        }
+
         let g = format!("{}/*.nupkg", packages_dir.to_string_lossy());
         info!("Searching for packages to clean in: '{}'", g);
         let mut to_delete = Vec::new();
