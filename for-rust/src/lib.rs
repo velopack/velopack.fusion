@@ -1,5 +1,5 @@
 //! # Velopack
-//! [Velopack](https://velopack.io) is a auto-update and installation framework for cross-platform desktop applications. 
+//! [Velopack](https://velopack.io) is a auto-update and installation framework for cross-platform desktop applications.
 //! With less than 10 lines of code, you can add auto-update and installation features to your application.
 //!
 //! ## Features
@@ -14,7 +14,7 @@
 //! ## Components
 //! - **this crate**: The core library that provides auto-update features and glue to the other components.
 //! - **vpk cli tool**: The `vpk` command line tool packages and publishes your releases and installers.
-//! - **update binary**: Bundled with your application by vpk, handles 
+//! - **update binary**: Bundled with your application by vpk, handles
 //!
 //! ## Optional Rust Features
 //! - `async`: Enables async support using async-std.
@@ -43,13 +43,14 @@
 //! use anyhow::Result;
 //!
 //! fn update_my_app() -> Result<()> {
-//!     let um = UpdateManager::new("https://the.place/you-host/updates", None)?;
+//!     let source = sources::HttpSource::new("https://the.place/you-host/updates");
+//!     let um = UpdateManager::new(source, None)?;
 //!     let updates: Option<UpdateInfo> = um.check_for_updates()?;
 //!     if updates.is_none() {
 //!         return Ok(()); // no updates available
 //!     }
 //!     let updates = updates.unwrap();
-//!     um.download_updates(&updates, |progress| { 
+//!     um.download_updates(&updates, |progress| {
 //!         println!("Download progress: {}%", progress);
 //!     })?;
 //!     um.apply_updates_and_restart(&updates, RestartArgs::None)?;
@@ -67,24 +68,25 @@
 //! vpk pack -u MyAppUniqueId -v 1.0.0 -p /target/release -e myexename.exe
 //! ```
 //!
-//! ✅ You're Done! Your app now has auto-updates and an installer. 
+//! ✅ You're Done! Your app now has auto-updates and an installer.
 //! You can upload your release to your website, or use the `vpk upload` command to publish it to the destination of your choice.
 //!
 //! Read the Velopack documentation at [https://velopack.io/docs](https://velopack.io/docs) for more information.
 
 #![warn(missing_docs)]
 
-mod manifest;
+mod app;
 mod download;
+mod manager;
+mod manifest;
 mod util;
 
 /// Locator provides some utility functions for locating the current app important paths (eg. path to packages, update binary, and so forth).
 pub mod locator;
+/// Sources contains abstractions for custom update sources (eg. url, local file, github releases, etc).
+pub mod sources;
 
-mod app;
 pub use app::*;
-
-mod manager;
 pub use manager::*;
 
 #[macro_use]

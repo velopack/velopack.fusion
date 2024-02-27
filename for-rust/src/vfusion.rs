@@ -3,7 +3,7 @@ mod logging;
 use anyhow::Result;
 use clap::{arg, ArgMatches, Command};
 use std::env;
-use velopack::*;
+use velopack::{sources::UpdateSource, *};
 
 #[macro_use]
 extern crate anyhow;
@@ -18,6 +18,9 @@ fn root_command() -> Command {
     .subcommand(Command::new("get-version")
         .about("Prints the current version of the application")
     )
+    .subcommand(Command::new("get-packages")
+        .about("Prints the path to the packages directory")
+    )
     .subcommand(Command::new("check")
         .about("Checks for available updates")
         .arg(arg!(--url <URL> "URL or local folder containing an update source").required(true))
@@ -27,7 +30,7 @@ fn root_command() -> Command {
     .subcommand(Command::new("download")
         .about("Download/copies an available remote file into the packages directory")
         .arg(arg!(--url <URL> "URL or local folder containing an update source").required(true))
-        .arg(arg!(--downgrade "Allow version downgrade"))
+        .arg(arg!(--name <NAME> "The name of the release to download").required(true))
         .arg(arg!(--channel <NAME> "Explicitly switch to a specific channel"))
     )
     .arg(arg!(--verbose "Print debug messages to console / log").global(true))
@@ -38,7 +41,8 @@ fn root_command() -> Command {
 
 fn main() -> Result<()> {
     let matches = root_command().get_matches();
-    let (subcommand, subcommand_matches) = matches.subcommand().ok_or_else(|| anyhow!("No subcommand was used. Try `--help` for more information."))?;
+    let (subcommand, subcommand_matches) =
+        matches.subcommand().ok_or_else(|| anyhow!("No subcommand was used. Try `--help` for more information."))?;
     let verbose = matches.get_flag("verbose");
     default_logging(verbose)?;
 
@@ -55,6 +59,7 @@ fn main() -> Result<()> {
         "check" => check(subcommand_matches).map_err(|e| anyhow!("Check error: {}", e)),
         "download" => download(subcommand_matches).map_err(|e| anyhow!("Download error: {}", e)),
         "get-version" => get_version(subcommand_matches).map_err(|e| anyhow!("Get-version error: {}", e)),
+        "get-packages" => get_packages(subcommand_matches).map_err(|e| anyhow!("Get-packages error: {}", e)),
         _ => bail!("Unknown subcommand. Try `--help` for more information."),
     };
 
@@ -87,19 +92,32 @@ fn get_version(_matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
+fn get_packages(_matches: &ArgMatches) -> Result<()> {
+    let loc = locator::auto_locate()?;
+    println!("{}", loc.packages_dir.to_string_lossy());
+    Ok(())
+}
+
 fn check(matches: &ArgMatches) -> Result<()> {
     let url = matches.get_one::<String>("url").unwrap();
     let allow_downgrade = matches.get_flag("downgrade");
-    let channel = matches.get_one::<String>("channel").map(|x| x.as_str());
+    let channel = matches.get_one::<String>("channel").map(|x| x.to_owned());
 
     info!("Command: Check");
     info!("    URL: {:?}", url);
     info!("    Allow Downgrade: {:?}", allow_downgrade);
     info!("    Channel: {:?}", channel);
 
-    let options = UpdateOptions { AllowVersionDowngrade: allow_downgrade, ExplicitChannel: channel.map(|s| s.to_owned()) };
-    let um = UpdateManager::new(url, Some(options))?;
-    let updates = um.check_for_updates()?;
+    let options = UpdateOptions { AllowVersionDowngrade: allow_downgrade, ExplicitChannel: channel };
+    let updates = if is_http_url(url) {
+        let source = sources::HttpSource::new(url);
+        let um = UpdateManager::new(source, Some(options))?;
+        um.check_for_updates()?
+    } else {
+        let source = sources::FileSource::new(url);
+        let um = UpdateManager::new(source, Some(options))?;
+        um.check_for_updates()?
+    };
 
     if let Some(info) = updates {
         println!("{}", serde_json::to_string(&info)?);
@@ -110,26 +128,40 @@ fn check(matches: &ArgMatches) -> Result<()> {
 
 fn download(matches: &ArgMatches) -> Result<()> {
     let url = matches.get_one::<String>("url").unwrap();
-    let allow_downgrade = matches.get_flag("downgrade");
-    let channel = matches.get_one::<String>("channel").map(|x| x.as_str());
+    let name = matches.get_one::<String>("name").map(|x| x.to_owned()).unwrap();
+    let channel = matches.get_one::<String>("channel").map(|x| x.to_owned());
 
     info!("Command: Download");
     info!("    URL: {:?}", url);
-    info!("    Allow Downgrade: {:?}", allow_downgrade);
+    info!("    Asset Name: {:?}", name);
     info!("    Channel: {:?}", channel);
 
-    let options = UpdateOptions { AllowVersionDowngrade: allow_downgrade, ExplicitChannel: channel.map(|s| s.to_owned()) };
-    let um = UpdateManager::new(url, Some(options))?;
-    let updates = um.check_for_updates()?;
+    if is_http_url(url) {
+        let source = sources::HttpSource::new(url);
+        download_generic(source, &name, channel)?;
+    } else {
+        let source = sources::FileSource::new(url);
+        download_generic(source, &name, channel)?;
+    };
+    Ok(())
+}
 
-    if updates.is_none() {
-        bail!("No update available");
-    }
+fn download_generic<T: UpdateSource>(source: T, name: &str, channel: Option<String>) -> Result<()> {
+    let options = UpdateOptions { AllowVersionDowngrade: false, ExplicitChannel: channel };
+    let um = UpdateManager::new(source, Some(options))?;
+    let feed = um.get_release_feed()?;
+    let asset = feed.find(&name).ok_or_else(|| anyhow!("Asset not found in feed: {}", name))?;
 
-    let updates = updates.unwrap();
-    um.download_updates(&updates, |p| {
+    let info = UpdateInfo { IsDowngrade: false, TargetFullRelease: asset.clone() };
+    um.download_updates(&info, |p| {
         println!("{}", p);
     })?;
-
     Ok(())
+}
+
+fn is_http_url(url: &str) -> bool {
+    match url::Url::parse(url) {
+        Ok(url) => url.scheme().eq_ignore_ascii_case("http") || url.scheme().eq_ignore_ascii_case("https"),
+        _ => false,
+    }
 }
