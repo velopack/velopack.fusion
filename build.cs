@@ -11,8 +11,10 @@ using Spectre.Console;
 string projectDir = GetMsbuildParameter("RootProjectDir");
 
 var setVersionArg = new Option<bool>("--set-version", "-v");
+var isciArg = new Option<bool>("--ci");
 var rootCommand = new Command("build") {
     setVersionArg,
+    isciArg,
 };
 ParseResult parseResult = rootCommand.Parse(args);
 
@@ -28,6 +30,30 @@ if (parseResult.GetValueForOption(setVersionArg))
 // build libraries
 var macros = LoadNativeMacros();
 RunAll(BuildRust, BuildJs, BuildCpp, BuildCs);
+
+// check for untracked changes in ci mode
+if (parseResult.GetValueForOption(isciArg))
+{
+    GetProcessOutput("git", "update-index --refresh", projectDir, throwNonZeroExit: false);
+    GetProcessOutput("git", "git add .", projectDir, throwNonZeroExit: false);
+    var status = GetProcessOutput("git", "status --porcelain", projectDir, throwNonZeroExit: false);
+    if (!String.IsNullOrEmpty(status))
+    {
+        var untrackedFiles = status.Split('\n', 'r', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(x => !x.Contains("package.json"))
+            .Where(x => !x.Contains("Cargo.toml"))
+            .Where(x => !x.Contains("Cargo.lock"))
+            .ToList();
+
+        if (untrackedFiles.Any())
+        {
+            Console.WriteLine();
+            Error("CI MODE: Untracked changes detected. Please build fusion before pushing commits.");
+            Error("The following files have been modified: " + "\n  - " + String.Join("\n  - ", untrackedFiles));
+            Environment.Exit(1);
+        }
+    }
+}
 
 void BuildRust(StringBuilder sb)
 {
@@ -374,7 +400,7 @@ void RunProcess(StringBuilder sb, string processPath, string arguments, string w
     process.BeginOutputReadLine();
     process.WaitForExit();
 
-    if (process.ExitCode != 0)
+    if (throwNonZeroExit && process.ExitCode != 0)
     {
         throw new Exception($"Process exited with code {process.ExitCode}");
     }
@@ -411,7 +437,7 @@ string GetProcessOutput(string processPath, string arguments, string workDir, bo
     process.BeginOutputReadLine();
     process.WaitForExit();
 
-    if (process.ExitCode != 0)
+    if (throwNonZeroExit && process.ExitCode != 0)
     {
         throw new Exception($"Process exited with code {process.ExitCode}");
     }

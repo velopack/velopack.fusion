@@ -17,7 +17,7 @@ jobs:
         run: dotnet run --set-version
 
       - name: Build Fusion
-        run: dotnet run
+        run: dotnet run --ci
 
       - name: Cargo Publish
         working-directory: for-rust
