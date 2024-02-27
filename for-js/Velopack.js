@@ -121,7 +121,13 @@ function nativeRegisterElectron() {
     }
 }
 function nativeStartProcessFireAndForget(command_line) {
-    spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
+    const child = spawn(command_line[0], command_line.slice(1), {
+        encoding: "utf8",
+        detached: true,
+        stdio: "ignore",
+    });
+    // Detach the child process so it can run independently and outlive the parent process
+    child.unref();
 }
 function nativeStartProcessBlocking(command_line) {
     const child = spawnSync(command_line[0], command_line.slice(1), {

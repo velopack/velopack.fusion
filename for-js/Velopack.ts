@@ -114,7 +114,13 @@ function nativeRegisterElectron(): void {
 function nativeStartProcessFireAndForget(
   command_line: readonly string[],
 ): void {
-  spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
+  const child = spawn(command_line[0], command_line.slice(1), {
+    encoding: "utf8",
+    detached: true,
+    stdio: "ignore",
+  });
+  // Detach the child process so it can run independently and outlive the parent process
+  child.unref();
 }
 
 function nativeStartProcessBlocking(command_line: readonly string[]): string {
