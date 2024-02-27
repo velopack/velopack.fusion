@@ -27,8 +27,8 @@ There are a variety of getting started guides also available at [https://velopac
 
 | Lang | Status | Runtime Deps | Sync | Async | Links |
 |:-:|---|---|---|---|---|
-| C# | ✅ Done | ✅ None | ✅ Yes | ✅ Yes | [quick start](https://velopack.io/docs/getting-started/csharp.html), [docs](https://velopack.io/docs/updating/overview.html), [samples](https://github.com/velopack/velopack/tree/master/samples) |
-| Rust | ✅ Done | ✅ None | ✅ Yes | ✅ Yes | [quick start](https://velopack.io/docs/getting-started/rust.html), [docs](https://docs.rs/velopack), [samples](https://github.com/velopack/velopack.fusion/tree/master/for-rust/samples/iced) |
+| C# | ✅ Done | ✅ None | ✅ Yes | ✅ Yes | [quick start](https://velopack.io/docs/getting-started/csharp.html), [docs](https://velopack.io/docs/updating/overview.html), [samples](https://github.com/velopack/velopack/tree/master/samples), [nuget.org](https://nuget.org/packages/velopack) |
+| Rust | ✅ Done | ✅ None | ✅ Yes | ✅ Yes | [quick start](https://velopack.io/docs/getting-started/rust.html), [docs](https://docs.rs/velopack), [samples](https://github.com/velopack/velopack.fusion/tree/master/for-rust/samples/iced), [crates.io](crates.io/crates/velopack) |
 | JS | ✅ Done | ✅ None | ✅ Yes | ✅ Yes | - |
 | C++ | ✅ Done | 🔶 vfusion.exe | ✅ Yes | ❌ No | [velopack.hpp](https://github.com/velopack/velopack.fusion/tree/master/for-cpp) |
 | Java | Planned | - | - | - | - |
