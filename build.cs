@@ -39,7 +39,7 @@ if (parseResult.GetValueForOption(isciArg))
     var status = GetProcessOutput("git", "status --porcelain", projectDir, throwNonZeroExit: false);
     if (!String.IsNullOrEmpty(status))
     {
-        var untrackedFiles = status.Split('\n', 'r', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        var untrackedFiles = status.Split(new char[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Where(x => !x.Contains("package.json"))
             .Where(x => !x.Contains("Cargo.toml"))
             .Where(x => !x.Contains("Cargo.lock"))
