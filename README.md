@@ -26,11 +26,11 @@ There are a variety of getting started guides also available at [https://velopac
 ## Supported Languages
 
 | Lang | Status | Runtime Deps | Sync | Async | Links |
-|---|---|---|---|---|---|
+|:-:|---|---|---|---|---|
 | C# | ✅ Done | ✅ None | ✅ Yes | ✅ Yes | [quick start](https://velopack.io/docs/getting-started/csharp.html), [docs](https://velopack.io/docs/updating/overview.html), [samples](https://github.com/velopack/velopack/tree/master/samples) |
 | Rust | ✅ Done | ✅ None | ✅ Yes | ✅ Yes | [quick start](https://velopack.io/docs/getting-started/rust.html), [docs](https://docs.rs/velopack), [samples](https://github.com/velopack/velopack.fusion/tree/master/for-rust/samples/iced) |
-| JS | 🔶 WIP | 🔶 vfusion.exe | ✅ Yes | ✅ Yes | - |
-| C++ | 🔶 WIP | 🔶 vfusion.exe | ✅ Yes | ❌ No | [velopack.hpp](https://github.com/velopack/velopack.fusion/tree/master/for-cpp) |
+| JS | ✅ Done | ✅ None | ✅ Yes | ✅ Yes | - |
+| C++ | ✅ Done | 🔶 vfusion.exe | ✅ Yes | ❌ No | [velopack.hpp](https://github.com/velopack/velopack.fusion/tree/master/for-cpp) |
 | Java | Planned | - | - | - | - |
 | Swift | Planned | - | - | - | - |
 | Python | Planned | - | - | - | - |
@@ -39,7 +39,7 @@ There are a variety of getting started guides also available at [https://velopac
 Want to see your programming language get a client library but it's not listed here? [Open an issue!](https://github.com/velopack/velopack.fusion/issues)
 
 > [!WARNING]
-> If your library requires `vfusion.exe` as a runtime dependency, it's currently up to you to distribute this small binary (1.3mb) with your application. In the future, this will be automated.
+> If your library requires `vfusion.exe` in the table above as a runtime dependency, it's currently up to you to manually distribute this small binary (1.3mb) with your application. In the future, this will be automated.
 
 ## Other Languages
 If your programming language is not listed above, or is not completed, you can always redistribute the `vfusion.exe` binary with your application and use the command line interface to download updates.
