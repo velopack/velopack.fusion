@@ -5,7 +5,7 @@
   "main": "Velopack.js",
   "types": "Velopack.d.ts",
   "scripts": {
-    "build": "tsc Velopack.ts --module commonjs --target es2020 --declaration --skipLibCheck",
+    "build": "tsc Velopack.ts --module commonjs --target es2021 --declaration --skipLibCheck",
     "format": "prettier Velopack.ts --write",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
