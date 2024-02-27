@@ -37,7 +37,19 @@ function nativeCurrentOsName(): string {
 }
 
 function nativeExitProcess(code: number): void {
-    process.exit(code);
+    let electron;
+    try {
+        electron = require('electron');
+    } catch {
+        process.exit(code);
+        return;
+    }
+
+    if (electron.app) {
+        electron.app.quit(code);
+    } else if (electron.remote) {
+        electron.remote.app.quit(code);
+    }
 }
 
 function nativeStartProcessFireAndForget(command_line: readonly string[]): void {
