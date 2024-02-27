@@ -349,32 +349,33 @@ public:
      * packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
      * so may fail if there is already another update operation in progress.
      */
-    void downloadUpdates(std::shared_ptr<UpdateInfo> updateInfo) const;
+    void downloadUpdates(const VelopackAsset * toDownload) const;
     /**
      * This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified 
      * restart arguments. If you need to save state or clean up, you should do that before calling this method. 
      * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
      */
-    void applyUpdatesAndExit(std::string assetPath) const;
+    void applyUpdatesAndExit(const VelopackAsset * toApply) const;
     /**
      * This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified 
      * restart arguments. If you need to save state or clean up, you should do that before calling this method. 
      * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
      */
-    void applyUpdatesAndRestart(std::string assetPath, const std::vector<std::string> * restartArgs = nullptr) const;
+    void applyUpdatesAndRestart(const VelopackAsset * toApply, const std::vector<std::string> * restartArgs = nullptr) const;
     /**
      * This will launch the Velopack updater and tell it to wait for this program to exit gracefully.
      * You should then clean up any state and exit your app. The updater will apply updates and then
      * optionally restart your app. The updater will only wait for 60 seconds before giving up.
      */
-    void waitExitThenApplyUpdates(std::string assetPath, bool silent, bool restart, const std::vector<std::string> * restartArgs = nullptr) const;
+    void waitExitThenApplyUpdates(const VelopackAsset * toApply, bool silent, bool restart, const std::vector<std::string> * restartArgs = nullptr) const;
 protected:
     std::vector<std::string> getCurrentVersionCommand() const;
     std::vector<std::string> getCheckForUpdatesCommand() const;
-    std::vector<std::string> getDownloadUpdatesCommand(std::shared_ptr<UpdateInfo> updateInfo) const;
+    std::vector<std::string> getDownloadUpdatesCommand(const VelopackAsset * toDownload) const;
 private:
     bool _allowDowngrade = false;
     std::string _explicitChannel{""};
     std::string _urlOrPath{""};
+    std::string getPackagesDir() const;
 };
 }

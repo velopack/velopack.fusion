@@ -1013,7 +1013,7 @@ export class UpdateManagerSync {
     return command;
   }
 
-  protected getDownloadUpdatesCommand(updateInfo: UpdateInfo): string[] {
+  protected getDownloadUpdatesCommand(toDownload: VelopackAsset): string[] {
     if (this.#_urlOrPath.length == 0) {
       throw new Error(
         "Please call SetUrlOrPath before trying to download updates.",
@@ -1024,9 +1024,8 @@ export class UpdateManagerSync {
     command.push("download");
     command.push("--url");
     command.push(this.#_urlOrPath);
-    if (this.#_allowDowngrade) {
-      command.push("--downgrade");
-    }
+    command.push("--name");
+    command.push(toDownload.fileName);
     if (this.#_explicitChannel.length > 0) {
       command.push("--channel");
       command.push(this.#_explicitChannel);
@@ -1071,8 +1070,8 @@ export class UpdateManagerSync {
    * packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
    * so may fail if there is already another update operation in progress.
    */
-  public downloadUpdates(updateInfo: UpdateInfo): void {
-    const command: string[] = this.getDownloadUpdatesCommand(updateInfo);
+  public downloadUpdates(toDownload: VelopackAsset): void {
+    const command: string[] = this.getDownloadUpdatesCommand(toDownload);
     Platform.startProcessBlocking(command);
   }
 
@@ -1081,9 +1080,9 @@ export class UpdateManagerSync {
    * restart arguments. If you need to save state or clean up, you should do that before calling this method.
    * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
    */
-  public applyUpdatesAndExit(assetPath: string): void {
+  public applyUpdatesAndExit(toApply: VelopackAsset | null): void {
     const args: string[] = [];
-    this.waitExitThenApplyUpdates(assetPath, false, false, args);
+    this.waitExitThenApplyUpdates(toApply, false, false, args);
     Platform.exit(0);
   }
 
@@ -1093,10 +1092,10 @@ export class UpdateManagerSync {
    * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
    */
   public applyUpdatesAndRestart(
-    assetPath: string,
+    toApply: VelopackAsset | null,
     restartArgs: readonly string[] | null = null,
   ): void {
-    this.waitExitThenApplyUpdates(assetPath, false, true, restartArgs);
+    this.waitExitThenApplyUpdates(toApply, false, true, restartArgs);
     Platform.exit(0);
   }
 
@@ -1106,7 +1105,7 @@ export class UpdateManagerSync {
    * optionally restart your app. The updater will only wait for 60 seconds before giving up.
    */
   public waitExitThenApplyUpdates(
-    assetPath: string,
+    toApply: VelopackAsset | null,
     silent: boolean,
     restart: boolean,
     restartArgs: readonly string[] | null = null,
@@ -1119,7 +1118,9 @@ export class UpdateManagerSync {
     command.push("apply");
     command.push("--waitPid");
     command.push(`${Platform.getCurrentProcessId()}`);
-    if (assetPath.length > 0) {
+    if (toApply != null) {
+      let packagesDir: string = this.#getPackagesDir();
+      let assetPath: string = Platform.pathJoin(packagesDir, toApply.fileName);
       command.push("--package");
       command.push(assetPath);
     }
@@ -1131,6 +1132,13 @@ export class UpdateManagerSync {
       command.push(...restartArgs);
     }
     Platform.startProcessFireAndForget(command);
+  }
+
+  #getPackagesDir(): string {
+    const command: string[] = [];
+    command.push(Platform.getFusionExePath());
+    command.push("get-packages");
+    return Platform.startProcessBlocking(command);
   }
 }
 
@@ -1223,10 +1231,10 @@ export class UpdateManager extends UpdateManagerSync {
    * so may fail if there is already another update operation in progress.
    */
   public async downloadUpdatesAsync(
-    updateInfo: UpdateInfo,
+    toDownload: VelopackAsset,
     progress: (arg: number) => void,
   ): Promise<void> {
-    const command: string[] = this.getDownloadUpdatesCommand(updateInfo);
+    const command: string[] = this.getDownloadUpdatesCommand(toDownload);
     await nativeStartProcessAsyncReadLine(command, (data: string) => {
       const p = parseInt(data);
       if (!isNaN(p) && p > 0) {

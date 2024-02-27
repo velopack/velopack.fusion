@@ -150,7 +150,7 @@ export declare class UpdateManagerSync {
     setExplicitChannel(explicitChannel: string): void;
     protected getCurrentVersionCommand(): string[];
     protected getCheckForUpdatesCommand(): string[];
-    protected getDownloadUpdatesCommand(updateInfo: UpdateInfo): string[];
+    protected getDownloadUpdatesCommand(toDownload: VelopackAsset): string[];
     /**
      * Returns true if the current app is installed, false otherwise. If the app is not installed, other functions in
      * UpdateManager may throw exceptions, so you may want to check this before calling other functions.
@@ -173,25 +173,25 @@ export declare class UpdateManagerSync {
      * packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
      * so may fail if there is already another update operation in progress.
      */
-    downloadUpdates(updateInfo: UpdateInfo): void;
+    downloadUpdates(toDownload: VelopackAsset): void;
     /**
      * This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified
      * restart arguments. If you need to save state or clean up, you should do that before calling this method.
      * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
      */
-    applyUpdatesAndExit(assetPath: string): void;
+    applyUpdatesAndExit(toApply: VelopackAsset | null): void;
     /**
      * This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified
      * restart arguments. If you need to save state or clean up, you should do that before calling this method.
      * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
      */
-    applyUpdatesAndRestart(assetPath: string, restartArgs?: readonly string[] | null): void;
+    applyUpdatesAndRestart(toApply: VelopackAsset | null, restartArgs?: readonly string[] | null): void;
     /**
      * This will launch the Velopack updater and tell it to wait for this program to exit gracefully.
      * You should then clean up any state and exit your app. The updater will apply updates and then
      * optionally restart your app. The updater will only wait for 60 seconds before giving up.
      */
-    waitExitThenApplyUpdates(assetPath: string, silent: boolean, restart: boolean, restartArgs?: readonly string[] | null): void;
+    waitExitThenApplyUpdates(toApply: VelopackAsset | null, silent: boolean, restart: boolean, restartArgs?: readonly string[] | null): void;
 }
 /**
  * The main VelopackApp struct. This is the main entry point for your app.
@@ -230,5 +230,5 @@ export declare class UpdateManager extends UpdateManagerSync {
      * packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
      * so may fail if there is already another update operation in progress.
      */
-    downloadUpdatesAsync(updateInfo: UpdateInfo, progress: (arg: number) => void): Promise<void>;
+    downloadUpdatesAsync(toDownload: VelopackAsset, progress: (arg: number) => void): Promise<void>;
 }

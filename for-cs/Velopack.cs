@@ -976,7 +976,7 @@ namespace Velopack
             return command;
         }
 
-        protected List<string> GetDownloadUpdatesCommand(UpdateInfo updateInfo)
+        protected List<string> GetDownloadUpdatesCommand(VelopackAsset toDownload)
         {
             if (this._urlOrPath.Length == 0)
             {
@@ -987,10 +987,8 @@ namespace Velopack
             command.Add("download");
             command.Add("--url");
             command.Add(this._urlOrPath);
-            if (this._allowDowngrade)
-            {
-                command.Add("--downgrade");
-            }
+            command.Add("--name");
+            command.Add(toDownload.FileName);
             if (this._explicitChannel.Length > 0)
             {
                 command.Add("--channel");
@@ -1032,35 +1030,35 @@ namespace Velopack
         /// this method will attempt to unpack and prepare them. If there is no delta update available, or there is an error preparing delta 
         /// packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
         /// so may fail if there is already another update operation in progress.</summary>
-        public void DownloadUpdates(UpdateInfo updateInfo)
+        public void DownloadUpdates(VelopackAsset toDownload)
         {
-            List<string> command = GetDownloadUpdatesCommand(updateInfo);
+            List<string> command = GetDownloadUpdatesCommand(toDownload);
             Platform.StartProcessBlocking(command);
         }
 
         /// <summary>This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified 
         /// restart arguments. If you need to save state or clean up, you should do that before calling this method. </summary>
         /// <remarks>The user may be prompted during the update, if the update requires additional frameworks to be installed etc.</remarks>
-        public void ApplyUpdatesAndExit(string assetPath)
+        public void ApplyUpdatesAndExit(VelopackAsset toApply)
         {
             List<string> args = new List<string>();
-            WaitExitThenApplyUpdates(assetPath, false, false, args);
+            WaitExitThenApplyUpdates(toApply, false, false, args);
             Platform.Exit(0);
         }
 
         /// <summary>This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified 
         /// restart arguments. If you need to save state or clean up, you should do that before calling this method. </summary>
         /// <remarks>The user may be prompted during the update, if the update requires additional frameworks to be installed etc.</remarks>
-        public void ApplyUpdatesAndRestart(string assetPath, List<string> restartArgs = null)
+        public void ApplyUpdatesAndRestart(VelopackAsset toApply, List<string> restartArgs = null)
         {
-            WaitExitThenApplyUpdates(assetPath, false, true, restartArgs);
+            WaitExitThenApplyUpdates(toApply, false, true, restartArgs);
             Platform.Exit(0);
         }
 
         /// <summary>This will launch the Velopack updater and tell it to wait for this program to exit gracefully.</summary>
         /// <remarks>You should then clean up any state and exit your app. The updater will apply updates and then
         /// optionally restart your app. The updater will only wait for 60 seconds before giving up.</remarks>
-        public void WaitExitThenApplyUpdates(string assetPath, bool silent, bool restart, List<string> restartArgs = null)
+        public void WaitExitThenApplyUpdates(VelopackAsset toApply, bool silent, bool restart, List<string> restartArgs = null)
         {
             List<string> command = new List<string>();
             command.Add(Platform.GetUpdateExePath());
@@ -1071,8 +1069,10 @@ namespace Velopack
             command.Add("apply");
             command.Add("--waitPid");
             command.Add($"{Platform.GetCurrentProcessId()}");
-            if (assetPath.Length > 0)
+            if (toApply != null)
             {
+                string packagesDir = GetPackagesDir();
+                string assetPath = Platform.PathJoin(packagesDir, toApply.FileName);
                 command.Add("--package");
                 command.Add(assetPath);
             }
@@ -1086,6 +1086,14 @@ namespace Velopack
                 command.AddRange(restartArgs);
             }
             Platform.StartProcessFireAndForget(command);
+        }
+
+        string GetPackagesDir()
+        {
+            List<string> command = new List<string>();
+            command.Add(Platform.GetFusionExePath());
+            command.Add("get-packages");
+            return Platform.StartProcessBlocking(command);
         }
     }
 
@@ -1146,9 +1154,9 @@ namespace Velopack
         }
 
         /// <inheritdoc cref="UpdateManagerSync.DownloadUpdates"/>
-        public async Task DownloadUpdatesAsync(UpdateInfo updateInfo, Action<int> progress = null)
+        public async Task DownloadUpdatesAsync(VelopackAsset toDownload, Action<int> progress = null)
         {
-            var command_line = GetDownloadUpdatesCommand(updateInfo);
+            var command_line = GetDownloadUpdatesCommand(toDownload);
             var psi = new ProcessStartInfo()
             {
                 CreateNoWindow = true,

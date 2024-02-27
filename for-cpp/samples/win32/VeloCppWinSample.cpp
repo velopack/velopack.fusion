@@ -5,8 +5,8 @@
 #include <malloc.h>
 #include <memory.h>
 #include <tchar.h>
-#include "../../Velopack.hpp"
 #include "constants.h"
+#include "../../Velopack.hpp"
 
 #pragma comment(linker, \
   "\"/manifestdependency:type='Win32' "\
@@ -165,7 +165,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 			{
 				if (updInfo != nullptr) {
 					try {
-						manager.downloadUpdates(updInfo);
+						manager.downloadUpdates(updInfo->targetFullRelease.get());
 					}
 					catch (std::exception& e) {
 						std::wstring wideWhat = utf8_to_wstring(e.what());
@@ -182,7 +182,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 					MessageBoxCentered(hWnd, L"Download an update first.", szTitle, MB_OK);
 				}
 				else {
-					manager.applyUpdatesAndRestart(updPath);
+					manager.applyUpdatesAndRestart(updInfo->targetFullRelease.get());
 				}
 			}
 		}

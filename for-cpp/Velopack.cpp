@@ -2196,7 +2196,7 @@ std::vector<std::string> UpdateManagerSync::getCheckForUpdatesCommand() const
     return command;
 }
 
-std::vector<std::string> UpdateManagerSync::getDownloadUpdatesCommand(std::shared_ptr<UpdateInfo> updateInfo) const
+std::vector<std::string> UpdateManagerSync::getDownloadUpdatesCommand(const VelopackAsset * toDownload) const
 {
     if (this->_urlOrPath.empty()) {
         throw std::runtime_error("Please call SetUrlOrPath before trying to download updates.");
@@ -2206,9 +2206,8 @@ std::vector<std::string> UpdateManagerSync::getDownloadUpdatesCommand(std::share
     command.push_back("download");
     command.push_back("--url");
     command.push_back(this->_urlOrPath);
-    if (this->_allowDowngrade) {
-        command.push_back("--downgrade");
-    }
+    command.push_back("--name");
+    command.push_back(toDownload->fileName);
     if (!this->_explicitChannel.empty()) {
         command.push_back("--channel");
         command.push_back(this->_explicitChannel);
@@ -2237,26 +2236,26 @@ std::shared_ptr<UpdateInfo> UpdateManagerSync::checkForUpdates() const
     return UpdateInfo::fromJson(output);
 }
 
-void UpdateManagerSync::downloadUpdates(std::shared_ptr<UpdateInfo> updateInfo) const
+void UpdateManagerSync::downloadUpdates(const VelopackAsset * toDownload) const
 {
-    std::vector<std::string> command = getDownloadUpdatesCommand(updateInfo);
+    std::vector<std::string> command = getDownloadUpdatesCommand(toDownload);
     Platform::startProcessBlocking(&command);
 }
 
-void UpdateManagerSync::applyUpdatesAndExit(std::string assetPath) const
+void UpdateManagerSync::applyUpdatesAndExit(const VelopackAsset * toApply) const
 {
     std::vector<std::string> args;
-    waitExitThenApplyUpdates(assetPath, false, false, &args);
+    waitExitThenApplyUpdates(toApply, false, false, &args);
     Platform::exit(0);
 }
 
-void UpdateManagerSync::applyUpdatesAndRestart(std::string assetPath, const std::vector<std::string> * restartArgs) const
+void UpdateManagerSync::applyUpdatesAndRestart(const VelopackAsset * toApply, const std::vector<std::string> * restartArgs) const
 {
-    waitExitThenApplyUpdates(assetPath, false, true, restartArgs);
+    waitExitThenApplyUpdates(toApply, false, true, restartArgs);
     Platform::exit(0);
 }
 
-void UpdateManagerSync::waitExitThenApplyUpdates(std::string assetPath, bool silent, bool restart, const std::vector<std::string> * restartArgs) const
+void UpdateManagerSync::waitExitThenApplyUpdates(const VelopackAsset * toApply, bool silent, bool restart, const std::vector<std::string> * restartArgs) const
 {
     std::vector<std::string> command;
     command.push_back(Platform::getUpdateExePath());
@@ -2266,7 +2265,9 @@ void UpdateManagerSync::waitExitThenApplyUpdates(std::string assetPath, bool sil
     command.push_back("apply");
     command.push_back("--waitPid");
     command.push_back(std::format("{}", Platform::getCurrentProcessId()));
-    if (!assetPath.empty()) {
+    if (toApply != nullptr) {
+        std::string packagesDir{getPackagesDir()};
+        std::string assetPath{Platform::pathJoin(packagesDir, toApply->fileName)};
         command.push_back("--package");
         command.push_back(assetPath);
     }
@@ -2278,5 +2279,13 @@ void UpdateManagerSync::waitExitThenApplyUpdates(std::string assetPath, bool sil
         command.insert(command.end(), restartArgs->begin(), restartArgs->end());
     }
     Platform::startProcessFireAndForget(&command);
+}
+
+std::string UpdateManagerSync::getPackagesDir() const
+{
+    std::vector<std::string> command;
+    command.push_back(Platform::getFusionExePath());
+    command.push_back("get-packages");
+    return Platform::startProcessBlocking(&command);
 }
 }

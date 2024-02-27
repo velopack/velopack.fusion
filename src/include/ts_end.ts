@@ -33,8 +33,8 @@ export class UpdateManager extends UpdateManagerSync {
      * packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
      * so may fail if there is already another update operation in progress.
      */
-    public async downloadUpdatesAsync(updateInfo: UpdateInfo, progress: (arg: number) => void): Promise<void> {
-        const command: string[] = this.getDownloadUpdatesCommand(updateInfo);
+    public async downloadUpdatesAsync(toDownload: VelopackAsset, progress: (arg: number) => void): Promise<void> {
+        const command: string[] = this.getDownloadUpdatesCommand(toDownload);
         await nativeStartProcessAsyncReadLine(command, (data: string) => {
             const p = parseInt(data);
             if (!isNaN(p) && p > 0) {

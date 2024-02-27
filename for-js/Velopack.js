@@ -41,7 +41,7 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
     if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
     return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
-var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _a, _Platform_impl_GetFusionExePath, _Platform_impl_GetUpdateExePath, _StringStream_instances, _StringStream_builder, _StringStream_writer, _StringStream_initialised, _StringStream_init, _UpdateManagerSync__allowDowngrade, _UpdateManagerSync__explicitChannel, _UpdateManagerSync__urlOrPath, _StringWriter_buf;
+var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _a, _Platform_impl_GetFusionExePath, _Platform_impl_GetUpdateExePath, _StringStream_instances, _StringStream_builder, _StringStream_writer, _StringStream_initialised, _StringStream_init, _UpdateManagerSync_instances, _UpdateManagerSync__allowDowngrade, _UpdateManagerSync__explicitChannel, _UpdateManagerSync__urlOrPath, _UpdateManagerSync_getPackagesDir, _StringWriter_buf;
 const { spawn, spawnSync } = require("child_process");
 const fs = require("fs");
 function emitLines(stream) {
@@ -868,6 +868,7 @@ export class UpdateInfo {
  */
 export class UpdateManagerSync {
     constructor() {
+        _UpdateManagerSync_instances.add(this);
         _UpdateManagerSync__allowDowngrade.set(this, false);
         _UpdateManagerSync__explicitChannel.set(this, "");
         _UpdateManagerSync__urlOrPath.set(this, "");
@@ -922,7 +923,7 @@ export class UpdateManagerSync {
         }
         return command;
     }
-    getDownloadUpdatesCommand(updateInfo) {
+    getDownloadUpdatesCommand(toDownload) {
         if (__classPrivateFieldGet(this, _UpdateManagerSync__urlOrPath, "f").length == 0) {
             throw new Error("Please call SetUrlOrPath before trying to download updates.");
         }
@@ -931,9 +932,8 @@ export class UpdateManagerSync {
         command.push("download");
         command.push("--url");
         command.push(__classPrivateFieldGet(this, _UpdateManagerSync__urlOrPath, "f"));
-        if (__classPrivateFieldGet(this, _UpdateManagerSync__allowDowngrade, "f")) {
-            command.push("--downgrade");
-        }
+        command.push("--name");
+        command.push(toDownload.fileName);
         if (__classPrivateFieldGet(this, _UpdateManagerSync__explicitChannel, "f").length > 0) {
             command.push("--channel");
             command.push(__classPrivateFieldGet(this, _UpdateManagerSync__explicitChannel, "f"));
@@ -974,8 +974,8 @@ export class UpdateManagerSync {
      * packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
      * so may fail if there is already another update operation in progress.
      */
-    downloadUpdates(updateInfo) {
-        const command = this.getDownloadUpdatesCommand(updateInfo);
+    downloadUpdates(toDownload) {
+        const command = this.getDownloadUpdatesCommand(toDownload);
         Platform.startProcessBlocking(command);
     }
     /**
@@ -983,9 +983,9 @@ export class UpdateManagerSync {
      * restart arguments. If you need to save state or clean up, you should do that before calling this method.
      * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
      */
-    applyUpdatesAndExit(assetPath) {
+    applyUpdatesAndExit(toApply) {
         const args = [];
-        this.waitExitThenApplyUpdates(assetPath, false, false, args);
+        this.waitExitThenApplyUpdates(toApply, false, false, args);
         Platform.exit(0);
     }
     /**
@@ -993,8 +993,8 @@ export class UpdateManagerSync {
      * restart arguments. If you need to save state or clean up, you should do that before calling this method.
      * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
      */
-    applyUpdatesAndRestart(assetPath, restartArgs = null) {
-        this.waitExitThenApplyUpdates(assetPath, false, true, restartArgs);
+    applyUpdatesAndRestart(toApply, restartArgs = null) {
+        this.waitExitThenApplyUpdates(toApply, false, true, restartArgs);
         Platform.exit(0);
     }
     /**
@@ -1002,7 +1002,7 @@ export class UpdateManagerSync {
      * You should then clean up any state and exit your app. The updater will apply updates and then
      * optionally restart your app. The updater will only wait for 60 seconds before giving up.
      */
-    waitExitThenApplyUpdates(assetPath, silent, restart, restartArgs = null) {
+    waitExitThenApplyUpdates(toApply, silent, restart, restartArgs = null) {
         const command = [];
         command.push(Platform.getUpdateExePath());
         if (silent) {
@@ -1011,7 +1011,9 @@ export class UpdateManagerSync {
         command.push("apply");
         command.push("--waitPid");
         command.push(`${Platform.getCurrentProcessId()}`);
-        if (assetPath.length > 0) {
+        if (toApply != null) {
+            let packagesDir = __classPrivateFieldGet(this, _UpdateManagerSync_instances, "m", _UpdateManagerSync_getPackagesDir).call(this);
+            let assetPath = Platform.pathJoin(packagesDir, toApply.fileName);
             command.push("--package");
             command.push(assetPath);
         }
@@ -1025,7 +1027,12 @@ export class UpdateManagerSync {
         Platform.startProcessFireAndForget(command);
     }
 }
-_UpdateManagerSync__allowDowngrade = new WeakMap(), _UpdateManagerSync__explicitChannel = new WeakMap(), _UpdateManagerSync__urlOrPath = new WeakMap();
+_UpdateManagerSync__allowDowngrade = new WeakMap(), _UpdateManagerSync__explicitChannel = new WeakMap(), _UpdateManagerSync__urlOrPath = new WeakMap(), _UpdateManagerSync_instances = new WeakSet(), _UpdateManagerSync_getPackagesDir = function _UpdateManagerSync_getPackagesDir() {
+    const command = [];
+    command.push(Platform.getFusionExePath());
+    command.push("get-packages");
+    return Platform.startProcessBlocking(command);
+};
 /**
  * The main VelopackApp struct. This is the main entry point for your app.
  */
@@ -1109,8 +1116,8 @@ export class UpdateManager extends UpdateManagerSync {
      * packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
      * so may fail if there is already another update operation in progress.
      */
-    async downloadUpdatesAsync(updateInfo, progress) {
-        const command = this.getDownloadUpdatesCommand(updateInfo);
+    async downloadUpdatesAsync(toDownload, progress) {
+        const command = this.getDownloadUpdatesCommand(toDownload);
         await nativeStartProcessAsyncReadLine(command, (data) => {
             const p = parseInt(data);
             if (!isNaN(p) && p > 0) {

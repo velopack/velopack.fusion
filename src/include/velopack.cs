@@ -16,9 +16,9 @@ namespace Velopack
         }
 
         /// <inheritdoc cref="UpdateManagerSync.DownloadUpdates"/>
-        public async Task DownloadUpdatesAsync(UpdateInfo updateInfo, Action<int> progress = null)
+        public async Task DownloadUpdatesAsync(VelopackAsset toDownload, Action<int> progress = null)
         {
-            var command_line = GetDownloadUpdatesCommand(updateInfo);
+            var command_line = GetDownloadUpdatesCommand(toDownload);
             var psi = new ProcessStartInfo()
             {
                 CreateNoWindow = true,

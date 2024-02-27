@@ -44,12 +44,10 @@ public class UpdateManagerSync
         command.Add("check");
         command.Add("--url");
         command.Add(_urlOrPath);
-
         if (_allowDowngrade)
         {
             command.Add("--downgrade");
         }
-
         if (_explicitChannel.Length > 0)
         {
             command.Add("--channel");
@@ -58,7 +56,7 @@ public class UpdateManagerSync
         return command;
     }
 
-    protected List<string()>() GetDownloadUpdatesCommand(UpdateInfo# updateInfo) throws Exception
+    protected List<string()>() GetDownloadUpdatesCommand(VelopackAsset toDownload) throws Exception
     {
         if (_urlOrPath.Length == 0)
         {
@@ -70,12 +68,8 @@ public class UpdateManagerSync
         command.Add("download");
         command.Add("--url");
         command.Add(_urlOrPath);
-
-        if (_allowDowngrade)
-        {
-            command.Add("--downgrade");
-        }
-
+        command.Add("--name");
+        command.Add(toDownload.FileName);
         if (_explicitChannel.Length > 0)
         {
             command.Add("--channel");
@@ -117,35 +111,35 @@ public class UpdateManagerSync
     /// this method will attempt to unpack and prepare them. If there is no delta update available, or there is an error preparing delta 
     /// packages, this method will fall back to downloading the full version of the update. This function will acquire a global update lock
     /// so may fail if there is already another update operation in progress.
-    public void DownloadUpdates(UpdateInfo# updateInfo) throws Exception
+    public void DownloadUpdates(VelopackAsset toDownload) throws Exception
     {
-        List<string()>() command = GetDownloadUpdatesCommand(updateInfo);
+        List<string()>() command = GetDownloadUpdatesCommand(toDownload);
         Platform.StartProcessBlocking(command); // throws on non-zero exit codes
     }
 
     /// This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified 
     /// restart arguments. If you need to save state or clean up, you should do that before calling this method. 
     /// The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
-    public void ApplyUpdatesAndExit(string() assetPath) throws Exception
+    public void ApplyUpdatesAndExit(VelopackAsset? toApply) throws Exception
     {
         List<string()>() args;
-        WaitExitThenApplyUpdates(assetPath, false, false, args);
+        WaitExitThenApplyUpdates(toApply, false, false, args);
         Platform.Exit(0);
     }
 
     /// This will exit your app immediately, apply updates, and then optionally relaunch the app using the specified 
     /// restart arguments. If you need to save state or clean up, you should do that before calling this method. 
     /// The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
-    public void ApplyUpdatesAndRestart(string() assetPath, List<string()>? restartArgs = null) throws Exception 
+    public void ApplyUpdatesAndRestart(VelopackAsset? toApply, List<string()>? restartArgs = null) throws Exception 
     {
-        WaitExitThenApplyUpdates(assetPath, false, true, restartArgs);
+        WaitExitThenApplyUpdates(toApply, false, true, restartArgs);
         Platform.Exit(0);
     }
 
     /// This will launch the Velopack updater and tell it to wait for this program to exit gracefully.
     /// You should then clean up any state and exit your app. The updater will apply updates and then
     /// optionally restart your app. The updater will only wait for 60 seconds before giving up.
-    public void WaitExitThenApplyUpdates(string() assetPath, bool silent, bool restart, List<string()>? restartArgs = null) throws Exception 
+    public void WaitExitThenApplyUpdates(VelopackAsset? toApply, bool silent, bool restart, List<string()>? restartArgs = null) throws Exception 
     {
         List<string()>() command;
         command.Add(Platform.GetUpdateExePath());
@@ -156,7 +150,9 @@ public class UpdateManagerSync
         command.Add("--waitPid");
         command.Add($"{Platform.GetCurrentProcessId()}");
 
-        if (assetPath.Length > 0) {
+        if (toApply != null) {
+            string() packagesDir = GetPackagesDir();
+            string() assetPath = Platform.PathJoin(packagesDir, toApply.FileName);
             command.Add("--package");
             command.Add(assetPath);
         }
@@ -171,5 +167,13 @@ public class UpdateManagerSync
         }
 
         Platform.StartProcessFireAndForget(command);
-    }  
+    }
+
+    string() GetPackagesDir() throws Exception 
+    {
+        List<string()>() command;
+        command.Add(Platform.GetFusionExePath());
+        command.Add("get-packages");
+        return Platform.StartProcessBlocking(command);
+    }
 }
