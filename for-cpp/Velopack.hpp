@@ -333,8 +333,8 @@ public:
      */
     bool isInstalled() const;
     /**
-     * Checks for updates, returning null if there are none available. If there are updates available, this method will return an 
-     * UpdateInfo object containing the latest available release, and any delta updates that can be applied if they are available.
+     * Get the currently installed version of the application. 
+     * If the application is not installed, this function will throw an exception.
      */
     std::string getCurrentVersion() const;
     /**
@@ -369,13 +369,25 @@ public:
      */
     void waitExitThenApplyUpdates(const VelopackAsset * toApply, bool silent, bool restart, const std::vector<std::string> * restartArgs = nullptr) const;
 protected:
+    /**
+     * Returns the command line arguments to get the current version of the application.
+     */
     std::vector<std::string> getCurrentVersionCommand() const;
+    /**
+     * Returns the command line arguments to check for updates.
+     */
     std::vector<std::string> getCheckForUpdatesCommand() const;
+    /**
+     * Returns the command line arguments to download the specified update.
+     */
     std::vector<std::string> getDownloadUpdatesCommand(const VelopackAsset * toDownload) const;
+    /**
+     * Returns the path to the app's packages directory. This is where updates are downloaded to.
+     */
+    std::string getPackagesDir() const;
 private:
     bool _allowDowngrade = false;
     std::string _explicitChannel{""};
     std::string _urlOrPath{""};
-    std::string getPackagesDir() const;
 };
 }

@@ -148,17 +148,30 @@ export declare class UpdateManagerSync {
      * without having to reinstall the application.
      */
     setExplicitChannel(explicitChannel: string): void;
+    /**
+     * Returns the command line arguments to get the current version of the application.
+     */
     protected getCurrentVersionCommand(): string[];
+    /**
+     * Returns the command line arguments to check for updates.
+     */
     protected getCheckForUpdatesCommand(): string[];
+    /**
+     * Returns the command line arguments to download the specified update.
+     */
     protected getDownloadUpdatesCommand(toDownload: VelopackAsset): string[];
+    /**
+     * Returns the path to the app's packages directory. This is where updates are downloaded to.
+     */
+    protected getPackagesDir(): string;
     /**
      * Returns true if the current app is installed, false otherwise. If the app is not installed, other functions in
      * UpdateManager may throw exceptions, so you may want to check this before calling other functions.
      */
     isInstalled(): boolean;
     /**
-     * Checks for updates, returning null if there are none available. If there are updates available, this method will return an
-     * UpdateInfo object containing the latest available release, and any delta updates that can be applied if they are available.
+     * Get the currently installed version of the application.
+     * If the application is not installed, this function will throw an exception.
      */
     getCurrentVersion(): string;
     /**

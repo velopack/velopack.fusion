@@ -41,7 +41,7 @@ var __classPrivateFieldSet = (this && this.__classPrivateFieldSet) || function (
     if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
     return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
 };
-var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _a, _Platform_impl_GetFusionExePath, _Platform_impl_GetUpdateExePath, _StringStream_instances, _StringStream_builder, _StringStream_writer, _StringStream_initialised, _StringStream_init, _UpdateManagerSync_instances, _UpdateManagerSync__allowDowngrade, _UpdateManagerSync__explicitChannel, _UpdateManagerSync__urlOrPath, _UpdateManagerSync_getPackagesDir, _StringWriter_buf;
+var _JsonNode_type, _JsonNode_objectValue, _JsonNode_arrayValue, _JsonNode_stringValue, _JsonNode_numberValue, _JsonNode_boolValue, _JsonParser_instances, _JsonParser_text, _JsonParser_position, _JsonParser_builder, _JsonParser_peekToken, _a, _Platform_impl_GetFusionExePath, _Platform_impl_GetUpdateExePath, _StringStream_instances, _StringStream_builder, _StringStream_writer, _StringStream_initialised, _StringStream_init, _UpdateManagerSync__allowDowngrade, _UpdateManagerSync__explicitChannel, _UpdateManagerSync__urlOrPath, _StringWriter_buf;
 const { spawn, spawnSync } = require("child_process");
 const fs = require("fs");
 function emitLines(stream) {
@@ -868,7 +868,6 @@ export class UpdateInfo {
  */
 export class UpdateManagerSync {
     constructor() {
-        _UpdateManagerSync_instances.add(this);
         _UpdateManagerSync__allowDowngrade.set(this, false);
         _UpdateManagerSync__explicitChannel.set(this, "");
         _UpdateManagerSync__urlOrPath.set(this, "");
@@ -899,12 +898,18 @@ export class UpdateManagerSync {
     setExplicitChannel(explicitChannel) {
         __classPrivateFieldSet(this, _UpdateManagerSync__explicitChannel, explicitChannel, "f");
     }
+    /**
+     * Returns the command line arguments to get the current version of the application.
+     */
     getCurrentVersionCommand() {
         const command = [];
         command.push(Platform.getFusionExePath());
         command.push("get-version");
         return command;
     }
+    /**
+     * Returns the command line arguments to check for updates.
+     */
     getCheckForUpdatesCommand() {
         if (__classPrivateFieldGet(this, _UpdateManagerSync__urlOrPath, "f").length == 0) {
             throw new Error("Please call SetUrlOrPath before trying to check for updates.");
@@ -923,6 +928,9 @@ export class UpdateManagerSync {
         }
         return command;
     }
+    /**
+     * Returns the command line arguments to download the specified update.
+     */
     getDownloadUpdatesCommand(toDownload) {
         if (__classPrivateFieldGet(this, _UpdateManagerSync__urlOrPath, "f").length == 0) {
             throw new Error("Please call SetUrlOrPath before trying to download updates.");
@@ -941,6 +949,15 @@ export class UpdateManagerSync {
         return command;
     }
     /**
+     * Returns the path to the app's packages directory. This is where updates are downloaded to.
+     */
+    getPackagesDir() {
+        const command = [];
+        command.push(Platform.getFusionExePath());
+        command.push("get-packages");
+        return Platform.startProcessBlocking(command);
+    }
+    /**
      * Returns true if the current app is installed, false otherwise. If the app is not installed, other functions in
      * UpdateManager may throw exceptions, so you may want to check this before calling other functions.
      */
@@ -948,8 +965,8 @@ export class UpdateManagerSync {
         return Platform.isInstalled();
     }
     /**
-     * Checks for updates, returning null if there are none available. If there are updates available, this method will return an
-     * UpdateInfo object containing the latest available release, and any delta updates that can be applied if they are available.
+     * Get the currently installed version of the application.
+     * If the application is not installed, this function will throw an exception.
      */
     getCurrentVersion() {
         const command = this.getCurrentVersionCommand();
@@ -1012,7 +1029,7 @@ export class UpdateManagerSync {
         command.push("--waitPid");
         command.push(`${Platform.getCurrentProcessId()}`);
         if (toApply != null) {
-            let packagesDir = __classPrivateFieldGet(this, _UpdateManagerSync_instances, "m", _UpdateManagerSync_getPackagesDir).call(this);
+            let packagesDir = this.getPackagesDir();
             let assetPath = Platform.pathJoin(packagesDir, toApply.fileName);
             command.push("--package");
             command.push(assetPath);
@@ -1027,12 +1044,7 @@ export class UpdateManagerSync {
         Platform.startProcessFireAndForget(command);
     }
 }
-_UpdateManagerSync__allowDowngrade = new WeakMap(), _UpdateManagerSync__explicitChannel = new WeakMap(), _UpdateManagerSync__urlOrPath = new WeakMap(), _UpdateManagerSync_instances = new WeakSet(), _UpdateManagerSync_getPackagesDir = function _UpdateManagerSync_getPackagesDir() {
-    const command = [];
-    command.push(Platform.getFusionExePath());
-    command.push("get-packages");
-    return Platform.startProcessBlocking(command);
-};
+_UpdateManagerSync__allowDowngrade = new WeakMap(), _UpdateManagerSync__explicitChannel = new WeakMap(), _UpdateManagerSync__urlOrPath = new WeakMap();
 /**
  * The main VelopackApp struct. This is the main entry point for your app.
  */

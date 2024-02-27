@@ -2215,6 +2215,14 @@ std::vector<std::string> UpdateManagerSync::getDownloadUpdatesCommand(const Velo
     return command;
 }
 
+std::string UpdateManagerSync::getPackagesDir() const
+{
+    std::vector<std::string> command;
+    command.push_back(Platform::getFusionExePath());
+    command.push_back("get-packages");
+    return Platform::startProcessBlocking(&command);
+}
+
 bool UpdateManagerSync::isInstalled() const
 {
     return Platform::isInstalled();
@@ -2279,13 +2287,5 @@ void UpdateManagerSync::waitExitThenApplyUpdates(const VelopackAsset * toApply, 
         command.insert(command.end(), restartArgs->begin(), restartArgs->end());
     }
     Platform::startProcessFireAndForget(&command);
-}
-
-std::string UpdateManagerSync::getPackagesDir() const
-{
-    std::vector<std::string> command;
-    command.push_back(Platform::getFusionExePath());
-    command.push_back("get-packages");
-    return Platform::startProcessBlocking(&command);
 }
 }

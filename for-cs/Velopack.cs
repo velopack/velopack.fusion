@@ -945,6 +945,7 @@ namespace Velopack
             this._explicitChannel = explicitChannel;
         }
 
+        /// <summary>Returns the command line arguments to get the current version of the application.</summary>
         protected List<string> GetCurrentVersionCommand()
         {
             List<string> command = new List<string>();
@@ -953,6 +954,7 @@ namespace Velopack
             return command;
         }
 
+        /// <summary>Returns the command line arguments to check for updates.</summary>
         protected List<string> GetCheckForUpdatesCommand()
         {
             if (this._urlOrPath.Length == 0)
@@ -976,6 +978,7 @@ namespace Velopack
             return command;
         }
 
+        /// <summary>Returns the command line arguments to download the specified update.</summary>
         protected List<string> GetDownloadUpdatesCommand(VelopackAsset toDownload)
         {
             if (this._urlOrPath.Length == 0)
@@ -997,6 +1000,15 @@ namespace Velopack
             return command;
         }
 
+        /// <summary>Returns the path to the app's packages directory. This is where updates are downloaded to.</summary>
+        protected string GetPackagesDir()
+        {
+            List<string> command = new List<string>();
+            command.Add(Platform.GetFusionExePath());
+            command.Add("get-packages");
+            return Platform.StartProcessBlocking(command);
+        }
+
         /// <summary>Returns true if the current app is installed, false otherwise. If the app is not installed, other functions in 
         /// UpdateManager may throw exceptions, so you may want to check this before calling other functions.</summary>
         public bool IsInstalled()
@@ -1004,8 +1016,8 @@ namespace Velopack
             return Platform.IsInstalled();
         }
 
-        /// <summary>Checks for updates, returning null if there are none available. If there are updates available, this method will return an 
-        /// UpdateInfo object containing the latest available release, and any delta updates that can be applied if they are available.</summary>
+        /// <summary>Get the currently installed version of the application. </summary>
+        /// <remarks>If the application is not installed, this function will throw an exception.</remarks>
         public string GetCurrentVersion()
         {
             List<string> command = GetCurrentVersionCommand();
@@ -1086,14 +1098,6 @@ namespace Velopack
                 command.AddRange(restartArgs);
             }
             Platform.StartProcessFireAndForget(command);
-        }
-
-        string GetPackagesDir()
-        {
-            List<string> command = new List<string>();
-            command.Add(Platform.GetFusionExePath());
-            command.Add("get-packages");
-            return Platform.StartProcessBlocking(command);
         }
     }
 
