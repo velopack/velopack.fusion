@@ -13,7 +13,7 @@ public class VelopackApp
     public void Run()
     {
 #if JS
-        native { VMACRO_NativeRegisterElectonQuit(); }
+        native { VMACRO_NativeRegisterElectron(); }
 #endif
 
         List<string()>() args;

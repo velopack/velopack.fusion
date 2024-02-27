@@ -64,7 +64,7 @@ function nativeExitProcess(code: number): void {
     }
 }
 
-function nativeRegisterElectonQuit(): void {
+function nativeRegisterElectron(): void {
     if (is_electron) {
         electron.ipcMain.on('velopack-quit', (event, code) => {
             electron.app.quit(code);
@@ -72,19 +72,33 @@ function nativeRegisterElectonQuit(): void {
         electron.ipcMain.on('velopack-get-pid', (event) => {
             event.returnValue = process.pid;
         });
+        electron.ipcMain.on('velopack-exec-fire-forget', (event, command) => {
+            nativeStartProcessFireAndForget(command);
+        });
+        electron.ipcMain.on('velopack-exec-blocking', (event, command) => {
+            event.returnValue = nativeStartProcessBlocking(command);
+        });
     }
 }
 
 function nativeStartProcessFireAndForget(command_line: readonly string[]): void {
-    spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
+    if (is_electron && !electron.app) {
+        electron.ipcRenderer.send('velopack-exec-fire-forget', command_line);
+    } else {
+        spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
+    }
 }
 
 function nativeStartProcessBlocking(command_line: readonly string[]): string {
-    const child = spawnSync(command_line[0], command_line.slice(1), { encoding: "utf8" });
-    if (child.status !== 0) {
-        throw new Error(`Process returned non-zero exit code (${child.status}). Check the log for more details.`);
+    if (is_electron && !electron.app) {
+        return electron.ipcRenderer.sendSync('velopack-exec-blocking', command_line);
+    } else {
+        const child = spawnSync(command_line[0], command_line.slice(1), { encoding: "utf8" });
+        if (child.status !== 0) {
+            throw new Error(`Process returned non-zero exit code (${child.status}). Check the log for more details.`);
+        }
+        return child.stdout;
     }
-    return child.stdout;
 }
 
 function nativeStartProcessAsync(command_line: readonly string[]): Promise<string> {
