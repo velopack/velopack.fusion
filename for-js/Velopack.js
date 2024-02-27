@@ -93,6 +93,7 @@ function nativeExitProcess(code) {
     if (is_electron) {
         if (electron.app) {
             electron.app.quit(code);
+            // app.quit does not exit fast enough, the browser window might still show in hooks
             process.exit(code);
         }
         else if (electron.remote) {
@@ -117,35 +118,19 @@ function nativeRegisterElectron() {
         electron.ipcMain.on("velopack-get-pid", (event) => {
             event.returnValue = process.pid;
         });
-        electron.ipcMain.on("velopack-exec-fire-forget", (event, command) => {
-            nativeStartProcessFireAndForget(command);
-        });
-        electron.ipcMain.on("velopack-exec-blocking", (event, command) => {
-            event.returnValue = nativeStartProcessBlocking(command);
-        });
     }
 }
 function nativeStartProcessFireAndForget(command_line) {
-    if (is_electron && !electron.app) {
-        electron.ipcRenderer.send("velopack-exec-fire-forget", command_line);
-    }
-    else {
-        spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
-    }
+    spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
 }
 function nativeStartProcessBlocking(command_line) {
-    if (is_electron && !electron.app) {
-        return electron.ipcRenderer.sendSync("velopack-exec-blocking", command_line);
+    const child = spawnSync(command_line[0], command_line.slice(1), {
+        encoding: "utf8",
+    });
+    if (child.status !== 0) {
+        throw new Error(`Process returned non-zero exit code (${child.status}). Check the log for more details.`);
     }
-    else {
-        const child = spawnSync(command_line[0], command_line.slice(1), {
-            encoding: "utf8",
-        });
-        if (child.status !== 0) {
-            throw new Error(`Process returned non-zero exit code (${child.status}). Check the log for more details.`);
-        }
-        return child.stdout;
-    }
+    return child.stdout;
 }
 function nativeStartProcessAsync(command_line) {
     return new Promise((resolve, reject) => {
@@ -1014,6 +999,35 @@ class UpdateManagerSync {
         return command;
     }
     /**
+     * Returns the command line arguments to apply the specified update.
+     */
+    getUpdateApplyCommand(toApply, silent, restart, wait, restartArgs = null) {
+        const command = [];
+        command.push(Platform.getUpdateExePath());
+        command.push("apply");
+        if (silent) {
+            command.push("--silent");
+        }
+        if (wait) {
+            command.push("--waitPid");
+            command.push(`${Platform.getCurrentProcessId()}`);
+        }
+        if (toApply != null) {
+            let packagesDir = this.getPackagesDir();
+            let assetPath = Platform.pathJoin(packagesDir, toApply.fileName);
+            command.push("--package");
+            command.push(assetPath);
+        }
+        if (restart) {
+            command.push("--restart");
+        }
+        if (restart && restartArgs != null && restartArgs.length > 0) {
+            command.push("--");
+            command.push(...restartArgs);
+        }
+        return command;
+    }
+    /**
      * Returns the path to the app's packages directory. This is where updates are downloaded to.
      */
     getPackagesDir() {
@@ -1066,8 +1080,8 @@ class UpdateManagerSync {
      * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
      */
     applyUpdatesAndExit(toApply) {
-        const args = [];
-        this.waitExitThenApplyUpdates(toApply, false, false, args);
+        const command = this.getUpdateApplyCommand(toApply, false, false, false);
+        Platform.startProcessFireAndForget(command);
         Platform.exit(0);
     }
     /**
@@ -1076,7 +1090,8 @@ class UpdateManagerSync {
      * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
      */
     applyUpdatesAndRestart(toApply, restartArgs = null) {
-        this.waitExitThenApplyUpdates(toApply, false, true, restartArgs);
+        const command = this.getUpdateApplyCommand(toApply, false, true, false, restartArgs);
+        Platform.startProcessFireAndForget(command);
         Platform.exit(0);
     }
     /**
@@ -1085,27 +1100,7 @@ class UpdateManagerSync {
      * optionally restart your app. The updater will only wait for 60 seconds before giving up.
      */
     waitExitThenApplyUpdates(toApply, silent, restart, restartArgs = null) {
-        const command = [];
-        command.push(Platform.getUpdateExePath());
-        if (silent) {
-            command.push("--silent");
-        }
-        command.push("apply");
-        command.push("--waitPid");
-        command.push(`${Platform.getCurrentProcessId()}`);
-        if (toApply != null) {
-            let packagesDir = this.getPackagesDir();
-            let assetPath = Platform.pathJoin(packagesDir, toApply.fileName);
-            command.push("--package");
-            command.push(assetPath);
-        }
-        if (restart) {
-            command.push("--restart");
-        }
-        if (restart && restartArgs != null && restartArgs.length > 0) {
-            command.push("--");
-            command.push(...restartArgs);
-        }
+        const command = this.getUpdateApplyCommand(toApply, silent, restart, true, restartArgs);
         Platform.startProcessFireAndForget(command);
     }
 }

@@ -382,6 +382,10 @@ protected:
      */
     std::vector<std::string> getDownloadUpdatesCommand(const VelopackAsset * toDownload) const;
     /**
+     * Returns the command line arguments to apply the specified update.
+     */
+    std::vector<std::string> getUpdateApplyCommand(const VelopackAsset * toApply, bool silent, bool restart, bool wait, const std::vector<std::string> * restartArgs = nullptr) const;
+    /**
      * Returns the path to the app's packages directory. This is where updates are downloaded to.
      */
     std::string getPackagesDir() const;

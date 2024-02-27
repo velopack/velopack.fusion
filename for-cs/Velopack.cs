@@ -1000,6 +1000,40 @@ namespace Velopack
             return command;
         }
 
+        /// <summary>Returns the command line arguments to apply the specified update.</summary>
+        protected List<string> GetUpdateApplyCommand(VelopackAsset toApply, bool silent, bool restart, bool wait, List<string> restartArgs = null)
+        {
+            List<string> command = new List<string>();
+            command.Add(Platform.GetUpdateExePath());
+            command.Add("apply");
+            if (silent)
+            {
+                command.Add("--silent");
+            }
+            if (wait)
+            {
+                command.Add("--waitPid");
+                command.Add($"{Platform.GetCurrentProcessId()}");
+            }
+            if (toApply != null)
+            {
+                string packagesDir = GetPackagesDir();
+                string assetPath = Platform.PathJoin(packagesDir, toApply.FileName);
+                command.Add("--package");
+                command.Add(assetPath);
+            }
+            if (restart)
+            {
+                command.Add("--restart");
+            }
+            if (restart && restartArgs != null && restartArgs.Count > 0)
+            {
+                command.Add("--");
+                command.AddRange(restartArgs);
+            }
+            return command;
+        }
+
         /// <summary>Returns the path to the app's packages directory. This is where updates are downloaded to.</summary>
         protected string GetPackagesDir()
         {
@@ -1053,8 +1087,8 @@ namespace Velopack
         /// <remarks>The user may be prompted during the update, if the update requires additional frameworks to be installed etc.</remarks>
         public void ApplyUpdatesAndExit(VelopackAsset toApply)
         {
-            List<string> args = new List<string>();
-            WaitExitThenApplyUpdates(toApply, false, false, args);
+            List<string> command = GetUpdateApplyCommand(toApply, false, false, false);
+            Platform.StartProcessFireAndForget(command);
             Platform.Exit(0);
         }
 
@@ -1063,7 +1097,8 @@ namespace Velopack
         /// <remarks>The user may be prompted during the update, if the update requires additional frameworks to be installed etc.</remarks>
         public void ApplyUpdatesAndRestart(VelopackAsset toApply, List<string> restartArgs = null)
         {
-            WaitExitThenApplyUpdates(toApply, false, true, restartArgs);
+            List<string> command = GetUpdateApplyCommand(toApply, false, true, false, restartArgs);
+            Platform.StartProcessFireAndForget(command);
             Platform.Exit(0);
         }
 
@@ -1072,31 +1107,7 @@ namespace Velopack
         /// optionally restart your app. The updater will only wait for 60 seconds before giving up.</remarks>
         public void WaitExitThenApplyUpdates(VelopackAsset toApply, bool silent, bool restart, List<string> restartArgs = null)
         {
-            List<string> command = new List<string>();
-            command.Add(Platform.GetUpdateExePath());
-            if (silent)
-            {
-                command.Add("--silent");
-            }
-            command.Add("apply");
-            command.Add("--waitPid");
-            command.Add($"{Platform.GetCurrentProcessId()}");
-            if (toApply != null)
-            {
-                string packagesDir = GetPackagesDir();
-                string assetPath = Platform.PathJoin(packagesDir, toApply.FileName);
-                command.Add("--package");
-                command.Add(assetPath);
-            }
-            if (restart)
-            {
-                command.Add("--restart");
-            }
-            if (restart && restartArgs != null && restartArgs.Count > 0)
-            {
-                command.Add("--");
-                command.AddRange(restartArgs);
-            }
+            List<string> command = GetUpdateApplyCommand(toApply, silent, restart, true, restartArgs);
             Platform.StartProcessFireAndForget(command);
         }
     }

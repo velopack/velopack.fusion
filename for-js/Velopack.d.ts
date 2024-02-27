@@ -161,6 +161,10 @@ export declare class UpdateManagerSync {
      */
     protected getDownloadUpdatesCommand(toDownload: VelopackAsset): string[];
     /**
+     * Returns the command line arguments to apply the specified update.
+     */
+    protected getUpdateApplyCommand(toApply: VelopackAsset | null, silent: boolean, restart: boolean, wait: boolean, restartArgs?: readonly string[] | null): string[];
+    /**
      * Returns the path to the app's packages directory. This is where updates are downloaded to.
      */
     protected getPackagesDir(): string;

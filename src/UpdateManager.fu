@@ -81,6 +81,40 @@ public class UpdateManagerSync
         return command;
     }
 
+    /// Returns the command line arguments to apply the specified update.
+    protected List<string()>() GetUpdateApplyCommand(VelopackAsset? toApply, bool silent, bool restart, bool wait, List<string()>? restartArgs = null) throws Exception
+    {
+        List<string()>() command;
+        command.Add(Platform.GetUpdateExePath());
+        command.Add("apply");
+
+        if (silent) {
+            command.Add("--silent");
+        }
+
+        if (wait) {
+            command.Add("--waitPid");
+            command.Add($"{Platform.GetCurrentProcessId()}");
+        }
+
+        if (toApply != null) {
+            string() packagesDir = GetPackagesDir();
+            string() assetPath = Platform.PathJoin(packagesDir, toApply.FileName);
+            command.Add("--package");
+            command.Add(assetPath);
+        }
+
+        if (restart) {
+            command.Add("--restart");
+        }
+
+        if (restart && restartArgs != null && restartArgs.Count > 0) {
+            command.Add("--");
+            command.AddRange(restartArgs);
+        }
+        return command;
+    }
+
     /// Returns the path to the app's packages directory. This is where updates are downloaded to.
     protected string() GetPackagesDir() throws Exception 
     {
@@ -134,8 +168,8 @@ public class UpdateManagerSync
     /// The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
     public void ApplyUpdatesAndExit(VelopackAsset? toApply) throws Exception
     {
-        List<string()>() args;
-        WaitExitThenApplyUpdates(toApply, false, false, args);
+        List<string()>() command = GetUpdateApplyCommand(toApply, false, false, false);
+        Platform.StartProcessFireAndForget(command);
         Platform.Exit(0);
     }
 
@@ -144,7 +178,8 @@ public class UpdateManagerSync
     /// The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
     public void ApplyUpdatesAndRestart(VelopackAsset? toApply, List<string()>? restartArgs = null) throws Exception 
     {
-        WaitExitThenApplyUpdates(toApply, false, true, restartArgs);
+        List<string()>() command = GetUpdateApplyCommand(toApply, false, true, false, restartArgs);
+        Platform.StartProcessFireAndForget(command);
         Platform.Exit(0);
     }
 
@@ -153,31 +188,7 @@ public class UpdateManagerSync
     /// optionally restart your app. The updater will only wait for 60 seconds before giving up.
     public void WaitExitThenApplyUpdates(VelopackAsset? toApply, bool silent, bool restart, List<string()>? restartArgs = null) throws Exception 
     {
-        List<string()>() command;
-        command.Add(Platform.GetUpdateExePath());
-        if (silent) {
-            command.Add("--silent");
-        }
-        command.Add("apply");
-        command.Add("--waitPid");
-        command.Add($"{Platform.GetCurrentProcessId()}");
-
-        if (toApply != null) {
-            string() packagesDir = GetPackagesDir();
-            string() assetPath = Platform.PathJoin(packagesDir, toApply.FileName);
-            command.Add("--package");
-            command.Add(assetPath);
-        }
-
-        if (restart) {
-            command.Add("--restart");
-        }
-
-        if (restart && restartArgs != null && restartArgs.Count > 0) {
-            command.Add("--");
-            command.AddRange(restartArgs);
-        }
-
+        List<string()>() command = GetUpdateApplyCommand(toApply, silent, restart, true, restartArgs);
         Platform.StartProcessFireAndForget(command);
     }
 }

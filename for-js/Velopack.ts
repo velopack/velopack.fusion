@@ -84,6 +84,7 @@ function nativeExitProcess(code: number): void {
   if (is_electron) {
     if (electron.app) {
       electron.app.quit(code);
+      // app.quit does not exit fast enough, the browser window might still show in hooks
       process.exit(code);
     } else if (electron.remote) {
       electron.remote.app.quit(code);
@@ -107,42 +108,25 @@ function nativeRegisterElectron(): void {
     electron.ipcMain.on("velopack-get-pid", (event) => {
       event.returnValue = process.pid;
     });
-    electron.ipcMain.on("velopack-exec-fire-forget", (event, command) => {
-      nativeStartProcessFireAndForget(command);
-    });
-    electron.ipcMain.on("velopack-exec-blocking", (event, command) => {
-      event.returnValue = nativeStartProcessBlocking(command);
-    });
   }
 }
 
 function nativeStartProcessFireAndForget(
   command_line: readonly string[],
 ): void {
-  if (is_electron && !electron.app) {
-    electron.ipcRenderer.send("velopack-exec-fire-forget", command_line);
-  } else {
-    spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
-  }
+  spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
 }
 
 function nativeStartProcessBlocking(command_line: readonly string[]): string {
-  if (is_electron && !electron.app) {
-    return electron.ipcRenderer.sendSync(
-      "velopack-exec-blocking",
-      command_line,
+  const child = spawnSync(command_line[0], command_line.slice(1), {
+    encoding: "utf8",
+  });
+  if (child.status !== 0) {
+    throw new Error(
+      `Process returned non-zero exit code (${child.status}). Check the log for more details.`,
     );
-  } else {
-    const child = spawnSync(command_line[0], command_line.slice(1), {
-      encoding: "utf8",
-    });
-    if (child.status !== 0) {
-      throw new Error(
-        `Process returned non-zero exit code (${child.status}). Check the log for more details.`,
-      );
-    }
-    return child.stdout;
   }
+  return child.stdout;
 }
 
 function nativeStartProcessAsync(
@@ -1101,6 +1085,42 @@ export class UpdateManagerSync {
   }
 
   /**
+   * Returns the command line arguments to apply the specified update.
+   */
+  protected getUpdateApplyCommand(
+    toApply: VelopackAsset | null,
+    silent: boolean,
+    restart: boolean,
+    wait: boolean,
+    restartArgs: readonly string[] | null = null,
+  ): string[] {
+    const command: string[] = [];
+    command.push(Platform.getUpdateExePath());
+    command.push("apply");
+    if (silent) {
+      command.push("--silent");
+    }
+    if (wait) {
+      command.push("--waitPid");
+      command.push(`${Platform.getCurrentProcessId()}`);
+    }
+    if (toApply != null) {
+      let packagesDir: string = this.getPackagesDir();
+      let assetPath: string = Platform.pathJoin(packagesDir, toApply.fileName);
+      command.push("--package");
+      command.push(assetPath);
+    }
+    if (restart) {
+      command.push("--restart");
+    }
+    if (restart && restartArgs != null && restartArgs.length > 0) {
+      command.push("--");
+      command.push(...restartArgs);
+    }
+    return command;
+  }
+
+  /**
    * Returns the path to the app's packages directory. This is where updates are downloaded to.
    */
   protected getPackagesDir(): string {
@@ -1158,8 +1178,13 @@ export class UpdateManagerSync {
    * The user may be prompted during the update, if the update requires additional frameworks to be installed etc.
    */
   public applyUpdatesAndExit(toApply: VelopackAsset | null): void {
-    const args: string[] = [];
-    this.waitExitThenApplyUpdates(toApply, false, false, args);
+    const command: string[] = this.getUpdateApplyCommand(
+      toApply,
+      false,
+      false,
+      false,
+    );
+    Platform.startProcessFireAndForget(command);
     Platform.exit(0);
   }
 
@@ -1172,7 +1197,14 @@ export class UpdateManagerSync {
     toApply: VelopackAsset | null,
     restartArgs: readonly string[] | null = null,
   ): void {
-    this.waitExitThenApplyUpdates(toApply, false, true, restartArgs);
+    const command: string[] = this.getUpdateApplyCommand(
+      toApply,
+      false,
+      true,
+      false,
+      restartArgs,
+    );
+    Platform.startProcessFireAndForget(command);
     Platform.exit(0);
   }
 
@@ -1187,27 +1219,13 @@ export class UpdateManagerSync {
     restart: boolean,
     restartArgs: readonly string[] | null = null,
   ): void {
-    const command: string[] = [];
-    command.push(Platform.getUpdateExePath());
-    if (silent) {
-      command.push("--silent");
-    }
-    command.push("apply");
-    command.push("--waitPid");
-    command.push(`${Platform.getCurrentProcessId()}`);
-    if (toApply != null) {
-      let packagesDir: string = this.getPackagesDir();
-      let assetPath: string = Platform.pathJoin(packagesDir, toApply.fileName);
-      command.push("--package");
-      command.push(assetPath);
-    }
-    if (restart) {
-      command.push("--restart");
-    }
-    if (restart && restartArgs != null && restartArgs.length > 0) {
-      command.push("--");
-      command.push(...restartArgs);
-    }
+    const command: string[] = this.getUpdateApplyCommand(
+      toApply,
+      silent,
+      restart,
+      true,
+      restartArgs,
+    );
     Platform.startProcessFireAndForget(command);
   }
 }
