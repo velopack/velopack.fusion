@@ -3,36 +3,6 @@ name: Build
 on: [ push, pull_request ]
 
 jobs:
-  build-fusion:
-    runs-on: windows-latest
-    steps:
-      - name: Print dotnet version
-        run: dotnet --info
-
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set Library Versions
-        run: dotnet run --set-version
-
-      - name: Build Fusion
-        run: dotnet run
-
-      - name: Cargo Publish
-        working-directory: for-rust
-        if: github.ref == 'refs/heads/master'
-        run: |
-          cargo login ${{ secrets.CARGO_TOKEN }}
-          cargo publish --allow-dirty
-
-      - name: NPM Publish
-        working-directory: for-js
-        if: github.ref == 'refs/heads/master'
-        run: |
-          npm set "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" 
-          npm publish --access public
-
   build-cli:
     strategy:
       matrix:
@@ -84,56 +54,57 @@ jobs:
       - name: Upload Rust Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: vfusion-cli-${{ matrix.os }}
+          name: rust-${{ matrix.os }}
           path: |
             for-rust/target/release/VfusionMac
             for-rust/target/release/VfusionNix
-            for-rust/target/release/*.exe
+            for-rust/target/release/Vfusion.exe
 
-  # package:
-  #   runs-on: ubuntu-latest
-  #   needs: [build]
-  #   steps:
-  #     - name: Print dotnet version
-  #       run: dotnet --info
+  build-fusion:
+    needs: [build-cli]
+    runs-on: windows-latest
+    steps:
+      - name: Print dotnet version
+        run: dotnet --info
 
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-  #     - uses: actions/cache@v4
-  #       with:
-  #         path: ~/.nuget/packages
-  #         key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
-  #         restore-keys: ${{ runner.os }}-nuget-
+      - name: Set Library Versions
+        run: dotnet run --set-version
 
-  #     - name: Download Rust OSX
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: rust-macos-latest
-  #         path: for-rust/target/release
+      - name: Build Fusion
+        run: dotnet run
 
-  #     - name: Download Rust Windows
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: rust-windows-latest
-  #         path: for-rust/target/release
+      - name: Download Rust OSX
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-macos-latest
+          path: for-js/bin
 
-  #     - name: Download Rust Linux
-  #       uses: actions/download-artifact@v4
-  #       with:
-  #         name: rust-ubuntu-latest
-  #         path: for-rust/target/release
+      - name: Download Rust Windows
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-windows-latest
+          path: for-js/bin
 
-  #     - name: Build .NET
-  #       run: dotnet build -c Release /p:PackRustAssets=true
+      - name: Download Rust Linux
+        uses: actions/download-artifact@v4
+        with:
+          name: rust-ubuntu-latest
+          path: for-js/bin
 
-  #     - name: Upload Package Artifacts
-  #       uses: actions/upload-artifact@v4
-  #       with:
-  #         name: packages
-  #         path: build/Release/*.nupkg
+      - name: Cargo Publish
+        working-directory: for-rust
+        if: github.ref == 'refs/heads/master'
+        run: |
+          cargo login ${{ secrets.CARGO_TOKEN }}
+          cargo publish --allow-dirty
 
-      # - name: Publish to GitHub Packages
-      #   shell: pwsh
-      #   run: dotnet nuget push build/Release/*.nupkg -k ${{ secrets.GITHUB_TOKEN }} -s https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json --skip-duplicate
+      - name: NPM Publish
+        working-directory: for-js
+        if: github.ref == 'refs/heads/master'
+        run: |
+          npm set "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}" 
+          npm publish --access public
