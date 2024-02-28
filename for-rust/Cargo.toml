@@ -17,6 +17,9 @@ cli = ["clap", "simplelog", "file-rotate"]
 delta = ["zstd"]
 async = ["async-std"]
 
+[package.metadata.docs.rs]
+features = ["async"]
+
 [lib]
 name = "velopack"
 path = "src/lib.rs"
