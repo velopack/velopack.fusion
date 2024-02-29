@@ -73,7 +73,7 @@ npx electron-forge package
 ```sh
 dotnet tool update -g vpk
 ```
-***Note: you must have the .NET Core SDK 6 installed to use and update the `vpk`***
+***Note: you must have the .NET Core SDK 6 installed to use and update `vpk`***
 
 7. Package your Velopack release / installers:
 ```sh
@@ -83,4 +83,4 @@ vpk pack -u MyAppUniqueId -v 1.0.0 -p /myBuildDir -e myexename.exe
 ✅ You're Done! Your app now has auto-updates and an installer.
 You can upload your release to your website, or use the `vpk upload` command to publish it to the destination of your choice.
 
-Read the Velopack documentation at [https://velopack.io/docs](https://velopack.io/docs) for more information.
+Read the [Velopack Documentation](https://velopack.io/docs) or the [Velopack JS Reference](https://velopack.io/ref/js/) for more information.

@@ -40,18 +40,25 @@ static void update_app()
 }
 ```
 
-4. Compile your app to a program using your usual compiler (eg. msvc, cmake, gcc, etc)
-
-5. Install the `vpk` command line tool:
+4. Install the `vpk` command line tool:
 ```sh
 dotnet tool update -g vpk
 ```
 ***Note: you must have the .NET Core SDK 6 installed to use and update `vpk`***
 
-6. Package your Velopack release / installers:
+5. Compile your app to a program using your usual compiler (eg. msvc, cmake, gcc, etc)
+
+6. Copy `Vfusion.exe`, `VfusionMac` or `VfusionNix` to your build output folder. This is a manual step for now, but may be automated in the future. You can compile this yourself, download a [recent build artifact](https://github.com/velopack/velopack.fusion/actions), or grab the latest [npm release](https://www.npmjs.com/package/velopack?activeTab=code) which also bundles the binaries.
+
+>[!WARNING]
+>Until this is automated, failing to copy the fusion binary to your update directory will result in your app being unable to update.
+
+7. Package your Velopack release / installers:
 ```sh
 vpk pack -u MyAppUniqueId -v 1.0.0 -p /myBuildDir -e myexename.exe
 ```
 
 ✅ You're Done! Your app now has auto-updates and an installer.
 You can upload your release to your website, or use the `vpk upload` command to publish it to the destination of your choice.
+
+Read the [Velopack Documentation](https://velopack.io/docs) or the [Velopack C++ Reference](https://velopack.io/ref/cpp/) for more information.

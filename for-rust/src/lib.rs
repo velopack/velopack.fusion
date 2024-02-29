@@ -67,7 +67,7 @@
 //! ```sh
 //! dotnet tool update -g vpk
 //! ```
-//! ***Note: you must have the .NET Core SDK 6 installed to use and update the `vpk`***
+//! ***Note: you must have the .NET Core SDK 6 installed to use and update `vpk`***
 //!
 //! 6. Package your Velopack release / installers:
 //! ```sh
