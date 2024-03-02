@@ -1321,7 +1321,7 @@ static subprocess_s nativeStartProcess(const std::vector<std::string> *command_l
 
 static void nativeStartProcessFireAndForget(const std::vector<std::string> *command_line)
 {
-    nativeStartProcess(command_line, subprocess_option_no_window);
+    nativeStartProcess(command_line, subprocess_option_no_window | subprocess_option_inherit_environment);
 }
 
 // static std::thread nativeStartProcessAsyncReadLine(const std::vector<std::string> *command_line, Velopack::ProcessReadLineHandler *handler)
@@ -1366,7 +1366,7 @@ static void nativeStartProcessFireAndForget(const std::vector<std::string> *comm
 
 static std::string nativeStartProcessBlocking(const std::vector<std::string> *command_line)
 {
-    subprocess_s subprocess = nativeStartProcess(command_line, subprocess_option_no_window);
+    subprocess_s subprocess = nativeStartProcess(command_line, subprocess_option_no_window | subprocess_option_inherit_environment);
     FILE *p_stdout = subprocess_stdout(&subprocess);
     std::filebuf buf = std::basic_filebuf<char>(p_stdout);
     std::istream is(&buf);
