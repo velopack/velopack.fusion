@@ -47,10 +47,9 @@ pub fn download_url_as_string(url: &str) -> Result<String> {
 }
 
 fn get_download_agent() -> Result<ureq::Agent> {
-    // let tls_builder = native_tls::TlsConnector::builder();
-    // let tls_connector = tls_builder.build()?;
-    // Ok(ureq::AgentBuilder::new().tls_connector(tls_connector.into()).build())
-    Ok(ureq::AgentBuilder::new().build())
+    let tls_builder = native_tls::TlsConnector::builder();
+    let tls_connector = tls_builder.build()?;
+    Ok(ureq::AgentBuilder::new().tls_connector(tls_connector.into()).build())
 }
 
 #[test]
