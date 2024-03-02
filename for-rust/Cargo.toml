@@ -42,11 +42,7 @@ rpath = false            # disable rpath
 [dependencies]
 anyhow = "1.0"
 log = "0.4"
-native-tls = "0.2"
-ureq = { version = "2.9", default-features = false, features = [
-    "native-tls",
-    "gzip",
-] }
+ureq = "2.9"
 url = "2.5"
 semver = "1.0"
 xml = "0.8"
