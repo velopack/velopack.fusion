@@ -94,6 +94,9 @@ void BuildCpp(StringBuilder sb)
     var outCpp = FusionBuild(sb, "for-cpp/Velopack.cpp", "CPP", includeVeloApp: false);
     var outHpp = Path.ChangeExtension(outCpp, ".hpp");
 
+    // patches
+    ReplaceAll(outCpp, "std::format(\"{}\",", "std::to_string(");
+
     // includes
     PrependFiles(outCpp, "disclaimer.txt", "subprocess.h", "velopack.cpp");
     PrependFiles(outHpp, "disclaimer.txt", "velopack.hpp");

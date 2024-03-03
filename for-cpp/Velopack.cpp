@@ -2242,7 +2242,7 @@ std::vector<std::string> UpdateManagerSync::getUpdateApplyCommand(const Velopack
     }
     if (wait) {
         command.push_back("--waitPid");
-        command.push_back(std::format("{}", Platform::getCurrentProcessId()));
+        command.push_back(std::to_string( Platform::getCurrentProcessId()));
     }
     if (toApply != nullptr) {
         std::string packagesDir{getPackagesDir()};
