@@ -8,8 +8,8 @@
 //! - ⚡️ **Lightning fast** – Velopack is written in Rust for native performance. Creating releases is multi-threaded, and produces delta packages for ultra fast app updates. Applying update packages is highly optimised, and often can be done in the background.
 //!
 //! ## Documentation
-//! The documentation in this rust crate only covers the create itself, so it's highly recommended that you also
-//! read the main Velopack documentation at [https://velopack.io/docs](https://velopack.io/docs).
+//! The documentation in this rust crate is minimal and only covers the create itself, so it's highly recommended that you also
+//! read the main Velopack documentation at [https://docs.velopack.io](https://docs.velopack.io).
 //!
 //! ## Components
 //! - **this crate**: The core library that provides auto-update features and glue to the other components.

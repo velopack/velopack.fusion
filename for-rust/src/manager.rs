@@ -206,10 +206,12 @@ impl<T: UpdateSource> UpdateManager<T> {
         let mut latest_version: Version = Version::parse("0.0.0")?;
         for asset in assets {
             if let Ok(sv) = Version::parse(&asset.Version) {
-                debug!("Found asset: {} ({}).", asset.FileName, sv.to_string());
-                if latest.is_none() || (sv > latest_version && asset.Type.eq_ignore_ascii_case("Full")) {
-                    latest = Some(asset);
-                    latest_version = sv;
+                if asset.Type.eq_ignore_ascii_case("Full") {
+                    debug!("Found full release: {} ({}).", asset.FileName, sv.to_string());
+                    if latest.is_none() || (sv > latest_version) {
+                        latest = Some(asset);
+                        latest_version = sv;
+                    }
                 }
             }
         }
