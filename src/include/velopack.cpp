@@ -15,7 +15,8 @@
 #define PATH_MAX MAX_PATH
 #include <Windows.h>
 #elif defined(__unix__) || defined(__APPLE__) && defined(__MACH__)
-#include <unistd.h> // For getpid on UNIX-like systems
+#include <unistd.h>  // For getpid on UNIX-like systems
+#include <libproc.h> // For proc_pidpath on UNIX-like systems
 #endif
 
 static std::string nativeCurrentOsName()
@@ -39,25 +40,33 @@ static void nativeExitProcess(int exit_code)
     ::exit(exit_code);
 }
 
+static int32_t nativeCurrentProcessId()
+{
+#if defined(_WIN32)
+    return GetCurrentProcessId();
+#elif defined(__unix__) || defined(__APPLE__) && defined(__MACH__)
+    return getpid();
+#else
+#error "Unsupported platform"
+    return -1; // Indicate error or unsupported platform
+#endif
+}
+
 static std::string nativeGetCurrentProcessPath()
 {
     const size_t buf_size = PATH_MAX;
     char path_buf[buf_size];
     size_t bytes_read = buf_size;
 
-#if defined(__APPLE__)
-    if (_NSGetExecutablePath(path_buf, &bytes_read) != 0)
-    {
-        throw std::runtime_error("Buffer size is too small for executable path.");
-    }
-#elif defined(_WIN32)
+#if defined(_WIN32)
     HMODULE hMod = GetModuleHandleA(NULL);
     bytes_read = GetModuleFileNameA(hMod, path_buf, buf_size);
 #else
-    bytes_read = readlink("/proc/self/exe", path_buf, bufSize);
-    if ((int)bytes_read == -1)
+    // Inspired by: https://stackoverflow.com/a/8149380
+    bytes_read = proc_pidpath(getpid(), path_buf, sizeof(path_buf));
+    if (bytes_read <= 0)
     {
-        throw std::runtime_error("Permission denied to /proc/self/exe.");
+        throw std::runtime_error("Can't find current process path");
     }
 #endif
 
@@ -80,7 +89,7 @@ static subprocess_s nativeStartProcess(const std::vector<std::string> *command_l
 
     if (result != 0)
     {
-        throw std::runtime_error("Unable to start Update process.");
+        throw std::runtime_error("Unable to start process.");
     }
 
     return subprocess;
@@ -89,6 +98,46 @@ static subprocess_s nativeStartProcess(const std::vector<std::string> *command_l
 static void nativeStartProcessFireAndForget(const std::vector<std::string> *command_line)
 {
     nativeStartProcess(command_line, subprocess_option_no_window | subprocess_option_inherit_environment);
+}
+
+static std::string nativeStartProcessBlocking(const std::vector<std::string> *command_line)
+{
+    subprocess_s subprocess = nativeStartProcess(command_line, subprocess_option_no_window | subprocess_option_inherit_environment);
+    FILE *p_stdout = subprocess_stdout(&subprocess);
+
+    if (!p_stdout)
+    {
+        throw std::runtime_error("Failed to open subprocess stdout.");
+    }
+
+    std::stringstream buffer;
+    constexpr size_t bufferSize = 4096; // Adjust buffer size as necessary
+    char readBuffer[bufferSize];
+
+    // Read the output in chunks
+    while (!feof(p_stdout) && !ferror(p_stdout))
+    {
+        size_t bytesRead = fread(readBuffer, 1, bufferSize, p_stdout);
+        if (bytesRead > 0)
+        {
+            buffer.write(readBuffer, bytesRead);
+        }
+    }
+
+    int return_code;
+    subprocess_join(&subprocess, &return_code);
+
+    if (return_code != 0)
+    {
+        throw std::runtime_error("Process returned non-zero exit code. Check the log for more details.");
+    }
+
+    if (ferror(p_stdout))
+    {
+        throw std::runtime_error("Error reading subprocess output.");
+    }
+
+    return buffer.str();
 }
 
 // static std::thread nativeStartProcessAsyncReadLine(const std::vector<std::string> *command_line, Velopack::ProcessReadLineHandler *handler)
@@ -130,38 +179,6 @@ static void nativeStartProcessFireAndForget(const std::vector<std::string> *comm
 
 //     return outputThread;
 // }
-
-static std::string nativeStartProcessBlocking(const std::vector<std::string> *command_line)
-{
-    subprocess_s subprocess = nativeStartProcess(command_line, subprocess_option_no_window | subprocess_option_inherit_environment);
-    FILE *p_stdout = subprocess_stdout(&subprocess);
-    std::filebuf buf = std::basic_filebuf<char>(p_stdout);
-    std::istream is(&buf);
-    std::stringstream buffer;
-    buffer << is.rdbuf();
-
-    int return_code;
-    subprocess_join(&subprocess, &return_code);
-
-    if (return_code != 0)
-    {
-        throw std::runtime_error("Process returned non-zero exit code. Check the log for more details.");
-    }
-
-    return buffer.str();
-}
-
-static int32_t nativeCurrentProcessId()
-{
-#if defined(_WIN32)
-    return GetCurrentProcessId();
-#elif defined(__unix__) || defined(__APPLE__) && defined(__MACH__)
-    return getpid();
-#else
-#error "Unsupported platform"
-    return -1; // Indicate error or unsupported platform
-#endif
-}
 
 namespace Velopack
 {
