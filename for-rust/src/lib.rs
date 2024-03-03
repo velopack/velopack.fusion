@@ -77,7 +77,7 @@
 //! ✅ You're Done! Your app now has auto-updates and an installer.
 //! You can upload your release to your website, or use the `vpk upload` command to publish it to the destination of your choice.
 //!
-//! Read the Velopack documentation at [https://velopack.io/docs](https://velopack.io/docs) for more information.
+//! Read the Velopack documentation at [https://docs.velopack.io/](https://docs.velopack.io/) for more information.
 
 #![warn(missing_docs)]
 
