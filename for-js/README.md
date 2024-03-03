@@ -1,86 +1,19 @@
 # Velopack
-[Velopack](https://velopack.io) is a auto-update and installation framework for cross-platform desktop applications.
-With less than 10 lines of code, you can add auto-update and installation features to your application.
+Velopack is an installation and auto-update framework for cross-platform applications. It's opinionated, extremely easy to use with zero config needed. With just one command you can be up and running with an installable application, and it's lightning fast for your users, too.
 
 ## Features
-- 😍 **Zero config** – Velopack takes your build output, and generates an installer, and updates and delta packages in a single command.
-- 🎯 **Cross platform** – Velopack supports building packages for **Windows**, **OSX**, and **Linux**. No matter your target, Velopack can create a release in just one command.
-- ⚡️ **Lightning fast** – Velopack is written in Rust for native performance. Creating releases is multi-threaded, and produces delta packages for ultra fast app updates. Applying update packages is ly optimised, and often can be done in the background.
+
+- 😍 **Zero config** – Velopack takes your compiler output and generates an installer, updates, delta packages, and self-updating portable package in just one command.
+- 🎯 **Cross platform** – Velopack supports building packages for **Windows**, **OSX**, and **Linux**, so you can use one solution for every target.
+- 🚀 **Automatic migrations** - If you are coming from other popular frameworks (eg. [Squirrel](https://github.com/Squirrel/Squirrel.Windows)), Velopack can automatically migrate your application.
+- ⚡️ **Lightning fast** – Velopack is written in Rust for native performance. Delta packages mean your user only downloads what's changed between versions.
+- 📔 **Language agnostic** - With support for C#, C++, JS, Rust and more. Use a familiar API for updates no matter what language your project is.
 
 ## Documentation
-The functions in this library are documented, and there is a quick start below, but it it's highly recommended that you also
-read the main Velopack documentation at [https://velopack.io/docs](https://velopack.io/docs).
+- 📖 [Read the docs](https://docs.velopack.io/)
+- ⚡ [Quick start guides](https://docs.velopack.io/category/quick-start)
+- 🕶️ [View example apps](https://docs.velopack.io/category/sample-apps)
 
-## Quick Start
-This quick start is slightly tailored to Electron, so if you are using pure nodejs and bundling your app using [pkg](https://github.com/vercel/pkg) or similar you can ignore those steps.
-
-1. Add Velopack to your `package.json`:
-```txt
-npm install velopack
-```
-
-2. Add the following code to your entry point (eg. `index.js`) as early as possible (before any electron startup code etc.):
-```js
-const { VelopackApp } = require('velopack');
-
-// Velopack builder needs to be the first thing to run in the main process.
-// In some cases, it might quit/restart the process to perform tasks.
-VelopackApp.build().run();
-
-// ... your other app startup code here
-```
-
-3. Add auto-updates somewhere to your app:
-```js
-const { UpdateManager } = require('velopack');
-
-async function updateApp()
-{
-    const um = new UpdateManager();
-    um.setUrlOrPath("https://the.place/you-host/updates");
-
-    const updateInfo = await um.checkForUpdatesAsync();
-    if (!updateInfo) {
-        return; // no update available
-    }
-
-    await um.downloadUpdatesAsync(updateInfo.targetFullRelease, p => {
-        console.log(`progress: ${p}%`);
-    });
-
-    um.applyUpdatesAndRestart(updateInfo.targetFullRelease);
-}
-```
-
-4. If you are using electron/forge, you will need to add an asar unpack rule:
-```js
-module.exports = {
-  packagerConfig: {
-    asar: {
-      // velopack contains native binaries which must remain unpacked
-      unpack: '**/node_modules/velopack/**',
-    },
-  },
-}
-```
-
-5. Compile your app to a binary (eg. `.exe` on Windows). Example using electron forge:
-```sh
-npx electron-forge package
-```
-
-6. Install the `vpk` command line tool:
-```sh
-dotnet tool update -g vpk
-```
-***Note: you must have the .NET Core SDK 6 installed to use and update `vpk`***
-
-7. Package your Velopack release / installers:
-```sh
-vpk pack -u MyAppUniqueId -v 1.0.0 -p /myBuildDir -e myexename.exe
-```
-
-✅ You're Done! Your app now has auto-updates and an installer.
-You can upload your release to your website, or use the `vpk upload` command to publish it to the destination of your choice.
-
-Read the [Velopack Documentation](https://velopack.io/docs) or the [Velopack JS Reference](https://velopack.io/ref/js/) for more information.
+## Community
+- ❓ Ask questions, get support, or discuss ideas on [our Discord server](https://discord.gg/CjrCrNzd3F)
+- 🗣️ Report bugs on [GitHub Issues](https://github.com/velopack/velopack/issues)
