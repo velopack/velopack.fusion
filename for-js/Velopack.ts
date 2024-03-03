@@ -538,13 +538,9 @@ class JsonParser {
   }
 
   public parseNumber(): JsonNode {
-    let d: number;
-    if (!isNaN((d = parseFloat(this.readWord())))) {
-      let node: JsonNode = new JsonNode();
-      node.initNumber(d);
-      return node;
-    }
-    throw new Error("Invalid number");
+    let node: JsonNode = new JsonNode();
+    node.initNumber(Platform.parseDouble(this.readWord()));
+    return node;
   }
 
   public parseString(): JsonNode {
@@ -587,12 +583,7 @@ class JsonParser {
               this.#builder.writeChar(9);
               break;
             case 117:
-              let i: number;
-              if (!isNaN((i = parseInt(this.readN(4), 16)))) {
-                this.#builder.writeChar(i);
-              } else {
-                throw new Error("Invalid unicode escape");
-              }
+              this.#builder.writeChar(Platform.parseHex(this.readN(4)));
               break;
           }
           break;
@@ -781,6 +772,24 @@ class Platform {
       return match[1];
     }
     return str;
+  }
+
+  public static parseDouble(str: string): number {
+    let d: number = 0;
+    if (!isNaN((d = parseFloat(str)))) {
+      return d;
+    }
+    throw new Error("ParseDouble failed, string is not a valid double");
+  }
+
+  public static parseHex(str: string): number {
+    let i: number = 0;
+    if (!isNaN((i = parseInt(str, 16)))) {
+      return i;
+    }
+    throw new Error(
+      "ParseHex failed, string is not a valid hexidecimal number",
+    );
   }
 
   public static pathParent(str: string): string {

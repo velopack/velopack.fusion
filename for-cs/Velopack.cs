@@ -407,14 +407,9 @@ namespace Velopack
 
         public JsonNode ParseNumber()
         {
-            double d;
-            if (double.TryParse(ReadWord(), out d))
-            {
-                JsonNode node = new JsonNode();
-                node.InitNumber(d);
-                return node;
-            }
-            throw new Exception("Invalid number");
+            JsonNode node = new JsonNode();
+            node.InitNumber(Platform.ParseDouble(ReadWord()));
+            return node;
         }
 
         public JsonNode ParseString()
@@ -463,15 +458,7 @@ namespace Velopack
                                 this.builder.WriteChar('\t');
                                 break;
                             case 'u':
-                                int i;
-                                if (int.TryParse(ReadN(4), NumberStyles.HexNumber, null, out i))
-                                {
-                                    this.builder.WriteChar(i);
-                                }
-                                else
-                                {
-                                    throw new Exception("Invalid unicode escape");
-                                }
+                                this.builder.WriteChar(Platform.ParseHex(ReadN(4)));
                                 break;
                         }
                         break;
@@ -684,6 +671,26 @@ namespace Velopack
                 return match.Groups[1].Value;
             }
             return str;
+        }
+
+        public static double ParseDouble(string str)
+        {
+            double d = 0;
+            if (double.TryParse(str, out d))
+            {
+                return d;
+            }
+            throw new Exception("ParseDouble failed, string is not a valid double");
+        }
+
+        public static int ParseHex(string str)
+        {
+            int i = 0;
+            if (int.TryParse(str, NumberStyles.HexNumber, null, out i))
+            {
+                return i;
+            }
+            throw new Exception("ParseHex failed, string is not a valid hexidecimal number");
         }
 
         public static string PathParent(string str)

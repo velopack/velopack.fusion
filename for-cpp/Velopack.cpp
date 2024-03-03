@@ -1784,13 +1784,9 @@ std::shared_ptr<JsonNode> JsonParser::parseBool()
 
 std::shared_ptr<JsonNode> JsonParser::parseNumber()
 {
-    double d;
-    if ([&] { char *ciend; d = std::strtod(readWord().data(), &ciend); return *ciend == '\0'; }()) {
-        std::shared_ptr<JsonNode> node = std::make_shared<JsonNode>();
-        node->initNumber(d);
-        return node;
-    }
-    throw std::runtime_error("Invalid number");
+    std::shared_ptr<JsonNode> node = std::make_shared<JsonNode>();
+    node->initNumber(Platform::parseDouble(readWord()));
+    return node;
 }
 
 std::shared_ptr<JsonNode> JsonParser::parseString()
@@ -1836,16 +1832,8 @@ std::shared_ptr<JsonNode> JsonParser::parseString()
                 this->builder.writeChar('\t');
                 break;
             case 'u':
-                {
-                    int i;
-                    if ([&] { char *ciend; i = std::strtol(readN(4).data(), &ciend, 16); return *ciend == '\0'; }()) {
-                        this->builder.writeChar(i);
-                    }
-                    else {
-                        throw std::runtime_error("Invalid unicode escape");
-                    }
-                    break;
-                }
+                this->builder.writeChar(Platform::parseHex(readN(4)));
+                break;
             }
             break;
         default:
@@ -2034,6 +2022,24 @@ std::string Platform::strTrim(std::string str)
         return match.str(1);
     }
     return str;
+}
+
+double Platform::parseDouble(std::string_view str)
+{
+    double d = 0;
+    if ([&] { char *ciend; d = std::strtod(str.data(), &ciend); return *ciend == '\0'; }()) {
+        return d;
+    }
+    throw std::runtime_error("ParseDouble failed, string is not a valid double");
+}
+
+int Platform::parseHex(std::string_view str)
+{
+    int i = 0;
+    if ([&] { char *ciend; i = std::strtol(str.data(), &ciend, 16); return *ciend == '\0'; }()) {
+        return i;
+    }
+    throw std::runtime_error("ParseHex failed, string is not a valid hexidecimal number");
 }
 
 std::string Platform::pathParent(std::string str)

@@ -210,6 +210,8 @@ public:
     static std::string getFusionExePath();
     static std::string getUpdateExePath();
     static std::string strTrim(std::string str);
+    static double parseDouble(std::string_view str);
+    static int parseHex(std::string_view str);
     static std::string pathParent(std::string str);
     static std::string pathJoin(std::string s1, std::string s2);
     static std::string_view pathSeparator();

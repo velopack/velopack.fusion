@@ -435,13 +435,9 @@ class JsonParser {
         }
     }
     parseNumber() {
-        let d;
-        if (!isNaN((d = parseFloat(this.readWord())))) {
-            let node = new JsonNode();
-            node.initNumber(d);
-            return node;
-        }
-        throw new Error("Invalid number");
+        let node = new JsonNode();
+        node.initNumber(Platform.parseDouble(this.readWord()));
+        return node;
     }
     parseString() {
         __classPrivateFieldGet(this, _JsonParser_builder, "f").clear();
@@ -483,13 +479,7 @@ class JsonParser {
                             __classPrivateFieldGet(this, _JsonParser_builder, "f").writeChar(9);
                             break;
                         case 117:
-                            let i;
-                            if (!isNaN((i = parseInt(this.readN(4), 16)))) {
-                                __classPrivateFieldGet(this, _JsonParser_builder, "f").writeChar(i);
-                            }
-                            else {
-                                throw new Error("Invalid unicode escape");
-                            }
+                            __classPrivateFieldGet(this, _JsonParser_builder, "f").writeChar(Platform.parseHex(this.readN(4)));
                             break;
                     }
                     break;
@@ -684,6 +674,20 @@ class Platform {
             return match[1];
         }
         return str;
+    }
+    static parseDouble(str) {
+        let d = 0;
+        if (!isNaN((d = parseFloat(str)))) {
+            return d;
+        }
+        throw new Error("ParseDouble failed, string is not a valid double");
+    }
+    static parseHex(str) {
+        let i = 0;
+        if (!isNaN((i = parseInt(str, 16)))) {
+            return i;
+        }
+        throw new Error("ParseHex failed, string is not a valid hexidecimal number");
     }
     static pathParent(str) {
         let ix_win = str.lastIndexOf("\\");

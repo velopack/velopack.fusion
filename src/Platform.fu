@@ -112,6 +112,34 @@ static class Platform
         return str;
     }
 
+    public static double ParseDouble(string str) throws Exception
+    {
+        double d = 0;
+#if JAVA
+        native { d = Double.parseDouble(str); }
+        return d;
+#else
+        if (d.TryParse(str)) {
+            return d;
+        }
+        throw Exception("ParseDouble failed, string is not a valid double");
+#endif
+    }
+
+    public static int ParseHex(string str) throws Exception
+    {
+        int i = 0;
+#if JAVA
+        native { i = Integer.parseInt(str, 16); }
+        return i;
+#else
+        if (i.TryParse(str, 16)) {
+            return i;
+        } 
+        throw Exception("ParseHex failed, string is not a valid hexidecimal number");
+#endif
+    }
+
     public static string() PathParent(string() str)
     {
         int ix_win = str.LastIndexOf("\\");

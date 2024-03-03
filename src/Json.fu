@@ -342,14 +342,9 @@ class JsonParser
 
     public JsonNode# ParseNumber!() throws Exception 
     {
-        double d;
-        if (d.TryParse(ReadWord())) {
-            JsonNode# node = new JsonNode();
-            node.InitNumber(d);
-            return node;
-        }
-
-        throw Exception("Invalid number");
+        JsonNode# node = new JsonNode();
+        node.InitNumber(Platform.ParseDouble(ReadWord()));
+        return node;
     }
 
     public JsonNode# ParseString!() throws Exception
@@ -395,12 +390,7 @@ class JsonParser
                             builder.WriteChar('\t');
                             break;
                         case 'u':
-                            int i;
-                            if (i.TryParse(ReadN(4), 16)) {
-                                builder.WriteChar(i);
-                            } else {
-                                throw Exception("Invalid unicode escape");
-                            }
+                            builder.WriteChar(Platform.ParseHex(ReadN(4)));
                             break;
                     }
                     break;
