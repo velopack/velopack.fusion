@@ -9,14 +9,93 @@
 #include <sstream>
 #include <thread>
 #include "Velopack.hpp"
+// #include "subprocess.h"
 
+// platform-specific includes
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #define PATH_MAX MAX_PATH
+#include <Windows.h> // For GetCurrentProcessId, GetModuleFileName, MultiByteToWideChar, WideCharToMultiByte, LCMapStringEx
+#elif defined(__unix__) || defined(__APPLE__)
+#include <unistd.h>  // For getpid
+#include <libproc.h> // For proc_pidpath
+#endif
+
+// unicode string manipulation support
+#if defined(QT_CORE_LIB)
+
+#include <QString>
+static std::string VeloString_ToLower(std::string_view s)
+{
+    QString t = QString::fromStdString(std::string { s });
+    return t.toLower().toStdString();
+}
+
+static std::string VeloString_ToUpper(std::string_view s)
+{
+    QString t = QString::fromStdString(std::string { s });
+    return t.toUpper().toStdString();
+}
+
+#elif defined(_WIN32)
+
 #include <Windows.h>
-#elif defined(__unix__) || defined(__APPLE__) && defined(__MACH__)
-#include <unistd.h>  // For getpid on UNIX-like systems
-#include <libproc.h> // For proc_pidpath on UNIX-like systems
+static std::string VeloString_Win32LCMap(std::string_view s, DWORD flags)
+{
+    int size = MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), nullptr, 0);
+    std::wstring wide(size, 0);
+    MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), wide.data(), size);
+    size = LCMapStringEx(LOCALE_NAME_SYSTEM_DEFAULT, LCMAP_LINGUISTIC_CASING | flags, wide.data(), size, nullptr, 0, nullptr, nullptr, 0);
+    std::wstring wideResult(size, 0);
+    LCMapStringEx(LOCALE_NAME_SYSTEM_DEFAULT, LCMAP_LINGUISTIC_CASING | flags, wide.data(), wide.size(), wideResult.data(), size, nullptr, nullptr, 0);
+    int resultSize = WideCharToMultiByte(CP_UTF8, 0, wideResult.data(), size, nullptr, 0, nullptr, nullptr);
+    std::string result(resultSize, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wideResult.data(), size, result.data(), resultSize, nullptr, nullptr);
+    return result;
+}
+
+static std::string VeloString_ToLower(std::string_view s)
+{
+    return VeloString_Win32LCMap(s, LCMAP_LOWERCASE);
+}
+
+static std::string VeloString_ToUpper(std::string_view s)
+{
+    return VeloString_Win32LCMap(s, LCMAP_UPPERCASE);
+}
+
+#elif defined(VELOPACK_NO_ICU)
+
+static std::string VeloString_ToLower(std::string_view s)
+{
+    std::string data(s);
+    std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c){ return std::tolower(c); });
+    return data;
+}
+
+static std::string VeloString_ToUpper(std::string_view s)
+{
+    std::string data(s);
+    std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c){ return std::toupper(c); });
+    return data;
+}
+
+#else
+
+#include <unicode/unistr.h>
+
+static std::string VeloString_ToLower(std::string_view s)
+{
+    std::string result;
+    return icu::UnicodeString::fromUTF8(s).toLower().toUTF8String(result);
+}
+
+static std::string VeloString_ToUpper(std::string_view s)
+{
+    std::string result;
+    return icu::UnicodeString::fromUTF8(s).toUpper().toUTF8String(result);
+}
+
 #endif
 
 static std::string nativeCurrentOsName()

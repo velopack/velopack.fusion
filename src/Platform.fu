@@ -126,6 +126,28 @@ static class Platform
 #endif
     }
 
+    public static string() ToLower(string str)
+    {
+        string() result = "";
+#if CPP
+        native { result = VeloString_ToLower(str); }
+#else 
+        result = str.ToLower();
+#endif
+        return result;
+    }
+
+    public static string() ToUpper(string str)
+    {
+        string() result = "";
+#if CPP
+        native { result = VeloString_ToUpper(str); }
+#else 
+        result = str.ToLower();
+#endif
+        return result;
+    }
+
     public static int ParseHex(string str) throws Exception
     {
         int i = 0;

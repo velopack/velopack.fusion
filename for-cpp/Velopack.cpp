@@ -1242,14 +1242,93 @@ int subprocess_alive(struct subprocess_s *const process) {
 #include <sstream>
 #include <thread>
 #include "Velopack.hpp"
+// #include "subprocess.h"
 
+// platform-specific includes
 #if defined(_WIN32)
 #define WIN32_LEAN_AND_MEAN
 #define PATH_MAX MAX_PATH
+#include <Windows.h> // For GetCurrentProcessId, GetModuleFileName, MultiByteToWideChar, WideCharToMultiByte, LCMapStringEx
+#elif defined(__unix__) || defined(__APPLE__)
+#include <unistd.h>  // For getpid
+#include <libproc.h> // For proc_pidpath
+#endif
+
+// unicode string manipulation support
+#if defined(QT_CORE_LIB)
+
+#include <QString>
+static std::string VeloString_ToLower(std::string_view s)
+{
+    QString t = QString::fromStdString(std::string { s });
+    return t.toLower().toStdString();
+}
+
+static std::string VeloString_ToUpper(std::string_view s)
+{
+    QString t = QString::fromStdString(std::string { s });
+    return t.toUpper().toStdString();
+}
+
+#elif defined(_WIN32)
+
 #include <Windows.h>
-#elif defined(__unix__) || defined(__APPLE__) && defined(__MACH__)
-#include <unistd.h>  // For getpid on UNIX-like systems
-#include <libproc.h> // For proc_pidpath on UNIX-like systems
+static std::string VeloString_Win32LCMap(std::string_view s, DWORD flags)
+{
+    int size = MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), nullptr, 0);
+    std::wstring wide(size, 0);
+    MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), wide.data(), size);
+    size = LCMapStringEx(LOCALE_NAME_SYSTEM_DEFAULT, LCMAP_LINGUISTIC_CASING | flags, wide.data(), size, nullptr, 0, nullptr, nullptr, 0);
+    std::wstring wideResult(size, 0);
+    LCMapStringEx(LOCALE_NAME_SYSTEM_DEFAULT, LCMAP_LINGUISTIC_CASING | flags, wide.data(), wide.size(), wideResult.data(), size, nullptr, nullptr, 0);
+    int resultSize = WideCharToMultiByte(CP_UTF8, 0, wideResult.data(), size, nullptr, 0, nullptr, nullptr);
+    std::string result(resultSize, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wideResult.data(), size, result.data(), resultSize, nullptr, nullptr);
+    return result;
+}
+
+static std::string VeloString_ToLower(std::string_view s)
+{
+    return VeloString_Win32LCMap(s, LCMAP_LOWERCASE);
+}
+
+static std::string VeloString_ToUpper(std::string_view s)
+{
+    return VeloString_Win32LCMap(s, LCMAP_UPPERCASE);
+}
+
+#elif defined(VELOPACK_NO_ICU)
+
+static std::string VeloString_ToLower(std::string_view s)
+{
+    std::string data(s);
+    std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c){ return std::tolower(c); });
+    return data;
+}
+
+static std::string VeloString_ToUpper(std::string_view s)
+{
+    std::string data(s);
+    std::transform(data.begin(), data.end(), data.begin(), [](unsigned char c){ return std::toupper(c); });
+    return data;
+}
+
+#else
+
+#include <unicode/unistr.h>
+
+static std::string VeloString_ToLower(std::string_view s)
+{
+    std::string result;
+    return icu::UnicodeString::fromUTF8(s).toLower().toUTF8String(result);
+}
+
+static std::string VeloString_ToUpper(std::string_view s)
+{
+    std::string result;
+    return icu::UnicodeString::fromUTF8(s).toUpper().toUTF8String(result);
+}
+
 #endif
 
 static std::string nativeCurrentOsName()
@@ -1470,41 +1549,6 @@ namespace Velopack
 #include <regex>
 #include <stdexcept>
 #include "Velopack.hpp"
-
-#ifdef _WIN32
-
-#include <Windows.h>
-
-static std::string FuString_Win32LCMap(std::string_view s, DWORD flags)
-{
-    int size = MultiByteToWideChar(CP_UTF8, 0, s.data(), (int) s.size(), nullptr, 0);
-    std::wstring wide(size, 0);
-    MultiByteToWideChar(CP_UTF8, 0, s.data(), (int) s.size(), wide.data(), size);
-    size = LCMapStringEx(LOCALE_NAME_SYSTEM_DEFAULT, LCMAP_LINGUISTIC_CASING | flags, wide.data(), size, nullptr, 0, nullptr, nullptr, 0);
-    std::wstring wideResult(size, 0);
-    LCMapStringEx(LOCALE_NAME_SYSTEM_DEFAULT, LCMAP_LINGUISTIC_CASING | flags, wide.data(), wide.size(), wideResult.data(), size, nullptr, nullptr, 0);
-    int resultSize = WideCharToMultiByte(CP_UTF8, 0, wideResult.data(), size, nullptr, 0, nullptr, nullptr);
-    std::string result(resultSize, 0);
-    WideCharToMultiByte(CP_UTF8, 0, wideResult.data(), size, result.data(), resultSize, nullptr, nullptr);
-    return result;
-}
-
-static std::string FuString_ToLower(std::string_view s)
-{
-    return FuString_Win32LCMap(s, LCMAP_LOWERCASE);
-}
-
-#else
-
-#include <unicode/unistr.h>
-
-static std::string FuString_ToLower(std::string_view s)
-{
-    std::string result;
-    return icu::UnicodeString::fromUTF8(s).toLower().toUTF8String(result);
-}
-
-#endif
 
 namespace Velopack
 {
@@ -2033,6 +2077,18 @@ double Platform::parseDouble(std::string_view str)
     throw std::runtime_error("ParseDouble failed, string is not a valid double");
 }
 
+std::string Platform::toLower(std::string_view str)
+{
+    std::string result{""};
+     result = VeloString_ToLower(str); return result;
+}
+
+std::string Platform::toUpper(std::string_view str)
+{
+    std::string result{""};
+     result = VeloString_ToUpper(str); return result;
+}
+
 int Platform::parseHex(std::string_view str)
 {
     int i = 0;
@@ -2143,21 +2199,21 @@ std::shared_ptr<VelopackAsset> VelopackAsset::fromNode(std::shared_ptr<JsonNode>
 {
     std::shared_ptr<VelopackAsset> asset = std::make_shared<VelopackAsset>();
     for (const auto &[k, v] : *node->asObject()) {
-        if (FuString_ToLower(k) == "id")
+        if (Platform::toLower(k) == "id")
             asset->packageId = v->asString();
-        else if (FuString_ToLower(k) == "version")
+        else if (Platform::toLower(k) == "version")
             asset->version = v->asString();
-        else if (FuString_ToLower(k) == "type")
-            asset->type = FuString_ToLower(v->asString()) == "full" ? VelopackAssetType::full : VelopackAssetType::delta;
-        else if (FuString_ToLower(k) == "filename")
+        else if (Platform::toLower(k) == "type")
+            asset->type = Platform::toLower(v->asString()) == "full" ? VelopackAssetType::full : VelopackAssetType::delta;
+        else if (Platform::toLower(k) == "filename")
             asset->fileName = v->asString();
-        else if (FuString_ToLower(k) == "sha1")
+        else if (Platform::toLower(k) == "sha1")
             asset->sha1 = v->asString();
-        else if (FuString_ToLower(k) == "size")
+        else if (Platform::toLower(k) == "size")
             asset->size = static_cast<int64_t>(v->asNumber());
-        else if (FuString_ToLower(k) == "markdown")
+        else if (Platform::toLower(k) == "markdown")
             asset->notesMarkdown = v->asString();
-        else if (FuString_ToLower(k) == "html")
+        else if (Platform::toLower(k) == "html")
             asset->notesHTML = v->asString();
     }
     return asset;
@@ -2168,9 +2224,9 @@ std::shared_ptr<UpdateInfo> UpdateInfo::fromJson(std::string_view json)
     std::shared_ptr<JsonNode> node = JsonNode::parse(json);
     std::shared_ptr<UpdateInfo> updateInfo = std::make_shared<UpdateInfo>();
     for (const auto &[k, v] : *node->asObject()) {
-        if (FuString_ToLower(k) == "targetfullrelease")
+        if (Platform::toLower(k) == "targetfullrelease")
             updateInfo->targetFullRelease = VelopackAsset::fromNode(v);
-        else if (FuString_ToLower(k) == "isdowngrade")
+        else if (Platform::toLower(k) == "isdowngrade")
             updateInfo->isDowngrade = v->asBool();
     }
     return updateInfo;

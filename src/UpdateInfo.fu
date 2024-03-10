@@ -45,7 +45,7 @@ public class VelopackAsset
         VelopackAsset# asset = new VelopackAsset();
         foreach((string k, JsonNode# v) in node.AsObject()) 
         {
-            switch (k.ToLower()) 
+            switch (Platform.ToLower(k)) 
             {
                 case "id":
                     asset.PackageId = v.AsString();
@@ -54,7 +54,7 @@ public class VelopackAsset
                     asset.Version = v.AsString();
                     break;
                 case "type":
-                    asset.Type = v.AsString().ToLower() == "full" 
+                    asset.Type = Platform.ToLower(v.AsString()) == "full" 
                         ? VelopackAssetType.Full : VelopackAssetType.Delta;
                     break;
                 case "filename":
@@ -96,7 +96,7 @@ public class UpdateInfo
         UpdateInfo#? updateInfo = new UpdateInfo();
         foreach((string k, JsonNode# v) in node.AsObject()) 
         {
-            switch (k.ToLower()) 
+            switch (Platform.ToLower(k)) 
             {
                 case "targetfullrelease":
                     updateInfo.TargetFullRelease = VelopackAsset.FromNode(v);

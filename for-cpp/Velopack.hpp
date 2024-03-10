@@ -31,6 +31,21 @@
 //  SOFTWARE.
 //
 
+//  UNICODE SUPPORT NOTES
+// 
+//  To keep this library as light as possible, we will try to avoid using ICU4C 
+//  if possible. If Qt is available, we will use its QString class to handle
+//  Unicode string manipulation. On Windows, we will use the Win32 unicode API.
+//  If neither of these are available, we will fall back to using ICU4C.
+//
+//  On Windows, for full Unicode support, you will need to set the code page.
+//  https://learn.microsoft.com/en-us/windows/apps/design/globalizing/use-utf8-code-page
+// 
+//  If you would like to disable ICU4C and fall back to ASCII-only functions on, 
+//  systems without an alternative implementation, uncomment the following define:
+//
+//  #define VELOPACK_NO_ICU
+
 #ifndef VELOPACK_H_INCLUDED
 #define VELOPACK_H_INCLUDED
 
@@ -43,6 +58,7 @@ namespace Velopack
 #endif // UNICODE
     void startup(char **args, size_t c_args);
 }
+
 #endif // VELOPACK_H_INCLUDED
 
 // Generated automatically with "fut". Do not edit.
@@ -211,6 +227,8 @@ public:
     static std::string getUpdateExePath();
     static std::string strTrim(std::string str);
     static double parseDouble(std::string_view str);
+    static std::string toLower(std::string_view str);
+    static std::string toUpper(std::string_view str);
     static int parseHex(std::string_view str);
     static std::string pathParent(std::string str);
     static std::string pathJoin(std::string s1, std::string s2);

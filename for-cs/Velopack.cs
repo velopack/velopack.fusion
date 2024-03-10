@@ -683,6 +683,20 @@ namespace Velopack
             throw new Exception("ParseDouble failed, string is not a valid double");
         }
 
+        public static string ToLower(string str)
+        {
+            string result = "";
+            result = str.ToLower();
+            return result;
+        }
+
+        public static string ToUpper(string str)
+        {
+            string result = "";
+            result = str.ToLower();
+            return result;
+        }
+
         public static int ParseHex(string str)
         {
             int i = 0;
@@ -849,7 +863,7 @@ namespace Velopack
             VelopackAsset asset = new VelopackAsset();
             foreach ((string k, JsonNode v) in node.AsObject())
             {
-                switch (k.ToLower())
+                switch (Platform.ToLower(k))
                 {
                     case "id":
                         asset.PackageId = v.AsString();
@@ -858,7 +872,7 @@ namespace Velopack
                         asset.Version = v.AsString();
                         break;
                     case "type":
-                        asset.Type = v.AsString().ToLower() == "full" ? VelopackAssetType.Full : VelopackAssetType.Delta;
+                        asset.Type = Platform.ToLower(v.AsString()) == "full" ? VelopackAssetType.Full : VelopackAssetType.Delta;
                         break;
                     case "filename":
                         asset.FileName = v.AsString();
@@ -900,7 +914,7 @@ namespace Velopack
             UpdateInfo updateInfo = new UpdateInfo();
             foreach ((string k, JsonNode v) in node.AsObject())
             {
-                switch (k.ToLower())
+                switch (Platform.ToLower(k))
                 {
                     case "targetfullrelease":
                         updateInfo.TargetFullRelease = VelopackAsset.FromNode(v);
@@ -1137,7 +1151,7 @@ namespace Velopack
             List<string> args = new List<string>();
             args = Environment.GetCommandLineArgs().ToList(); for (int i = 0; i < args.Count; i++)
             {
-                string val = Platform.StrTrim(args[i]).ToLower();
+                string val = Platform.ToLower(Platform.StrTrim(args[i]));
                 if (val == "--veloapp-install")
                 {
                     Platform.Exit(0);

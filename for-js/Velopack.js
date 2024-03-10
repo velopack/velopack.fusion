@@ -682,6 +682,16 @@ class Platform {
         }
         throw new Error("ParseDouble failed, string is not a valid double");
     }
+    static toLower(str) {
+        let result = "";
+        result = str.toLowerCase();
+        return result;
+    }
+    static toUpper(str) {
+        let result = "";
+        result = str.toLowerCase();
+        return result;
+    }
     static parseHex(str) {
         let i = 0;
         if (!isNaN((i = parseInt(str, 16)))) {
@@ -855,7 +865,7 @@ class VelopackAsset {
     static fromNode(node) {
         let asset = new VelopackAsset();
         for (const [k, v] of Object.entries(node.asObject())) {
-            switch (k.toLowerCase()) {
+            switch (Platform.toLower(k)) {
                 case "id":
                     asset.packageId = v.asString();
                     break;
@@ -864,7 +874,7 @@ class VelopackAsset {
                     break;
                 case "type":
                     asset.type =
-                        v.asString().toLowerCase() == "full"
+                        Platform.toLower(v.asString()) == "full"
                             ? VelopackAssetType.FULL
                             : VelopackAssetType.DELTA;
                     break;
@@ -908,7 +918,7 @@ class UpdateInfo {
         let node = JsonNode.parse(json);
         let updateInfo = new UpdateInfo();
         for (const [k, v] of Object.entries(node.asObject())) {
-            switch (k.toLowerCase()) {
+            switch (Platform.toLower(k)) {
                 case "targetfullrelease":
                     updateInfo.targetFullRelease = VelopackAsset.fromNode(v);
                     break;
@@ -1136,7 +1146,7 @@ class VelopackApp {
         const args = [];
         Array.prototype.push.apply(args, process.argv);
         for (let i = 0; i < args.length; i++) {
-            let val = Platform.strTrim(args[i]).toLowerCase();
+            let val = Platform.toLower(Platform.strTrim(args[i]));
             if (val == "--veloapp-install") {
                 Platform.exit(0);
             }

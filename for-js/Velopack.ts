@@ -782,6 +782,18 @@ class Platform {
     throw new Error("ParseDouble failed, string is not a valid double");
   }
 
+  public static toLower(str: string): string {
+    let result: string = "";
+    result = str.toLowerCase();
+    return result;
+  }
+
+  public static toUpper(str: string): string {
+    let result: string = "";
+    result = str.toLowerCase();
+    return result;
+  }
+
   public static parseHex(str: string): number {
     let i: number = 0;
     if (!isNaN((i = parseInt(str, 16)))) {
@@ -934,7 +946,7 @@ export class VelopackAsset {
   public static fromNode(node: JsonNode): VelopackAsset {
     let asset: VelopackAsset = new VelopackAsset();
     for (const [k, v] of Object.entries(node.asObject())) {
-      switch (k.toLowerCase()) {
+      switch (Platform.toLower(k)) {
         case "id":
           asset.packageId = v.asString();
           break;
@@ -943,7 +955,7 @@ export class VelopackAsset {
           break;
         case "type":
           asset.type =
-            v.asString().toLowerCase() == "full"
+            Platform.toLower(v.asString()) == "full"
               ? VelopackAssetType.FULL
               : VelopackAssetType.DELTA;
           break;
@@ -990,7 +1002,7 @@ export class UpdateInfo {
     let node: JsonNode = JsonNode.parse(json);
     let updateInfo: UpdateInfo | null = new UpdateInfo();
     for (const [k, v] of Object.entries(node.asObject())) {
-      switch (k.toLowerCase()) {
+      switch (Platform.toLower(k)) {
         case "targetfullrelease":
           updateInfo.targetFullRelease = VelopackAsset.fromNode(v);
           break;
@@ -1266,7 +1278,7 @@ export class VelopackApp {
     const args: string[] = [];
     Array.prototype.push.apply(args, process.argv);
     for (let i: number = 0; i < args.length; i++) {
-      let val: string = Platform.strTrim(args[i]).toLowerCase();
+      let val: string = Platform.toLower(Platform.strTrim(args[i]));
       if (val == "--veloapp-install") {
         Platform.exit(0);
       }
