@@ -19,6 +19,30 @@ pub struct VelopackLocator {
     pub manifest: Manifest,
 }
 
+/// Default log location for Velopack code.
+pub fn default_log_location() -> PathBuf {
+    #[cfg(target_os = "windows")]
+    {
+        let mut my_dir = std::env::current_exe().unwrap();
+        my_dir.pop();
+        my_dir.pop();
+        return my_dir.join("Velopack.log");
+    }
+    #[cfg(target_os = "linux")]
+    {
+        return std::path::Path::new("/tmp/velopack.log").to_path_buf();
+    }
+    #[cfg(target_os = "macos")]
+    {
+        #[allow(deprecated)]
+        let mut user_home = std::env::home_dir().expect("Could not locate user home directory via $HOME or /etc/passwd");
+        user_home.push("Library");
+        user_home.push("Logs");
+        user_home.push("velopack.log");
+        return user_home;
+    }
+}
+
 #[cfg(target_os = "windows")]
 /// Automatically locates the current app's important paths. If the app is not installed, it will return an error.
 pub fn auto_locate() -> Result<VelopackLocator> {
@@ -107,10 +131,19 @@ pub fn auto_locate() -> Result<VelopackLocator> {
     }
 
     let app = read_current_manifest(&metadata_path)?;
+
+    #[allow(deprecated)]
+    let mut packages_dir = std::env::home_dir().expect("Could not locate user home directory via $HOME or /etc/passwd");
+    packages_dir.push("Library");
+    packages_dir.push("Caches");
+    packages_dir.push("velopack");
+    packages_dir.push(&app.id);
+    packages_dir.push("packages");
+
     Ok(VelopackLocator {
         root_app_dir,
         update_exe_path,
-        packages_dir: PathBuf::from("/tmp/velopack").join(&app.id).join("packages"),
+        packages_dir: packages_dir,
         manifest: app,
     })
 }

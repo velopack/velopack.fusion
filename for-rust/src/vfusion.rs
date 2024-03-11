@@ -44,7 +44,9 @@ fn main() -> Result<()> {
     let (subcommand, subcommand_matches) =
         matches.subcommand().ok_or_else(|| anyhow!("No subcommand was used. Try `--help` for more information."))?;
     let verbose = matches.get_flag("verbose");
-    default_logging(verbose)?;
+
+    let default_log_file = locator::default_log_location();
+    logging::setup_logging(&default_log_file, verbose)?;
     
     info!("--");
     info!("Starting Velopack Fusion ({})", env!("CARGO_PKG_VERSION"));
@@ -70,21 +72,6 @@ fn main() -> Result<()> {
     }
 
     Ok(())
-}
-
-pub fn default_logging(verbose: bool) -> Result<()> {
-    #[cfg(windows)]
-    let default_log_file = {
-        let mut my_dir = env::current_exe().unwrap();
-        my_dir.pop();
-        my_dir.pop();
-        my_dir.join("Velopack.log")
-    };
-
-    #[cfg(unix)]
-    let default_log_file = std::path::Path::new("/tmp/velopack.log").to_path_buf();
-
-    logging::setup_logging(&default_log_file, verbose)
 }
 
 fn get_version(_matches: &ArgMatches) -> Result<()> {
