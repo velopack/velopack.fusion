@@ -47,7 +47,7 @@ static std::string VeloString_Win32LCMap(std::string_view s, DWORD flags)
     MultiByteToWideChar(CP_UTF8, 0, s.data(), (int)s.size(), wide.data(), size);
     size = LCMapStringEx(LOCALE_NAME_SYSTEM_DEFAULT, LCMAP_LINGUISTIC_CASING | flags, wide.data(), size, nullptr, 0, nullptr, nullptr, 0);
     std::wstring wideResult(size, 0);
-    LCMapStringEx(LOCALE_NAME_SYSTEM_DEFAULT, LCMAP_LINGUISTIC_CASING | flags, wide.data(), wide.size(), wideResult.data(), size, nullptr, nullptr, 0);
+    LCMapStringEx(LOCALE_NAME_SYSTEM_DEFAULT, LCMAP_LINGUISTIC_CASING | flags, wide.data(), (int)wide.size(), wideResult.data(), size, nullptr, nullptr, 0);
     int resultSize = WideCharToMultiByte(CP_UTF8, 0, wideResult.data(), size, nullptr, 0, nullptr, nullptr);
     std::string result(resultSize, 0);
     WideCharToMultiByte(CP_UTF8, 0, wideResult.data(), size, result.data(), resultSize, nullptr, nullptr);
