@@ -96,7 +96,7 @@ function nativeStartProcessBlocking(command_line: readonly string[]): string {
 
 function nativeStartProcessAsync(command_line: readonly string[]): Promise<string> {
     return new Promise((resolve, reject) => {
-        const process = spawnSync(command_line[0], command_line.slice(1), { encoding: "utf8" });
+        const process = spawn(command_line[0], command_line.slice(1), { encoding: "utf8" });
 
         let output = '';
         process.stdout.on('data', (data) => {
