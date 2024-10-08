@@ -1,19 +1,15 @@
-<a href="https://velopack.io">
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/velopack/velopack/master/artwork/velopack-white.svg">
-  <img alt="Velopack Logo" src="https://raw.githubusercontent.com/velopack/velopack/master/artwork/velopack-black.svg" width="300">
-</picture>
-</a>
-
----
-
-[![Crates.io](https://img.shields.io/crates/v/velopack?style=flat-square)](https://crates.io/crates/velopack)
+<!--[![Crates.io](https://img.shields.io/crates/v/velopack?style=flat-square)](https://crates.io/crates/velopack)
 [![npmjs.com](https://img.shields.io/npm/v/velopack?style=flat-square)](https://www.npmjs.com/package/velopack)
 [![Discord](https://img.shields.io/discord/767856501477343282?style=flat-square&color=purple)](https://discord.gg/CjrCrNzd3F)
 [![Build](https://img.shields.io/github/actions/workflow/status/velopack/velopack.fusion/build.yml?branch=master&style=flat-square)](https://github.com/velopack/velopack.fusion/actions)
-[![License](https://img.shields.io/github/license/velopack/velopack.fusion?style=flat-square)](https://github.com/velopack/velopack/blob/master/LICENSE)
+[![License](https://img.shields.io/github/license/velopack/velopack.fusion?style=flat-square)](https://github.com/velopack/velopack/blob/master/LICENSE)-->
 
-# Velopack Fusion
+# ❗❗ This repository has been moved ❗❗
+Velopack Fusion was an experimental project to transpile the "fut" language into other programming languages. This approach is no longer being used, and Velopack libraries for other languages have been integrated into the [Main Velopack Repo](https://github.com/velopack/velopack).
+
+---
+
+## Velopack Fusion
 
 [Velopack](https://velopack.io) is an installer and automatic update framework for cross-platform desktop applications.
 
